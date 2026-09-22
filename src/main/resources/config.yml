@@ -1,0 +1,118 @@
+# PvPLog - combat tag configuration
+# All messages use MiniMessage format: https://docs.advntr.dev/minimessage/format.html
+
+# How long (in seconds) a player stays in combat after hitting / being hit by another player.
+combat-duration: 20
+
+# Worlds where players are never tagged.
+disabled-worlds:
+  - example_world
+
+tagging:
+  # What counts as a PvP hit.
+  melee: true
+  projectiles: true        # arrows, tridents, snowballs, eggs, fireballs...
+  splash-potions: true     # harmful splash / lingering potions thrown at a player
+  explosions: true         # TNT lit by a player, end crystals, respawn anchors
+  pets: true               # wolves owned by a player
+  fishing-rod: false       # hooking a player with a fishing rod
+  # Also tag the attacker (not only the victim).
+  tag-attacker: true
+
+combat-log:
+  # Kill players who disconnect while in combat.
+  kill-on-logout: true
+  # Also punish players who got kicked (e.g. by an anti-cheat / timeout).
+  punish-on-kick: false
+  # Give the kill to the last player who hit them.
+  credit-last-attacker: true
+  # Commands run from console when someone combat logs. {player} = logger, {killer} = last attacker (or "none").
+  console-commands: []
+  #  - "eco take {player} 100"
+
+on-death:
+  # Remove the tag from the killer when they kill someone.
+  untag-killer: false
+
+restrictions:
+  # Block elytra gliding while in combat (also stops current glide on tag).
+  disable-elytra: true
+  # Disable /fly style flight while in combat (creative/spectator are not affected).
+  disable-flight: true
+  # Ender pearl cooldown in ticks while in combat (20 ticks = 1 second). -1 = vanilla.
+  ender-pearl-cooldown: -1
+  # Wind charge cooldown in ticks while in combat. -1 = vanilla.
+  wind-charge-cooldown: -1
+  # Block teleports with these causes while in combat (ender pearls / chorus fruit are always allowed).
+  blocked-teleport-causes:
+    - COMMAND
+    - SPECTATE
+
+commands:
+  # BLACKLIST = block the commands listed below. WHITELIST = only allow the commands listed below.
+  mode: BLACKLIST
+  list:
+    - spawn
+    - home
+    - homes
+    - sethome
+    - tpa
+    - tpahere
+    - tpaccept
+    - tpyes
+    - tpask
+    - tp
+    - back
+    - warp
+    - warps
+    - rtp
+    - randomtp
+    - wild
+    - afk
+    - ec
+    - enderchest
+    - echest
+    - ah
+    - auction
+    - auctionhouse
+    - trade
+    - shop
+    - sell
+    - fly
+    - vanish
+    - v
+    - hub
+    - lobby
+    - kill
+    - suicide
+
+display:
+  action-bar: true
+  boss-bar: true
+  boss-bar-color: RED        # PINK, BLUE, RED, GREEN, YELLOW, PURPLE, WHITE
+  boss-bar-overlay: PROGRESS # PROGRESS, NOTCHED_6, NOTCHED_10, NOTCHED_12, NOTCHED_20
+  sounds:
+    tagged: "entity.experience_orb.pickup"   # empty string to disable
+    untagged: "block.note_block.pling"
+
+messages:
+  prefix: "<dark_gray>[<red><bold>COMBAT</bold></red>]</dark_gray> "
+  tagged: "<red>You are now in combat! <gray>Do not log out or you will die."
+  untagged: "<green>You are no longer in combat. You may log out safely."
+  action-bar: "<red><bold>COMBAT</bold></red> <dark_gray>»</dark_gray> <white>{time}s</white> <dark_gray>|</dark_gray> <gray>Do not log out!"
+  boss-bar: "<red><bold>IN COMBAT</bold></red> <gray>- <white>{time}s</white>"
+  command-blocked: "<red>You cannot use <white>/{command}</white> while in combat!"
+  elytra-blocked: "<red>You cannot use an elytra while in combat!"
+  flight-blocked: "<red>You cannot fly while in combat!"
+  teleport-blocked: "<red>You cannot teleport while in combat!"
+  combat-logged-broadcast: "<red><bold>{player}</bold></red> <gray>logged out during combat and was killed."
+  status-in-combat: "<red>You are in combat for <white>{time}s</white>."
+  status-not-in-combat: "<green>You are not in combat."
+  admin-status-in-combat: "<white>{player}</white> <red>is in combat for <white>{time}s</white>."
+  admin-status-not-in-combat: "<white>{player}</white> <green>is not in combat."
+  admin-tagged: "<green>Tagged <white>{player}</white>."
+  admin-untagged: "<green>Untagged <white>{player}</white>."
+  reloaded: "<green>Configuration reloaded."
+  player-not-found: "<red>Player not found."
+  no-permission: "<red>You don't have permission to do that."
+  usage: "<red>Usage: /pvplog <reload|tag|untag|status> [player]"

@@ -1,0 +1,31 @@
+name: PvPLog
+version: '${project.version}'
+main: com.faboit.pvplog.PvPLogPlugin
+api-version: '1.21'
+description: Combat tagging - punishes players who log out during PvP.
+authors: [Faboit1]
+
+commands:
+  combat:
+    description: Shows your combat tag status.
+    aliases: [ct, combattime]
+    permission: pvplog.use
+  pvplog:
+    description: PvPLog admin command.
+    aliases: [combattag]
+    permission: pvplog.admin
+    usage: /<command> <reload|tag|untag|status> [player]
+
+permissions:
+  pvplog.use:
+    description: Use /combat.
+    default: true
+  pvplog.admin:
+    description: Use /pvplog admin commands.
+    default: op
+  pvplog.bypass:
+    description: Never get combat tagged.
+    default: false
+  pvplog.bypass.commands:
+    description: Use blocked commands while in combat.
+    default: false
