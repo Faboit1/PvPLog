@@ -19,6 +19,13 @@ tagging:
   # Also tag the attacker (not only the victim).
   tag-attacker: true
 
+# FriendSystem integration (only active when FriendSystem is installed).
+friends:
+  # Hits between friends never put either player in combat.
+  never-tag-friends: true
+  # Also cancel all PvP damage between friends.
+  prevent-damage: false
+
 combat-log:
   # Kill players who disconnect while in combat.
   kill-on-logout: true

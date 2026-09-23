@@ -70,7 +70,7 @@ public final class CombatCommand implements TabExecutor {
 
         switch (sub) {
             case "tag" -> {
-                combat.tag(target, null);
+                combat.tag(target, null, true);
                 send(sender, s.message("admin-tagged", "player", target.getName()));
             }
             case "untag" -> {

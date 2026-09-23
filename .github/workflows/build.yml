@@ -25,14 +25,28 @@ jobs:
       - name: Build with Maven
         run: mvn -B package --file pom.xml
 
+      - name: Read version
+        id: version
+        run: echo "version=$(mvn -q -B help:evaluate -Dexpression=project.version -DforceStdout)" >> "$GITHUB_OUTPUT"
+
       - name: Upload plugin jar
         uses: actions/upload-artifact@v4
         with:
-          name: PvPLog
+          name: PvPLog-${{ steps.version.outputs.version }}
           path: target/PvPLog-*.jar
 
-      - name: Publish release (tags only)
-        if: startsWith(github.ref, 'refs/tags/v')
+      # Every push to the default branch (or a v* tag) publishes/updates the release
+      # for the version in pom.xml. Bump the version in pom.xml to cut a new release.
+      - name: Publish release
+        if: >-
+          github.event_name != 'pull_request' &&
+          (startsWith(github.ref, 'refs/tags/v') ||
+           github.ref == format('refs/heads/{0}', github.event.repository.default_branch))
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: PvPLog ${{ steps.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          make_latest: true
           files: target/PvPLog-*.jar

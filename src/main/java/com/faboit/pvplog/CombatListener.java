@@ -56,8 +56,18 @@ public final class CombatListener implements Listener {
 
     private void tagPair(Player victim, Player attacker) {
         if (victim.equals(attacker)) return;
-        if (combat().canTag(victim)) combat().tag(victim, attacker);
-        if (settings().tagAttacker() && combat().canTag(attacker)) combat().tag(attacker, victim);
+        if (settings().ignoreFriends() && plugin.friendHook().areFriends(victim, attacker)) return;
+        combat().tag(victim, attacker, false);
+        if (settings().tagAttacker()) combat().tag(attacker, victim, false);
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onFriendlyFire(EntityDamageEvent event) {
+        if (!settings().preventFriendDamage() || !(event.getEntity() instanceof Player victim)) return;
+        Player attacker = resolveAttacker(event);
+        if (attacker != null && !attacker.equals(victim) && plugin.friendHook().areFriends(victim, attacker)) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -88,8 +98,9 @@ public final class CombatListener implements Listener {
         if (direct instanceof Player p) {
             return s.tagMelee() ? p : null;
         }
-        if (direct instanceof Tameable pet && s.tagPets() && pet.getOwner() instanceof Player owner && owner.isOnline()) {
-            return owner.getPlayer();
+        if (direct instanceof Tameable pet && s.tagPets() && pet.getOwnerUniqueId() != null) {
+            Player owner = Bukkit.getPlayer(pet.getOwnerUniqueId());
+            return owner != null && owner.isOnline() ? owner : null;
         }
         return null;
     }
@@ -139,9 +150,8 @@ public final class CombatListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        UUID uuid = player.getUniqueId();
         if (!combat().isTagged(player)) {
-            combat().forget(uuid);
+            combat().untag(player, false);
             return;
         }
         Settings s = settings();
@@ -161,12 +171,20 @@ public final class CombatListener implements Listener {
         player.setHealth(0.0);
 
         var broadcast = s.message("combat-logged-broadcast", "player", player.getName());
-        if (broadcast != null) Bukkit.broadcast(broadcast);
+        if (broadcast != null) {
+            // Sending chat is thread-safe on Folia; deliver to everyone individually plus console.
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                if (!online.equals(player)) online.sendMessage(broadcast);
+            }
+            Bukkit.getConsoleSender().sendMessage(broadcast);
+        }
 
         String killerName = killer == null ? "none" : killer.getName();
         for (String cmd : s.combatLogCommands()) {
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
-                    cmd.replace("{player}", player.getName()).replace("{killer}", killerName));
+            String command = cmd.replace("{player}", player.getName()).replace("{killer}", killerName);
+            // Console commands must run on the global region thread on Folia (main thread on Paper).
+            Bukkit.getGlobalRegionScheduler().execute(plugin,
+                    () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command));
         }
         plugin.getLogger().info(player.getName() + " combat logged (last attacker: " + killerName + ")");
     }
@@ -273,8 +291,6 @@ public final class CombatListener implements Listener {
         }
         if (cooldown < 0) return;
         // Vanilla applies its own cooldown after launching, so override it on the next tick.
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            if (player.isOnline()) player.setCooldown(item, cooldown);
-        });
+        player.getScheduler().run(plugin, task -> player.setCooldown(item, cooldown), null);
     }
 }

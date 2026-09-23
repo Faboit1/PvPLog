@@ -31,6 +31,7 @@ public final class Settings {
     private final boolean killOnLogout, punishOnKick, creditLastAttacker;
     private final java.util.List<String> combatLogCommands;
     private final boolean untagKillerOnKill;
+    private final boolean ignoreFriends, preventFriendDamage;
 
     private final boolean disableElytra, disableFlight;
     private final int enderPearlCooldown, windChargeCooldown;
@@ -66,6 +67,8 @@ public final class Settings {
         creditLastAttacker = config.getBoolean("combat-log.credit-last-attacker", true);
         combatLogCommands = config.getStringList("combat-log.console-commands");
         untagKillerOnKill = config.getBoolean("on-death.untag-killer", false);
+        ignoreFriends = config.getBoolean("friends.never-tag-friends", true);
+        preventFriendDamage = config.getBoolean("friends.prevent-damage", false);
 
         disableElytra = config.getBoolean("restrictions.disable-elytra", true);
         disableFlight = config.getBoolean("restrictions.disable-flight", true);
@@ -155,6 +158,8 @@ public final class Settings {
     public boolean creditLastAttacker() { return creditLastAttacker; }
     public java.util.List<String> combatLogCommands() { return combatLogCommands; }
     public boolean untagKillerOnKill() { return untagKillerOnKill; }
+    public boolean ignoreFriends() { return ignoreFriends; }
+    public boolean preventFriendDamage() { return preventFriendDamage; }
     public boolean disableElytra() { return disableElytra; }
     public boolean disableFlight() { return disableFlight; }
     public int enderPearlCooldown() { return enderPearlCooldown; }

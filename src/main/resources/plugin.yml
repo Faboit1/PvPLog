@@ -2,6 +2,8 @@ name: PvPLog
 version: '${project.version}'
 main: com.faboit.pvplog.PvPLogPlugin
 api-version: '1.21'
+folia-supported: true
+softdepend: [FriendSystem]
 description: Combat tagging - punishes players who log out during PvP.
 authors: [Faboit1]
 

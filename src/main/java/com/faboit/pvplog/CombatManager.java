@@ -1,48 +1,59 @@
 package com.faboit.pvplog;
 
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitTask;
 
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
-/** Tracks who is in combat, drives the countdown display and expiry. */
+/**
+ * Tracks who is in combat, drives the countdown display and expiry.
+ *
+ * <p>Folia-safe: every tagged player gets their own repeating task on their entity
+ * scheduler, and anything that touches a player is run on the thread that owns them.
+ * On Paper the same schedulers simply run on the main thread.
+ */
 public final class CombatManager {
 
     private final PvPLogPlugin plugin;
-    private final Map<UUID, Tag> tags = new HashMap<>();
-    private BukkitTask task;
+    private final Map<UUID, Tag> tags = new ConcurrentHashMap<>();
 
     private static final class Tag {
-        long expiresAt;
-        UUID lastAttacker;
-        BossBar bossBar;
+        volatile long expiresAt;
+        volatile UUID lastAttacker;
+        BossBar bossBar;          // only touched on the owning player's thread
+        ScheduledTask task;
     }
 
     CombatManager(PvPLogPlugin plugin) {
         this.plugin = plugin;
     }
 
-    void start() {
-        task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 5L, 5L);
-    }
-
     void shutdown() {
-        if (task != null) task.cancel();
-        for (UUID uuid : tags.keySet().toArray(new UUID[0])) {
-            Player player = Bukkit.getPlayer(uuid);
-            if (player != null) hideDisplay(player, tags.get(uuid));
+        for (Map.Entry<UUID, Tag> entry : tags.entrySet()) {
+            Tag tag = entry.getValue();
+            if (tag.task != null) tag.task.cancel();
+            Player player = Bukkit.getPlayer(entry.getKey());
+            if (player != null && tag.bossBar != null) player.hideBossBar(tag.bossBar);
         }
         tags.clear();
     }
 
-    /** Whether this player can be tagged at all right now. */
+    /** Run on the thread that owns this player (immediately if we already are on it). */
+    void runFor(Player player, Runnable action) {
+        if (Bukkit.isOwnedByCurrentRegion(player)) {
+            action.run();
+        } else {
+            player.getScheduler().run(plugin, task -> action.run(), null);
+        }
+    }
+
+    /** Whether this player can be tagged at all right now. Call on the player's thread. */
     public boolean canTag(Player player) {
         if (player.hasPermission("pvplog.bypass")) return false;
         GameMode mode = player.getGameMode();
@@ -51,11 +62,20 @@ public final class CombatManager {
     }
 
     /**
-     * Put a player in combat (or refresh their timer).
+     * Put a player in combat (or refresh their timer). Safe from any thread.
      *
      * @param attacker the opponent, may be null
+     * @param force    skip the bypass / gamemode / world checks
      */
-    public void tag(Player player, Player attacker) {
+    public void tag(Player player, Player attacker, boolean force) {
+        UUID attackerId = attacker == null ? null : attacker.getUniqueId();
+        runFor(player, () -> {
+            if (!player.isOnline() || (!force && !canTag(player))) return;
+            tagNow(player, attackerId);
+        });
+    }
+
+    private void tagNow(Player player, UUID attackerId) {
         Settings settings = plugin.settings();
         Tag tag = tags.get(player.getUniqueId());
         boolean fresh = tag == null;
@@ -64,31 +84,28 @@ public final class CombatManager {
             tags.put(player.getUniqueId(), tag);
         }
         tag.expiresAt = System.currentTimeMillis() + settings.combatDurationMillis();
-        if (attacker != null) tag.lastAttacker = attacker.getUniqueId();
+        if (attackerId != null) tag.lastAttacker = attackerId;
 
         if (fresh) {
-            send(player, settings.message("tagged"));
+            UUID uuid = player.getUniqueId();
+            tag.task = player.getScheduler().runAtFixedRate(plugin, t -> tick(player, t),
+                    () -> tags.remove(uuid), 5L, 5L);
+            CombatManager.send(player, settings.message("tagged"));
             if (settings.taggedSound() != null) player.playSound(settings.taggedSound());
             applyRestrictions(player);
         }
         updateDisplay(player, tag);
     }
 
-    /** Remove a player from combat. */
+    /** Remove a player from combat. Safe from any thread. */
     public void untag(Player player, boolean notify) {
         Tag tag = tags.remove(player.getUniqueId());
         if (tag == null) return;
-        hideDisplay(player, tag);
-        if (notify) {
-            Settings settings = plugin.settings();
-            send(player, settings.message("untagged"));
-            if (settings.untaggedSound() != null) player.playSound(settings.untaggedSound());
-        }
-    }
-
-    /** Drop state for a player that left, without touching them. */
-    void forget(UUID uuid) {
-        tags.remove(uuid);
+        runFor(player, () -> {
+            if (tag.task != null) tag.task.cancel();
+            hideDisplay(player, tag);
+            if (notify) notifyUntagged(player);
+        });
     }
 
     public boolean isTagged(Player player) {
@@ -125,27 +142,26 @@ public final class CombatManager {
         }
     }
 
-    private void tick() {
-        long now = System.currentTimeMillis();
-        Iterator<Map.Entry<UUID, Tag>> it = tags.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry<UUID, Tag> entry = it.next();
-            Player player = Bukkit.getPlayer(entry.getKey());
-            if (player == null) {
-                it.remove();
-                continue;
-            }
-            Tag tag = entry.getValue();
-            if (tag.expiresAt <= now) {
-                it.remove();
-                hideDisplay(player, tag);
-                Settings settings = plugin.settings();
-                send(player, settings.message("untagged"));
-                if (settings.untaggedSound() != null) player.playSound(settings.untaggedSound());
-            } else {
-                updateDisplay(player, tag);
-            }
+    private void tick(Player player, ScheduledTask task) {
+        Tag tag = tags.get(player.getUniqueId());
+        if (tag == null || tag.task != task) {
+            task.cancel();
+            return;
         }
+        if (tag.expiresAt <= System.currentTimeMillis()) {
+            tags.remove(player.getUniqueId(), tag);
+            task.cancel();
+            hideDisplay(player, tag);
+            notifyUntagged(player);
+        } else {
+            updateDisplay(player, tag);
+        }
+    }
+
+    private void notifyUntagged(Player player) {
+        Settings settings = plugin.settings();
+        send(player, settings.message("untagged"));
+        if (settings.untaggedSound() != null) player.playSound(settings.untaggedSound());
     }
 
     private void updateDisplay(Player player, Tag tag) {
@@ -175,7 +191,6 @@ public final class CombatManager {
     }
 
     private void hideDisplay(Player player, Tag tag) {
-        if (tag == null) return;
         if (tag.bossBar != null) {
             player.hideBossBar(tag.bossBar);
             tag.bossBar = null;

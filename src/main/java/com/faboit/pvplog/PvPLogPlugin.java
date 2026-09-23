@@ -7,13 +7,14 @@ public final class PvPLogPlugin extends JavaPlugin {
 
     private Settings settings;
     private CombatManager combatManager;
+    private FriendHook friendHook;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         settings = new Settings(this);
         combatManager = new CombatManager(this);
-        combatManager.start();
+        friendHook = new FriendHook(this);
 
         getServer().getPluginManager().registerEvents(new CombatListener(this), this);
 
@@ -21,7 +22,12 @@ public final class PvPLogPlugin extends JavaPlugin {
         register("combat", command);
         register("pvplog", command);
 
-        getLogger().info("PvPLog enabled - combat duration " + settings.combatDurationMillis() / 1000 + "s");
+        getLogger().info("PvPLog enabled - combat duration " + settings.combatDurationMillis() / 1000 + "s"
+                + (isFolia() ? " (Folia mode)" : ""));
+        // FriendSystem may enable after us (softdepend only orders when both exist), so check once the server is up.
+        getServer().getGlobalRegionScheduler().run(this, task -> getLogger().info(friendHook.isAvailable()
+                ? "Hooked into FriendSystem - friends will never be combat tagged."
+                : "FriendSystem not found - friend protection disabled."));
     }
 
     @Override
@@ -46,6 +52,19 @@ public final class PvPLogPlugin extends JavaPlugin {
 
     public Settings settings() {
         return settings;
+    }
+
+    FriendHook friendHook() {
+        return friendHook;
+    }
+
+    static boolean isFolia() {
+        try {
+            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
     }
 
     public CombatManager combatManager() {
