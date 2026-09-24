@@ -126,13 +126,10 @@ public final class RespawnPull implements Listener {
                     k++;
                     return;
                 }
-                // arrived (or blocked on the way): wait for the ground briefly, then stand exactly on the spawn
-                if (k == ticks) {
-                    player.setVelocity(new Vector(0, -0.1, 0));
-                    k++;
-                }
+                // done steering: the client is a few ticks behind (latency) and finishes the arc on its own momentum;
+                // wait for it to touch down (briefly), then stand it exactly on the spawn
                 boolean grounded = player.getLocation().subtract(0, 0.08, 0).getBlock().isSolid();
-                if (!grounded && settle++ < 10) return;
+                if (!grounded && settle++ < 15) return;
                 for (Player v : viewers) {
                     if (!v.isOnline() || v.getWorld() != target.getWorld()) continue;
                     v.playSound(target, Sound.ENTITY_PLAYER_BIG_FALL, 0.8f, 0.9f);
