@@ -73,9 +73,13 @@ identical run is the way to confirm a flat heap. Not done yet.
   by the standalone plugin and bundled in both Grim builds. It has no 26.3 support: it treats protocol 777 as 26.2 and
   writes 26.2 packet IDs. 26.2's `player_rotation` (0x49) is 26.3's `player_position`, and 26.3's dialog IDs don't
   exist in 26.2's table. The format of both packets is identical in 26.2 and 26.3 (Mojang classes compared) and
-  ViaVersion remaps their IDs correctly, so neither DuelCore nor ViaVersion is at fault. Fix: packetevents 2.14.0 (the
-  first version with 26.3 support), ViaVersion 1069 / ViaBackwards 634, and **Grim removed** at the owner's request
-  (no Grim build with packetevents 2.14 exists yet). Lightning Grim 2.3.74-00dbb86 had also thrown PacketEvents
+  ViaVersion remaps their IDs correctly, so neither DuelCore nor ViaVersion is at fault. The culprit is Grim: every
+  released build bundles packetevents 2.13 and reads packets *before* ViaVersion ("pre-Via"), so for 26.3 clients it
+  misreads teleports as rotations (setback loop, BadPacketsN/AimDuplicateLook spam, then the kick) and doesn't know
+  the dialog IDs (GrimAnticheat/Grim#2887; the fix is the unreleased PR #2888). Applied: standalone packetevents 2.14.0
+  (the first with 26.3 support; used by TotemGuard, Sentry and AntiHealthIndicator), ViaVersion 1069 and ViaBackwards
+  634. Grim was briefly removed and then **kept** at the owner's request, so ViaVersion now **blocks protocol 777
+  (26.3)** with the message "26.3 isn't supported yet. Please join with 26.2" until a Grim release supports 26.3. Lightning Grim 2.3.74-00dbb86 had also thrown PacketEvents
   `ArrayIndexOutOfBoundsException`s on Paper 26.2.
 - **WorldGuardExtraFlagsPlus** disabled itself once its `messages-wgefp.yml` passed YAML's 3 MB limit. Its save
   doubles the apostrophes in "can't" on every write, so three messages had grown to about a million `'` each. The file
