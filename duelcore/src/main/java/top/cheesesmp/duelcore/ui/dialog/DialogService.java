@@ -331,20 +331,20 @@ public final class DialogService {
 
     // ------------------------------------------------------------------ spectate
 
-    /** Spectate sort orders, in the order they are offered. The first one is the default. */
-    public static final List<String> SPECTATE_SORTS = List.of("elo", "newest", "watchers");
+    /** Highest average Elo first, then by fighter names (A–Z). */
+    private static final Comparator<Match> SPECTATE_ORDER = Comparator.comparingDouble(DialogService::matchElo).reversed()
+        .thenComparing(m -> (m.teamName(0) + " " + m.teamName(1)).toLowerCase(Locale.ROOT));
 
     public void spectate(Player player) {
-        spectate(player, "", SPECTATE_SORTS.getFirst());
+        spectate(player, "");
     }
 
     /**
-     * Live matches, filtered by {@code query} (a player name or kit, case-insensitive substring) and sorted by
-     * {@code sort}: "elo" (average rating of the fighters, highest first), "newest" or "watchers".
+     * Live matches, filtered by {@code query} (a player name or kit, case-insensitive substring), highest average
+     * Elo first, then by name.
      */
-    public void spectate(Player player, String query, String sort) {
+    public void spectate(Player player, String query) {
         String q = query.strip().toLowerCase(Locale.ROOT);
-        if (!SPECTATE_SORTS.contains(sort)) sort = SPECTATE_SORTS.getFirst();
         List<Match> live = new ArrayList<>();
         for (Match m : plugin.matches().active()) {
             if (m.isOver() || m.arena() == null) continue;
@@ -353,13 +353,7 @@ public final class DialogService {
         }
         List<Match> shown = new ArrayList<>();
         for (Match m : live) if (q.isEmpty() || matchesQuery(m, q)) shown.add(m);
-        Comparator<Match> order = switch (sort) {
-            case "newest" -> Comparator.comparingLong(Match::createdAt).reversed();
-            case "watchers" -> Comparator.<Match>comparingInt(m -> m.spectators().size()).reversed()
-                .thenComparing(Comparator.comparingDouble(DialogService::matchElo).reversed());
-            default -> Comparator.comparingDouble(DialogService::matchElo).reversed();
-        };
-        shown.sort(order);
+        shown.sort(SPECTATE_ORDER);
         Component title = msg().get("dialog.spectate.title", Messages.num("live", live.size()));
         if (live.isEmpty()) {
             player.showDialog(dialog(title, List.of(text(msg().get("dialog.spectate.none"))), List.of(),
@@ -383,11 +377,6 @@ public final class DialogService {
         List<DialogInput> inputs = new ArrayList<>();
         inputs.add(DialogInput.text("search", msg().get("dialog.spectate.search-label")).width(plugin.gui().wideWidth)
             .initial(query.strip()).maxLength(32).build());
-        List<SingleOptionDialogInput.OptionEntry> sorts = new ArrayList<>();
-        for (String s : SPECTATE_SORTS) {
-            sorts.add(SingleOptionDialogInput.OptionEntry.create(s, msg().get("dialog.spectate.sort-" + s), s.equals(sort)));
-        }
-        inputs.add(DialogInput.singleOption("sort", msg().get("dialog.spectate.sort"), sorts).width(plugin.gui().wideWidth).build());
         Component body = shown.isEmpty()
             ? msg().get("dialog.spectate.no-results", Messages.text("query", query.strip()))
             : msg().get("dialog.spectate.body", Messages.num("shown", Math.min(shown.size(), limit)), Messages.num("live", live.size()));

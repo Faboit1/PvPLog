@@ -75,6 +75,12 @@ permissions:
   duelcore.hub.build:
     description: Build in the hub (in creative mode)
     default: op
+  duelcore.chatfilter.bypass:
+    description: Messages skip the chat filter
+    default: false
+  duelcore.chatfilter.notify:
+    description: See messages the chat filter blocked
+    default: op
   duelcore.admin:
     description: All DuelCore admin commands (/duelcore)
     default: op

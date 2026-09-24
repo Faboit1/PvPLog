@@ -83,8 +83,7 @@ public final class ClickRouter implements Listener {
             case "settings/save" -> saveSettings(player, view);
             case "spectate/search" -> {
                 String query = view == null ? "" : java.util.Objects.requireNonNullElse(view.getText("search"), "");
-                String sort = view == null ? "" : java.util.Objects.requireNonNullElse(view.getText("sort"), "");
-                plugin.dialogs().spectate(player, query.length() > 32 ? query.substring(0, 32) : query, sort);
+                plugin.dialogs().spectate(player, query.length() > 32 ? query.substring(0, 32) : query);
             }
             case "spectate/match" -> {
                 int id;

@@ -9,7 +9,7 @@ ViaBackwards) could join next to the human testers.
 | Area | Result |
 | --- | --- |
 | Gradle build | ✅ Clean, 0 compiler warnings (`-Xlint:deprecation,unchecked,removal`) |
-| Unit tests | ✅ 20/20: Glicko-2 paper example, Elo, overall Elo, tier ladder, DB round trip on SQLite incl. migrations v1→v3, matchmaker windows/policies, snapshot RLE + Sponge import, bedrock floor, generated maps (fenced, spawns playable, distinct biomes), resource/message key cross-check |
+| Unit tests | ✅ 24/24: chat filter (slurs and evasions blocked, 29 clean look-alikes untouched, swearing masked), kit YAML parsing, Glicko-2 paper example, Elo, overall Elo, tier ladder, DB round trip on SQLite incl. migrations v1→v3, matchmaker windows/policies, snapshot RLE + Sponge import, bedrock floor, generated maps (fenced, spawns playable, distinct biomes), resource/message key cross-check |
 | Boot | ✅ Enables in under 1.3 s. DuelCore logs no errors or warnings (other plugins' errors listed under *Environment notes*) |
 | Full match through the real UI | ✅ `duel1.js`: queue dialog click → match found → countdown → first-to-3 → results dialog → hub hotbar restored → profile and leaderboard dialogs |
 | Arena instances | ✅ Paste, reuse, per-round reset and post-match reset. Every reset in every run ended clean (`dirtyResets=0`) |
@@ -26,6 +26,10 @@ ViaBackwards) could join next to the human testers.
 | Respawn throw | ✅ Probe: 40-block throw, apex +17.4 (target 18), per-tick velocity falls by 0.08 (player gravity), lands on target. In a match: both fighters thrown each round, land within about 2 blocks, then placed exactly on spawn |
 | MOTD | ✅ Server-list ping shows both centered lines and the hover text |
 | Login guard / `/tester` | ✅ `guard.js`: unknown name refused, bot allowed, new tester allowed and IP-locked, wrong IP refused |
+| Tier tags | ✅ `tagcheck.js`: tab shows kit icon + tier (`[netherite_sword]MT5 dcbot_alpha`, best kit), switches to the match kit's icon and tier during a duel (`[dragon_breath]???` in an unranked Pot match), and back after it, for both players |
+| Tab header/footer | ✅ `Cheese PvP` / online · live · queued / ping · TPS, refreshed every 2 s |
+| Chat filter | ✅ `tagcheck.js`: `n1gg.3r` blocked (sender told, other player receives nothing, logged); `fuuuck` masked for the other player; `spicy` passes |
+| All 15 kits | ✅ Bots queued every kit: correct items, potion counts (Pot 35 splash, Netherite Pot 30, SMP 27, Mace 21, Diamond SMP 18), stacked TNT carts, tipped arrows; `/data get` confirms enchantments (Sharp V, Sweeping III, Prot IV) |
 | Persistent arena world | ✅ After a restart all arenas are reused in about 3 s with 0 blocks changed; changed templates are cleared and re-pasted |
 
 ## Leak check
@@ -62,12 +66,12 @@ identical run is the way to confirm a flat heap. Not done yet.
 | Bot run | Respawn throw got rubber-banded by the frozen-state move check | Throws are exempt from it |
 | Unit test | `TierService` crashed when `tiers.yml` had no `format` entries | Copy into an explicit `EnumMap` |
 | Review | Old tier *points* still existed next to Elo | Removed; schema v3 renames the column and rebuilds standings |
+| Kit check | **Kit enchantments were never applied**: Bukkit returns nested YAML maps as `MemorySection`s, so every `enchants:` block was skipped silently | `ItemParser.asMap` accepts sections; regression test; confirmed in game with `/data get` |
 | Deploy | Test-kit edit dropped the login guard (about 1 min, only Faboit joined) | Guard restored, fails closed, covered by `guard.js` |
 
 ## Environment notes (not DuelCore)
 
-- **WorldGuardExtraFlagsPlus** throws `NoClassDefFoundError: PlaceholderExpansion` on joins because PlaceholderAPI
-  is not installed. This was already there before DuelCore.
+- **PlaceholderAPI** 2.12.3 and **PlugManX** 3.2.1 are installed; `%duelcore_…%` placeholders parse.
 - **26.3 clients were kicked** with "invalid packet" on dialogs, later "Failed to decode packet
   'clientbound/minecraft:player_position'" together with Grim flag spam. The cause was **packetevents 2.13.x**, used
   by the standalone plugin and bundled in both Grim builds. It has no 26.3 support: it treats protocol 777 as 26.2 and
@@ -78,8 +82,10 @@ identical run is the way to confirm a flat heap. Not done yet.
   misreads teleports as rotations (setback loop, BadPacketsN/AimDuplicateLook spam, then the kick) and doesn't know
   the dialog IDs (GrimAnticheat/Grim#2887; the fix is the unreleased PR #2888). Applied: standalone packetevents 2.14.0
   (the first with 26.3 support; used by TotemGuard, Sentry and AntiHealthIndicator), ViaVersion 1069 and ViaBackwards
-  634. Grim was briefly removed and then **kept** at the owner's request, so ViaVersion now **blocks protocol 777
-  (26.3)** with the message "26.3 isn't supported yet. Please join with 26.2" until a Grim release supports 26.3. Lightning Grim 2.3.74-00dbb86 had also thrown PacketEvents
+  634. Resolution: Grim is built from source with its 26.3 fix (GrimAnticheat/Grim PR #2888, on top of the
+  2.0 branch the previous build came from) as `grimac-bukkit-2.3.74-pr2888-a7378b3`. It bundles packetevents
+  2.14.0 with the 26.3 mappings, and ViaVersion no longer blocks 26.3. Replace it with an official release once one
+  ships 26.3 support. Lightning Grim 2.3.74-00dbb86 had also thrown PacketEvents
   `ArrayIndexOutOfBoundsException`s on Paper 26.2.
 - **WorldGuardExtraFlagsPlus** disabled itself once its `messages-wgefp.yml` passed YAML's 3 MB limit. Its save
   doubles the apostrophes in "can't" on every write, so three messages had grown to about a million `'` each. The file

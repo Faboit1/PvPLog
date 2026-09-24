@@ -26,6 +26,7 @@ public final class ConfigManager {
     private Messages messages;
     private TierService tiers;
     private GuiConfig gui;
+    private top.cheesesmp.duelcore.chat.ChatFilter chatFilter;
 
     public ConfigManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -40,6 +41,11 @@ public final class ConfigManager {
         this.messages = new Messages(msg, plugin.getLogger());
         this.tiers = parseTiers(tierYml);
         this.gui = new GuiConfig(guiYml);
+        this.chatFilter = new top.cheesesmp.duelcore.chat.ChatFilter(loadWithDefaults("chat-filter.yml"), plugin.getLogger());
+    }
+
+    public top.cheesesmp.duelcore.chat.ChatFilter chatFilter() {
+        return chatFilter;
     }
 
     private YamlConfiguration loadWithDefaults(String name) {

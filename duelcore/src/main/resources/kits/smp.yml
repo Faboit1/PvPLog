@@ -1,6 +1,7 @@
-# SMP: netherite survival PvP with everything a real SMP fight has.
+# SMP: netherite SMP. Maxed netherite, two swords, axe, shield, one totem, 128 gapples, 32 pearls, 12 Strength II,
+# 12 Speed II and 3 Fire Resistance splash potions. No mace, crystals or anchors.
 display-name: "SMP"
-description: "Netherite SMP gear: pearls, gapples, totems, potions."
+description: "Maxed netherite SMP gear: pearls, gapples, a totem and potions."
 icon: ender_pearl
 category: extra
 order: 11
@@ -26,27 +27,46 @@ rules:
   item-drops: false
 loadout:
   armor:
-    helmet: { item: netherite_helmet, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
+    helmet: { item: netherite_helmet, enchants: { protection: 4, unbreaking: 3, mending: 1, respiration: 3, aqua_affinity: 1 } }
     chestplate: { item: netherite_chestplate, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
-    leggings: { item: netherite_leggings, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
-    boots: { item: netherite_boots, enchants: { protection: 4, feather_falling: 4, unbreaking: 3, mending: 1 } }
+    leggings: { item: netherite_leggings, enchants: { protection: 4, unbreaking: 3, mending: 1, swift_sneak: 3 } }
+    boots: { item: netherite_boots, enchants: { protection: 4, unbreaking: 3, mending: 1, feather_falling: 4, depth_strider: 3, soul_speed: 3 } }
   items:
-    0: { item: netherite_sword, enchants: { sharpness: 5, unbreaking: 3 } }
-    1: { item: netherite_axe, enchants: { sharpness: 5, unbreaking: 3 } }
+    0: { item: netherite_sword, enchants: { sharpness: 5, fire_aspect: 2, sweeping_edge: 3, unbreaking: 3, mending: 1 } }
+    1: { item: netherite_axe, enchants: { sharpness: 5, efficiency: 5, unbreaking: 3, mending: 1 } }
     2: { item: golden_apple, amount: 64 }
     3: { item: ender_pearl, amount: 16 }
-    4: { item: wind_charge, amount: 32 }
-    5: water_bucket
-    6: { item: cobweb, amount: 16 }
-    7: { item: experience_bottle, amount: 64 }
-    8: { item: totem_of_undying }
-    9: { item: splash_potion, potion: strong_healing }
-    10: { item: splash_potion, potion: strong_healing }
-    11: { item: potion, potion: strong_strength }
-    12: { item: potion, potion: strong_swiftness }
-    13: { item: potion, potion: long_fire_resistance }
-    14: { item: cobblestone, amount: 64 }
-    15: lava_bucket
-    16: { item: totem_of_undying }
-    17: { item: totem_of_undying }
-  offhand: { item: shield, enchants: { unbreaking: 3 } }
+    4: { item: experience_bottle, amount: 64 }
+    5: { item: splash_potion, potion: strong_strength }
+    6: { item: splash_potion, potion: strong_swiftness }
+    7: { item: splash_potion, potion: long_fire_resistance }
+    8: totem_of_undying
+    9: { item: netherite_sword, enchants: { sharpness: 5, fire_aspect: 2, knockback: 1, sweeping_edge: 3, unbreaking: 3, mending: 1 } }
+    10: { item: golden_apple, amount: 64 }
+    11: { item: ender_pearl, amount: 16 }
+    12: { item: splash_potion, potion: strong_strength }
+    13: { item: splash_potion, potion: strong_strength }
+    14: { item: splash_potion, potion: strong_strength }
+    15: { item: splash_potion, potion: strong_strength }
+    16: { item: splash_potion, potion: strong_strength }
+    17: { item: splash_potion, potion: strong_strength }
+    18: { item: splash_potion, potion: strong_strength }
+    19: { item: splash_potion, potion: strong_strength }
+    20: { item: splash_potion, potion: strong_strength }
+    21: { item: splash_potion, potion: strong_strength }
+    22: { item: splash_potion, potion: strong_strength }
+    23: { item: splash_potion, potion: strong_swiftness }
+    24: { item: splash_potion, potion: strong_swiftness }
+    25: { item: splash_potion, potion: strong_swiftness }
+    26: { item: splash_potion, potion: strong_swiftness }
+    27: { item: splash_potion, potion: strong_swiftness }
+    28: { item: splash_potion, potion: strong_swiftness }
+    29: { item: splash_potion, potion: strong_swiftness }
+    30: { item: splash_potion, potion: strong_swiftness }
+    31: { item: splash_potion, potion: strong_swiftness }
+    32: { item: splash_potion, potion: strong_swiftness }
+    33: { item: splash_potion, potion: strong_swiftness }
+    34: { item: splash_potion, potion: long_fire_resistance }
+    35: { item: splash_potion, potion: long_fire_resistance }
+  offhand: { item: shield, enchants: { unbreaking: 3, mending: 1 } }
+effects: []

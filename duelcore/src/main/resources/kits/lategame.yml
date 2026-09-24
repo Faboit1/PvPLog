@@ -1,6 +1,7 @@
-# Late Game: late survival gear. Mixed diamond/netherite, webs, lava and a totem.
+# Late Game: Protection IV diamond, Sharpness V sword and axe, shield, Power IV bow, gapples, pearls, buckets,
+# cobwebs, one totem and Strength/Speed II.
 display-name: "Late Game"
-description: "Enchanted late-game survival loadout."
+description: "Maxed diamond survival gear: shield, bow, buckets and a totem."
 icon: diamond_chestplate
 category: main
 order: 8
@@ -15,7 +16,7 @@ rules:
   fall-damage: true
   build: true
   break: all
-  allowed-blocks: [cobblestone, oak_planks, cobweb, water, lava]
+  allowed-blocks: [cobblestone, cobweb, water, lava]
   ender-pearls: true
   pearl-cooldown: 1
   totems: true
@@ -27,21 +28,26 @@ rules:
 loadout:
   armor:
     helmet: { item: diamond_helmet, enchants: { protection: 4, unbreaking: 3 } }
-    chestplate: { item: netherite_chestplate, enchants: { protection: 4, unbreaking: 3 } }
-    leggings: { item: netherite_leggings, enchants: { protection: 4, unbreaking: 3 } }
-    boots: { item: diamond_boots, enchants: { protection: 4, feather_falling: 4, unbreaking: 3 } }
+    chestplate: { item: diamond_chestplate, enchants: { protection: 4, unbreaking: 3 } }
+    leggings: { item: diamond_leggings, enchants: { protection: 4, unbreaking: 3 } }
+    boots: { item: diamond_boots, enchants: { protection: 4, unbreaking: 3 } }
   items:
-    0: { item: netherite_sword, enchants: { sharpness: 5, unbreaking: 3 } }
-    1: { item: netherite_axe, enchants: { sharpness: 5, unbreaking: 3 } }
-    2: { item: bow, enchants: { power: 5, unbreaking: 3 } }
-    3: { item: crossbow, enchants: { quick_charge: 3, piercing: 4 } }
-    4: water_bucket
-    5: lava_bucket
-    6: { item: golden_apple, amount: 16 }
-    7: { item: ender_pearl, amount: 8 }
-    8: { item: cobblestone, amount: 64 }
-    9: { item: arrow, amount: 64 }
-    10: { item: cobweb, amount: 8 }
-    11: { item: cooked_beef, amount: 64 }
-    12: { item: diamond_pickaxe, enchants: { efficiency: 5 } }
+    0: { item: diamond_sword, enchants: { sharpness: 5, unbreaking: 3 } }
+    1: { item: diamond_axe, enchants: { sharpness: 5, efficiency: 5, unbreaking: 3 } }
+    2: { item: bow, enchants: { power: 4, unbreaking: 3 } }
+    3: { item: golden_apple, amount: 16 }
+    4: { item: ender_pearl, amount: 16 }
+    5: water_bucket
+    6: { item: cobblestone, amount: 64 }
+    7: { item: cobweb, amount: 16 }
+    8: { item: cooked_beef, amount: 64 }
+    9: { item: arrow, amount: 32 }
+    10: lava_bucket
+    11: { item: splash_potion, potion: strong_strength }
+    12: { item: splash_potion, potion: strong_strength }
+    13: { item: splash_potion, potion: strong_swiftness }
+    14: { item: splash_potion, potion: strong_swiftness }
+    15: { item: diamond_pickaxe, enchants: { efficiency: 5, unbreaking: 3 } }
+    16: totem_of_undying
   offhand: { item: shield, enchants: { unbreaking: 3 } }
+effects: []

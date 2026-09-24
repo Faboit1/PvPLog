@@ -146,6 +146,7 @@ public final class MatchService implements Runnable {
                     Messages.text("region", oppProfile == null || oppProfile.region() == null ? "" : oppProfile.region())),
                 Title.Times.times(Duration.ofMillis(150), Duration.ofMillis(1600), Duration.ofMillis(300))));
             plugin.sidebar().refresh(player);
+            plugin.tags().update(player); // the tag now shows this match's kit and tier
         }
         Bukkit.getPluginManager().callEvent(new MatchStartEvent(match));
         plugin.arenas().acquire(kit.arenaTags()).whenComplete((instance, error) ->

@@ -1,6 +1,7 @@
-# Diamond SMP: maxed diamond survival gear.
+# Diamond SMP: the SMP kit in maxed diamond: sword, axe, shield, one totem, gapples, pearls, cobwebs, buckets and
+# Strength/Speed/Fire Resistance splash potions.
 display-name: "Diamond SMP"
-description: "Maxed diamond gear, shield, bow and a couple of totems."
+description: "Maxed diamond SMP gear: shield, cobwebs, pearls, a totem and potions."
 icon: diamond_sword
 category: extra
 order: 10
@@ -15,7 +16,7 @@ rules:
   fall-damage: true
   build: true
   break: all
-  allowed-blocks: [cobblestone, cobweb, water]
+  allowed-blocks: [cobblestone, cobweb, water, lava]
   ender-pearls: true
   pearl-cooldown: 1
   totems: true
@@ -26,23 +27,38 @@ rules:
   item-drops: false
 loadout:
   armor:
-    helmet: { item: diamond_helmet, enchants: { protection: 4, unbreaking: 3 } }
-    chestplate: { item: diamond_chestplate, enchants: { protection: 4, unbreaking: 3 } }
-    leggings: { item: diamond_leggings, enchants: { protection: 4, unbreaking: 3 } }
-    boots: { item: diamond_boots, enchants: { protection: 4, feather_falling: 4, unbreaking: 3 } }
+    helmet: { item: diamond_helmet, enchants: { protection: 4, unbreaking: 3, mending: 1, respiration: 3, aqua_affinity: 1 } }
+    chestplate: { item: diamond_chestplate, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
+    leggings: { item: diamond_leggings, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
+    boots: { item: diamond_boots, enchants: { protection: 4, unbreaking: 3, mending: 1, feather_falling: 4, depth_strider: 3 } }
   items:
-    0: { item: diamond_sword, enchants: { sharpness: 5, unbreaking: 3 } }
-    1: { item: diamond_axe, enchants: { sharpness: 5, unbreaking: 3 } }
-    2: { item: bow, enchants: { power: 5, unbreaking: 3 } }
-    3: { item: golden_apple, amount: 32 }
-    4: { item: ender_pearl, amount: 16 }
+    0: { item: diamond_sword, enchants: { sharpness: 5, fire_aspect: 2, unbreaking: 3, mending: 1 } }
+    1: { item: diamond_axe, enchants: { sharpness: 5, efficiency: 5, unbreaking: 3, mending: 1 } }
+    2: { item: golden_apple, amount: 64 }
+    3: { item: ender_pearl, amount: 16 }
+    4: { item: cobweb, amount: 64 }
     5: water_bucket
-    6: { item: cobweb, amount: 8 }
-    7: { item: cobblestone, amount: 64 }
-    8: { item: totem_of_undying }
-    9: { item: arrow, amount: 64 }
-    10: { item: potion, potion: strong_swiftness }
-    11: { item: potion, potion: strong_strength }
-    12: { item: cooked_beef, amount: 64 }
-    13: { item: totem_of_undying }
-  offhand: { item: shield, enchants: { unbreaking: 3 } }
+    6: { item: splash_potion, potion: strong_strength }
+    7: { item: splash_potion, potion: strong_swiftness }
+    8: totem_of_undying
+    9: { item: experience_bottle, amount: 64 }
+    10: { item: cobblestone, amount: 64 }
+    11: lava_bucket
+    12: { item: splash_potion, potion: strong_strength }
+    13: { item: splash_potion, potion: strong_strength }
+    14: { item: splash_potion, potion: strong_strength }
+    15: { item: splash_potion, potion: strong_strength }
+    16: { item: splash_potion, potion: strong_strength }
+    17: { item: splash_potion, potion: strong_strength }
+    18: { item: splash_potion, potion: strong_strength }
+    19: { item: splash_potion, potion: strong_swiftness }
+    20: { item: splash_potion, potion: strong_swiftness }
+    21: { item: splash_potion, potion: strong_swiftness }
+    22: { item: splash_potion, potion: strong_swiftness }
+    23: { item: splash_potion, potion: strong_swiftness }
+    24: { item: splash_potion, potion: strong_swiftness }
+    25: { item: splash_potion, potion: strong_swiftness }
+    26: { item: splash_potion, potion: long_fire_resistance }
+    27: { item: splash_potion, potion: long_fire_resistance }
+  offhand: { item: shield, enchants: { unbreaking: 3, mending: 1 } }
+effects: []

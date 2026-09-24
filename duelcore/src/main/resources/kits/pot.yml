@@ -1,8 +1,8 @@
-# Pot: splash healing, pearls and speed. The classic.
+# Pot: MCTiers diamond pot. 26 splash Healing II, 3 each of Speed II, Strength II and Regeneration; no pearls.
 display-name: "Pot"
-description: "Diamond gear and healing splash potions."
+description: "Diamond gear, Sharpness V and 26 healing splash potions."
 icon: splash_potion
-sprite: "gui:mob_effect/instant_health"
+sprite: "items:item/dragon_breath#ff6e6e"
 category: main
 order: 5
 enabled: true
@@ -16,8 +16,7 @@ rules:
   fall-damage: true
   build: false
   break: all
-  ender-pearls: true
-  pearl-cooldown: 15
+  ender-pearls: false
   totems: false
   crystals: false
   anchors: false
@@ -28,16 +27,43 @@ loadout:
     helmet: { item: diamond_helmet, enchants: { protection: 4, unbreaking: 3 } }
     chestplate: { item: diamond_chestplate, enchants: { protection: 4, unbreaking: 3 } }
     leggings: { item: diamond_leggings, enchants: { protection: 4, unbreaking: 3 } }
-    boots: { item: diamond_boots, enchants: { protection: 4, unbreaking: 3, feather_falling: 4 } }
+    boots: { item: diamond_boots, enchants: { protection: 4, unbreaking: 3 } }
   items:
-    0: { item: diamond_sword, enchants: { sharpness: 5, fire_aspect: 2, unbreaking: 3 } }
-    1: { item: ender_pearl, amount: 16 }
-    2: { item: splash_potion, potion: strong_swiftness }
-    3: { item: splash_potion, potion: fire_resistance }
-    8: { item: cooked_beef, amount: 64 }
-    17: { item: splash_potion, potion: strong_swiftness }
-    26: { item: splash_potion, potion: strong_swiftness }
-    35: { item: splash_potion, potion: strong_swiftness }
-  fill:
-    item: { item: splash_potion, potion: strong_healing }
+    0: { item: diamond_sword, enchants: { sharpness: 5, sweeping_edge: 3, unbreaking: 3 } }
+    1: { item: splash_potion, potion: strong_healing }
+    2: { item: splash_potion, potion: strong_healing }
+    3: { item: splash_potion, potion: strong_healing }
+    4: { item: splash_potion, potion: strong_healing }
+    5: { item: splash_potion, potion: strong_healing }
+    6: { item: splash_potion, potion: strong_healing }
+    7: { item: splash_potion, potion: strong_healing }
+    8: { item: splash_potion, potion: strong_healing }
+    9: { item: splash_potion, potion: strong_healing }
+    10: { item: splash_potion, potion: strong_healing }
+    11: { item: splash_potion, potion: strong_healing }
+    12: { item: splash_potion, potion: strong_healing }
+    13: { item: splash_potion, potion: strong_healing }
+    14: { item: splash_potion, potion: strong_healing }
+    15: { item: splash_potion, potion: strong_swiftness }
+    16: { item: splash_potion, potion: strong_strength }
+    17: { item: splash_potion, potion: long_regeneration }
+    18: { item: splash_potion, potion: strong_healing }
+    19: { item: splash_potion, potion: strong_healing }
+    20: { item: splash_potion, potion: strong_healing }
+    21: { item: splash_potion, potion: strong_healing }
+    22: { item: splash_potion, potion: strong_healing }
+    23: { item: splash_potion, potion: strong_healing }
+    24: { item: splash_potion, potion: strong_swiftness }
+    25: { item: splash_potion, potion: strong_strength }
+    26: { item: splash_potion, potion: long_regeneration }
+    27: { item: splash_potion, potion: strong_healing }
+    28: { item: splash_potion, potion: strong_healing }
+    29: { item: splash_potion, potion: strong_healing }
+    30: { item: splash_potion, potion: strong_healing }
+    31: { item: splash_potion, potion: strong_healing }
+    32: { item: splash_potion, potion: strong_healing }
+    33: { item: splash_potion, potion: strong_swiftness }
+    34: { item: splash_potion, potion: strong_strength }
+    35: { item: splash_potion, potion: long_regeneration }
+  offhand: { item: cooked_beef, amount: 5 }
 effects: []

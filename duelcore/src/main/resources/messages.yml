@@ -127,6 +127,10 @@ spectate:
 settings:
   saved: "<muted>Settings saved · region <text><region></text> · max ping <text><max_ping></text></muted>"
 
+chat:
+  blocked: "<bad>Your message was blocked: it contains a slur or harassment.</bad>"
+  blocked-staff: "<muted>[filter]</muted> <text><player></text> <muted>tried to say</muted> <text><message></text> <muted>(<term>)</muted>"
+
 profile:
   not-found: "<muted>No profile for <text><player></text>.</muted>"
   no-legacy: "<muted>There is no previous season yet.</muted>"
@@ -249,10 +253,6 @@ dialog:
     none: "<muted>No matches are live right now.</muted>"
     no-results: "<muted>No live match matches <text><query></text>.</muted>"
     search-label: "Search player or kit"
-    sort: "Sort by"
-    sort-elo: "Elo"
-    sort-newest: "Newest"
-    sort-watchers: "Watchers"
     search: "<text>Search</text>"
     match: "<kit_icon> <text><red></text> <accent><red_score>–<blue_score></accent> <text><blue></text> <muted>· <elo></muted>"
     tooltip: "<text><kit></text> <muted>· <mode> · <elo> Elo · round <round> · first to <first_to> · <spectators> watching</muted>"

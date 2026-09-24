@@ -114,13 +114,30 @@ sidebar:
     - ""
     - "<muted>cheesesmp.top</muted>"
 
-# Tier tags. <tier> = the formatted overall tier (tiers.yml → format), <name> = player name.
+# Tier tags: the icon of a kit followed by the tier in it. In the hub the player's best kit (best tier, then highest
+# rating), during a match the match's kit with the tier they had when it started. The tab list is sorted by tier.
+# <tier> in chat/tab/nametag-prefix = the whole tag; in icon-tier: <icon> = kit sprite, <tier> = tiers.yml format.
 tags:
+  icon-tier: "<icon><tier>"
   chat: "<tier> <text><name></text><muted>:</muted> <message>"
   tab: "<tier> <text><name></text>"
   nametag-prefix: "<tier> "
   # Hide the tag for players who have no ranked kit yet (instead of showing "???").
   hide-unranked: false
+
+# Tab list header and footer, refreshed every 2 s. Empty lists = none.
+# Placeholders: <online> <live> <fighting> <queued> <ping> <tps>
+tab:
+  header:
+    - ""
+    - "<#f2c14e><b>Cheese PvP</b></#f2c14e>"
+    - "<#8b9099><online> online</#8b9099> <#4b4f57>·</#4b4f57> <#8b9099><live> live</#8b9099> <#4b4f57>·</#4b4f57> <#8b9099><queued> queued</#8b9099>"
+    - ""
+  footer:
+    - ""
+    - "<#8b9099>Ping</#8b9099> <#d8dbe0><ping>ms</#d8dbe0> <#4b4f57>·</#4b4f57> <#8b9099>TPS</#8b9099> <#d8dbe0><tps></#d8dbe0>"
+    - "<#4b4f57>cheesesmp.top</#4b4f57>"
+    - ""
 
 dialogs:
   # Columns in the kit picker and leaderboard kit list.

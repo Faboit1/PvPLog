@@ -14,6 +14,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -41,7 +42,8 @@ public final class ItemParser {
     public static ItemStack parse(Object spec, List<String> errors, String where) {
         try {
             if (spec instanceof String s) return fromString(s, 1);
-            if (spec instanceof Map<?, ?> map) return fromMap(map, errors, where);
+            Map<?, ?> map = asMap(spec);
+            if (map != null) return fromMap(map, errors, where);
             errors.add(where + ": unsupported item value " + spec);
         } catch (IllegalArgumentException e) {
             errors.add(where + ": " + e.getMessage());
@@ -71,7 +73,8 @@ public final class ItemParser {
         ItemMeta meta = stack.getItemMeta();
         if (meta == null) return stack;
 
-        if (map.get("enchants") instanceof Map<?, ?> enchants) {
+        Map<?, ?> enchants = asMap(map.get("enchants"));
+        if (enchants != null) {
             for (Map.Entry<?, ?> e : enchants.entrySet()) {
                 Enchantment enchantment = enchantment(String.valueOf(e.getKey()));
                 if (enchantment == null) {
@@ -102,6 +105,16 @@ public final class ItemParser {
         if (Boolean.TRUE.equals(map.get("unbreakable"))) meta.setUnbreakable(true);
         stack.setItemMeta(meta);
         return stack;
+    }
+
+    /**
+     * A map for a YAML value: Bukkit hands nested maps over as {@link ConfigurationSection}s (also inside the values of
+     * {@code getValues(false)}), so both forms are accepted. Null for anything else.
+     */
+    static @Nullable Map<?, ?> asMap(@Nullable Object value) {
+        if (value instanceof Map<?, ?> m) return m;
+        if (value instanceof ConfigurationSection section) return section.getValues(false);
+        return null;
     }
 
     public static @Nullable Enchantment enchantment(String name) {

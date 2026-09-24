@@ -119,6 +119,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         pm.registerEvents(duels, this);
         pm.registerEvents(sidebar, this);
         pm.registerEvents(tags, this);
+        pm.registerEvents(new top.cheesesmp.duelcore.chat.ChatFilterListener(this), this);
         pm.registerEvents(new ClickRouter(this), this);
         pm.registerEvents(results, this);
         pm.registerEvents(respawnPull, this);
@@ -131,6 +132,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         scheduler.runTaskTimer(this, arenas.queue(), 1L, 1L);
         scheduler.runTaskTimer(this, queue, 20L, cfg.mmIntervalTicks);
         scheduler.runTaskTimer(this, sidebar, 20L, 20L);
+        scheduler.runTaskTimer(this, tags, 40L, 40L);
         scheduler.runTaskTimer(this, duels, 20L, 20L);
         scheduler.runTaskTimer(this, leaderboards, 200L, 200L);
         scheduler.runTaskTimer(this, profiles::sweep, 1200L, 1200L);
@@ -253,6 +255,10 @@ public final class DuelCorePlugin extends JavaPlugin {
 
     public SidebarService sidebar() {
         return sidebar;
+    }
+
+    public top.cheesesmp.duelcore.chat.ChatFilter chatFilter() {
+        return config.chatFilter();
     }
 
     public TagService tags() {

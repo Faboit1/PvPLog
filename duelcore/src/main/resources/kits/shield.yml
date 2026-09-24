@@ -1,6 +1,7 @@
-# Shield: axe to break shields, sword to punish.
+# Shield: the MCTiers "Axe" kit. Unenchanted diamond, shield, axe to disable shields, sword to punish,
+# bow and crossbow to poke.
 display-name: "Shield"
-description: "Axe, sword and shield. Break the guard, then strike."
+description: "Unenchanted diamond, axe, sword, shield, bow and crossbow."
 icon: diamond_axe
 category: main
 order: 4
@@ -34,3 +35,4 @@ loadout:
     3: bow
     8: { item: arrow, amount: 6 }
   offhand: shield
+effects: []

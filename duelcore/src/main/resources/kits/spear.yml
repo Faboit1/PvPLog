@@ -1,6 +1,7 @@
-# Spear: the new spears with lunge, backed by a sword.
+# Spear: maxed netherite spear with Lunge III (drains hunger, so food matters), sword backup, shield, a totem,
+# gapples, pearls and Strength/Speed II.
 display-name: "Spear"
-description: "Netherite spear with lunge. Close the gap, then finish."
+description: "Maxed netherite spear with Lunge, sword backup and a totem."
 icon: netherite_spear
 category: main
 order: 2
@@ -11,23 +12,35 @@ round-time-limit: 180
 arena-tags: [terrain]
 rules:
   natural-regen: true
-  hunger: false
+  hunger: true
   fall-damage: true
   build: false
   break: all
-  ender-pearls: false
-  totems: false
+  ender-pearls: true
+  pearl-cooldown: 1
+  totems: true
   crystals: false
   anchors: false
   cobwebs: false
   item-drops: false
 loadout:
   armor:
-    helmet: { item: diamond_helmet, enchants: { protection: 2 } }
-    chestplate: { item: diamond_chestplate, enchants: { protection: 2 } }
-    leggings: { item: diamond_leggings, enchants: { protection: 2 } }
-    boots: { item: diamond_boots, enchants: { protection: 2 } }
+    helmet: { item: netherite_helmet, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
+    chestplate: { item: netherite_chestplate, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
+    leggings: { item: netherite_leggings, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
+    boots: { item: netherite_boots, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
   items:
-    0: { item: netherite_spear, enchants: { lunge: 3, sharpness: 2 } }
-    1: { item: diamond_sword, enchants: { sharpness: 2 } }
-    2: { item: golden_apple, amount: 4 }
+    0: { item: netherite_spear, enchants: { sharpness: 5, lunge: 3, unbreaking: 3, mending: 1 } }
+    1: { item: netherite_sword, enchants: { sharpness: 5, unbreaking: 3, mending: 1 } }
+    2: { item: golden_apple, amount: 64 }
+    3: { item: cooked_beef, amount: 64 }
+    4: { item: ender_pearl, amount: 16 }
+    5: { item: splash_potion, potion: strong_strength }
+    6: { item: splash_potion, potion: strong_swiftness }
+    7: { item: splash_potion, potion: strong_strength }
+    8: totem_of_undying
+    9: { item: splash_potion, potion: strong_strength }
+    10: { item: splash_potion, potion: strong_swiftness }
+    11: { item: splash_potion, potion: strong_swiftness }
+  offhand: { item: shield, enchants: { unbreaking: 3, mending: 1 } }
+effects: []

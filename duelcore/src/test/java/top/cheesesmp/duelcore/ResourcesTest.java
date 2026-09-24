@@ -123,9 +123,10 @@ class ResourcesTest {
     void defaultKitsAreWellFormed() throws IOException {
         Set<String> enchants = Set.of("protection", "blast_protection", "sharpness", "unbreaking", "fire_aspect", "feather_falling",
             "mending", "density", "wind_burst", "power", "punch", "flame", "infinity", "lunge", "efficiency", "quick_charge",
-            "piercing", "knockback", "breach");
+            "piercing", "knockback", "breach", "sweeping_edge", "respiration", "aqua_affinity", "swift_sneak", "depth_strider",
+            "soul_speed", "silk_touch", "multishot", "projectile_protection");
         Set<String> potions = Set.of("strong_healing", "strong_swiftness", "fire_resistance", "long_fire_resistance",
-            "strong_strength", "swiftness", "strength");
+            "strong_strength", "swiftness", "strength", "long_regeneration", "long_slow_falling");
         for (String id : KitManager.DEFAULT_KITS) {
             Map<String, Object> kit = yaml("kits/" + id + ".yml");
             assertNotNull(kit.get("display-name"), id + " display-name");
@@ -147,7 +148,7 @@ class ResourcesTest {
             if (loadout.get("offhand") != null) specs.add(loadout.get("offhand"));
             if (loadout.get("fill") instanceof Map<?, ?> fill) specs.add(fill.get("item"));
             for (Object spec : specs) {
-                String item = spec instanceof Map<?, ?> m ? String.valueOf(m.get("item")) : String.valueOf(spec);
+                String item = (spec instanceof Map<?, ?> m ? String.valueOf(m.get("item")) : String.valueOf(spec)).split("\\[")[0];
                 assertNotNull(org.bukkit.Material.matchMaterial(item), id + ": unknown item " + item);
                 if (spec instanceof Map<?, ?> m) {
                     if (m.get("enchants") instanceof Map<?, ?> en) {

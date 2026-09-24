@@ -122,6 +122,34 @@ Item fields: `item`, `amount`, `enchants`, `name`, `lore`, `potion`, `unbreakabl
 component string). Kits with `build: true` keep what they mine: the block's normal drops go straight into the
 inventory.
 
+`sprite:` takes `atlas:path`, optionally tinted with `#rrggbb` (e.g. `items:item/dragon_breath#ff6e6e` for the Pot
+kit, since vanilla has no single red-potion texture). A vanilla item string can change components the YAML keys
+don't cover, e.g. `"tnt_minecart[max_stack_size=64]"` to stack carts.
+
+**Default kits.** The kit ids match MCPVP's list. MCPVP hasn't published kit contents, so the loadouts follow the
+widely copied MCTiers default layouts (all enchantments maxed unless noted):
+
+| Kit | Loadout |
+| --- | --- |
+| Sword | Diamond Prot I, diamond sword Sharpness I |
+| Shield | Unenchanted diamond, shield, diamond axe and sword, bow, crossbow, 6 arrows |
+| Pot | Diamond Prot IV, sword Sharp V/Sweeping III, 26 splash Healing II, 3 each Speed II, Strength II, Regeneration; 5 steak |
+| Netherite Pot | Netherite Prot IV/Mending, sword Sharp V, 21 Healing II, 3 each Strength, Speed, Fire Resistance, 3 totems, 64 gapples, 128 XP |
+| SMP | Netherite with helmet/leggings/boots utility enchants, two Sharp V/Fire Aspect II swords (one Knockback I), Sharp V axe, shield, 1 totem, 128 gapples, 32 pearls, 64 XP, 12 Strength II, 12 Speed II, 3 Fire Resistance |
+| Diamond SMP | SMP in diamond: sword, axe, shield, 1 totem, gapples, pearls, 64 cobwebs, buckets, Strength/Speed/Fire Resistance |
+| Crystal | Netherite (Blast Prot IV legs and boots), sword, Silk Touch pickaxe, 128 crystals and obsidian, 64 anchors and glowstone, 9 totems, 128 gapples, 48 pearls, 128 XP, slow-falling crossbow |
+| Mace | Netherite, Density V + Wind Burst mace and Breach IV mace, sword, axe, shield, elytra, 2 totems, 128 wind charges, 16 pearls, 64 gapples, 13 Strength II, 8 Speed II |
+| Cart | Netherite, Power V/Flame/Punch/Infinity bow, Piercing IV crossbow, 64 stacked TNT carts, 128 rails, planks, cobwebs, 2 totems, gapples, pearls |
+| Creeper | Netherite (Blast Prot legs and boots), 64 creeper eggs, 2 flint and steel, shield, 2 totems, gapples, pearls, cobwebs, planks |
+| Spear | Netherite, spear Sharp V/Lunge III, sword, shield, 1 totem, gapples, steak, pearls, Strength/Speed II |
+| Early Game | Iron Prot II, iron sword and axe, shield, Power I bow, 4 gapples, steak, cobblestone, buckets |
+| Late Game | Diamond Prot IV, Sharp V sword and axe, shield, Power IV bow, 16 gapples, 16 pearls, buckets, cobwebs, 1 totem |
+| End Game | Netherite, sword, axe, pickaxe, 64 crystals and obsidian, 32 anchors and glowstone, elytra + rockets, shield, 5 totems, gapples, pearls, potions |
+| Bow | Iron/chain Projectile Prot II, Power V/Punch/Infinity bow, Quick Charge crossbow, iron sword |
+
+Kit files already on a server are not overwritten on update; delete a file (or copy the new default over it) to get
+the new loadout.
+
 ---
 
 ## Commands
@@ -134,7 +162,7 @@ Player commands (all players by default):
 | `/leave` | `/forfeit` | Leaves the queue, stops spectating, or forfeits (asks to confirm within 5 s) |
 | `/profile [player]` | `/stats` | Profile: overall tier and Elo, per-kit tier/rating/record, recent matches. `/profile <p> legacy` shows last season |
 | `/leaderboard [kit\|overall] [region]` | `/lb`, `/top` | Leaderboards, global or per region |
-| `/spectate [player]` | `/spec` | Watch a match. Without a name it opens the live list (search, sort by Elo/newest/watchers). `/spectate stop` |
+| `/spectate [player]` | `/spec` | Watch a match. Without a name it opens the live list (search; highest Elo first, then by name). `/spectate stop` |
 | `/duel [player] [kit]` | | Unranked challenge. Without arguments it opens a player picker. `/duel accept\|deny <player>` |
 | `/settings` | | Duel requests, sidebar, sounds, chat tags, hub visibility, spectators, region, country, max ping |
 
@@ -165,6 +193,8 @@ Staff:
 | `duelcore.tier` | op | `/tier` |
 | `duelcore.bypass.commands` | op | Any command during a match (others are limited to `match.allowed-commands`) |
 | `duelcore.hub.build` | op | Build in the hub (in creative) |
+| `duelcore.chatfilter.notify` | op | See messages the chat filter blocked |
+| `duelcore.chatfilter.bypass` | false | Messages skip the chat filter (not even ops have it unless given) |
 | `duelcore.admin` | op | All admin permissions: `.reload`, `.sethub`, `.arena`, `.kit`, `.season`, `.rating`, `.debug`, `.match`, `.tournament` |
 
 ---
@@ -203,9 +233,20 @@ the overall Elo: the average rating of every kit a player has finished placement
 
 - Hotbar items.
 - Sidebar lines for hub, queue, match and spectate.
-- Chat, tab and nametag formats.
+- Tier tags (`tags`): the icon of a kit followed by the tier in it (`icon-tier: "<icon><tier>"`). In the hub a
+  player shows their best kit (best tier, then highest rating), during a match the match's kit with the tier they had
+  when it started. Chat, tab and nametag formats. The tab list is sorted by tier, best first.
+- Tab header and footer (`tab`): online/live/queued counts, ping and TPS.
 - Dialog sizes (`kit-columns`, `wide-width`, `leaderboard-lines`, `spectate-limit`).
 - `motd`: two server-list lines, centered automatically, plus the hover text.
+
+**chat-filter.yml**: blocks slurs and harassment, masks swearing, in chat and private messages (`/msg`, `/tell`,
+`/r`, `/me`, …). Terms are written plainly and also catch leetspeak (`n1gg3r`, `f@g`), look-alike letters from
+other alphabets, accents, zero-width characters, stretched letters, up to three separators between letters
+(`n.i.g g-a`) and common endings. `allow` lists innocent words that contain a term (`raccoon`, `spicy`,
+`Scunthorpe`). `on-block-commands` can mute or warn. Staff with `duelcore.chatfilter.notify` see blocked messages.
+Note: masked words are sent as the server-side edit of a player message; clients with "Only Show Secure Chat" on
+still see the original of a *masked* message (blocked messages never reach anyone).
 
 **messages.yml**: every player-facing text. The theme tags `<accent> <text> <muted> <good> <bad>` are defined at the
 top, so recolouring means editing five lines.
@@ -241,7 +282,8 @@ Scripts:
 | `duel1.js` | Full match through the real UI (queue dialog click), respawn pull between rounds, results dialog, hub restore, profile and leaderboard dialogs |
 | `forfeit.js` | Disconnect during a match gives the win to the opponent, rating saved |
 | `load.js` | N bots in parallel over several kits until X matches are done (matchmaker widening, arena pooling) |
-| `specsearch.js` | Spectate list sorted by Elo, search by name and kit, no-results text, spectating a result |
+| `specsearch.js` | Spectate list sorted by Elo then name, search by name and kit, no-results text, spectating a result |
+| `tagcheck.js [kit] [icon]` | Tab header/footer, slur blocked, swearing masked, clean text untouched, tab tag switches to the match kit's icon during a match and back after, kit loadout |
 | `ping.js` | Server list MOTD and hover |
 
 Never install the test kit on a production server.

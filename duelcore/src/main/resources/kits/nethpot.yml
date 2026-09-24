@@ -1,6 +1,6 @@
-# Netherite Pot: netherite with strength, healing pots and gapples.
+# Netherite Pot: maxed netherite, 21 splash Healing II, Strength/Speed II, Fire Resistance, 3 totems, gapples, XP.
 display-name: "Netherite Pot"
-description: "Netherite, strength, healing pots and totems."
+description: "Maxed netherite, healing pots, gapples and three totems."
 icon: netherite_chestplate
 category: extra
 order: 9
@@ -15,8 +15,7 @@ rules:
   fall-damage: true
   build: false
   break: all
-  ender-pearls: true
-  pearl-cooldown: 15
+  ender-pearls: false
   totems: true
   crystals: false
   anchors: false
@@ -27,21 +26,43 @@ loadout:
     helmet: { item: netherite_helmet, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
     chestplate: { item: netherite_chestplate, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
     leggings: { item: netherite_leggings, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
-    boots: { item: netherite_boots, enchants: { protection: 4, feather_falling: 4, unbreaking: 3, mending: 1 } }
+    boots: { item: netherite_boots, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
   items:
-    0: { item: netherite_sword, enchants: { sharpness: 5, fire_aspect: 2, unbreaking: 3 } }
+    0: { item: netherite_sword, enchants: { sharpness: 5, sweeping_edge: 3, unbreaking: 3, mending: 1 } }
     1: { item: golden_apple, amount: 64 }
-    2: { item: ender_pearl, amount: 16 }
-    3: { item: potion, potion: strong_strength }
-    4: { item: potion, potion: strong_swiftness }
-    5: { item: potion, potion: long_fire_resistance }
-    6: { item: experience_bottle, amount: 64 }
-    7: { item: totem_of_undying }
-    8: { item: totem_of_undying }
-    9: { item: potion, potion: strong_strength }
-    10: { item: potion, potion: strong_swiftness }
-    11: { item: totem_of_undying }
-    12: { item: totem_of_undying }
-  offhand: { item: totem_of_undying }
-  fill:
-    item: { item: splash_potion, potion: strong_healing }
+    2: { item: experience_bottle, amount: 64 }
+    3: { item: splash_potion, potion: strong_healing }
+    4: { item: splash_potion, potion: strong_healing }
+    5: { item: splash_potion, potion: strong_healing }
+    6: { item: splash_potion, potion: strong_healing }
+    7: { item: splash_potion, potion: strong_strength }
+    8: { item: splash_potion, potion: strong_swiftness }
+    9: totem_of_undying
+    10: totem_of_undying
+    11: { item: experience_bottle, amount: 64 }
+    12: { item: splash_potion, potion: strong_strength }
+    13: { item: splash_potion, potion: strong_strength }
+    14: { item: splash_potion, potion: strong_swiftness }
+    15: { item: splash_potion, potion: strong_swiftness }
+    16: { item: splash_potion, potion: long_fire_resistance }
+    17: { item: splash_potion, potion: long_fire_resistance }
+    18: { item: splash_potion, potion: long_fire_resistance }
+    19: { item: splash_potion, potion: strong_healing }
+    20: { item: splash_potion, potion: strong_healing }
+    21: { item: splash_potion, potion: strong_healing }
+    22: { item: splash_potion, potion: strong_healing }
+    23: { item: splash_potion, potion: strong_healing }
+    24: { item: splash_potion, potion: strong_healing }
+    25: { item: splash_potion, potion: strong_healing }
+    26: { item: splash_potion, potion: strong_healing }
+    27: { item: splash_potion, potion: strong_healing }
+    28: { item: splash_potion, potion: strong_healing }
+    29: { item: splash_potion, potion: strong_healing }
+    30: { item: splash_potion, potion: strong_healing }
+    31: { item: splash_potion, potion: strong_healing }
+    32: { item: splash_potion, potion: strong_healing }
+    33: { item: splash_potion, potion: strong_healing }
+    34: { item: splash_potion, potion: strong_healing }
+    35: { item: splash_potion, potion: strong_healing }
+  offhand: totem_of_undying
+effects: []
