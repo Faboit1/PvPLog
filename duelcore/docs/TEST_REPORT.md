@@ -21,7 +21,7 @@ ViaBackwards) could join next to the human testers.
 | Parallel load | ✅ 12 bots, 3 kits (sword, shield, earlygame), up to 7 matches at once, TPS 20.0 |
 | Matchmaker widening | ✅ Pairing logs show the window growing with wait time (e.g. 1518 vs 1458 after 23 s at ±281) |
 | DB off the main thread | ✅ `db mainThread=0` in every `/duelcore debug` sample |
-| Leak check (50+ matches) | See *Leak check* below |
+| Leak check (50+ matches) | ✅ 67 matches with 12 bots: instances, chunks, tickets, entities, tasks and caches back to baseline, 0 dirty resets. Heap +100 MB after GC with no DuelCore structure growing (see *Leak check*) |
 | Spectate search / sort | ✅ `specsearch.js`: Elo sort, name search, kit search, no-results text, spectating a result |
 | Respawn throw | ✅ Probe: 40-block throw, apex +17.4 (target 18), per-tick velocity falls by 0.08 (player gravity), lands on target. In a match: both fighters thrown each round, land within about 2 blocks, then placed exactly on spawn |
 | MOTD | ✅ Server-list ping shows both centered lines and the hover text |
@@ -30,11 +30,27 @@ ViaBackwards) could join next to the human testers.
 
 ## Leak check
 
-Numbers from `/duelcore debug gc` before and after the parallel run:
+Run: 12 bots on sword, shield and earlygame, 19.2 minutes, **67 matches created and 67 finished** (65 decided).
+38 of those ended with a stuck bot forfeiting (see *Test harness limits*), which still goes through the whole
+match lifecycle. All bots played 9 to 13 matches, and up to 6 matches ran at once. Numbers from `/duelcore debug gc`:
 
-| | Before | After |
+| | Before | After 67 matches |
 | --- | --- | --- |
-| _filled in after the run_ | | |
+| Live matches / queued players / duel requests | 0 / 0 / 0 | 0 / 0 / 0 |
+| Arena instances | 7 (all idle) | 7 (all idle), no growth |
+| Arena jobs | – | 168 done: 161 resets, **0 dirty** |
+| Arena world chunks / plugin-ticket chunks | 1792 / 1008 | 1792 / 1008 |
+| Entities in the arena world | 0 | 0 |
+| Plugin scheduler tasks | 7 | 7 |
+| DuelCore caches (profiles, sidebars, leaderboards, results, editors) | 0 | 0 |
+| DB queries / on main thread / failures | 1 / 0 / 0 | 104 / **0** / 0 |
+| TPS / MSPT | 20.0 | 20.0 / 0.48 (peak MSPT during the run 4.0) |
+| Heap used after `System.gc()` | 527 MB | 627 MB |
+
+Everything DuelCore owns went back to its baseline: matches, instances, chunks, tickets, entities, tasks and
+caches. The heap was 100 MB higher even though none of DuelCore's structures grew. That heap also holds the other
+plugins (e.g. Grim's per-player data) and JIT state, so this run alone can't separate growth from warm-up. A second
+identical run is the way to confirm a flat heap. Not done yet.
 
 ## Bugs found and fixed during testing
 
