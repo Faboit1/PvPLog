@@ -91,6 +91,10 @@ public final class RespawnPull implements Listener {
         int ticks = (int) Math.clamp(Math.round(Math.sqrt(8 * bulge / GRAVITY)), 14, 80);
         Throw t = new Throw(player, target.clone(), done);
         active.put(player.getUniqueId(), t);
+        if (plugin.settings().verbose) {
+            plugin.getLogger().info(String.format(java.util.Locale.ROOT,
+                "[throw] %s %.0f blocks, top %.1f above start, %d ticks", player.getName(), horizontal, top - a.getY(), ticks));
+        }
         for (Player v : viewers) {
             if (!v.isOnline() || v.getWorld() != start.getWorld()) continue;
             v.playSound(start, Sound.ENTITY_WIND_CHARGE_WIND_BURST, 0.7f, 0.9f);
@@ -164,6 +168,10 @@ public final class RespawnPull implements Listener {
         if (land && t.player.isOnline()) {
             t.player.setVelocity(new Vector());
             t.player.setFallDistance(0);
+            if (plugin.settings().verbose) {
+                plugin.getLogger().info(String.format(java.util.Locale.ROOT, "[throw] %s landed %.2f blocks from the spawn",
+                    t.player.getName(), t.player.getLocation().distance(t.target)));
+            }
             if (t.player.getLocation().distanceSquared(t.target) > 0.25) {
                 t.player.teleportAsync(t.target).whenComplete((ok, err) -> t.done.run());
                 return;

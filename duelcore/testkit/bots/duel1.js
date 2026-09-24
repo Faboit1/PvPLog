@@ -37,23 +37,27 @@ async function main () {
   // respawn throw: from round 2 on the server throws both players back to their spawn along an arc
   const throws = []
   for (const bot of [a, b]) {
-    let base = null
-    let peak = null
+    const samples = [] // [time, y] over the last 3 s
+    let lastThrow = 0
     setInterval(() => {
       const e = bot.entity
       if (!e) return
-      if (e.onGround) {
-        if (base !== null && peak !== null && peak - base >= 6) {
-          throws.push({ bot: bot.username, rise: +(peak - base).toFixed(1), landed: e.position.floored() })
-          L.log('test', 'thrown', throws[throws.length - 1])
-        }
-        base = e.position.y
-        peak = null
-      } else if (base !== null) {
-        peak = Math.max(peak === null ? e.position.y : peak, e.position.y)
+      const now = Date.now()
+      samples.push([now, e.position.y])
+      while (samples.length && now - samples[0][0] > 3000) samples.shift()
+      const low = Math.min(...samples.map(x => x[1]))
+      if (e.position.y - low >= 6 && now - lastThrow > 5000) {
+        lastThrow = now
+        throws.push({ bot: bot.username, rise: +(e.position.y - low).toFixed(1), at: e.position.floored() })
+        L.log('test', 'thrown', throws[throws.length - 1])
       }
     }, 100)
   }
+  const tele = setInterval(() => {
+    const e = a.entity
+    L.log('telemetry', 'a', { pos: e.position, vel: e.velocity, onGround: e.onGround, ctl: a.controlState,
+      corrections, gm: a.game.gameMode, target: !!a.nearestEntity(x => x.type === 'player' && x.username === B) })
+  }, 2000)
   const fa = L.fighter(a, { slot: 0 })
   const fb = L.fighter(b, { slot: 0, cooldownMs: 700 })
   const endRe = /Victory|Defeat|Draw/

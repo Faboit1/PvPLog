@@ -208,7 +208,7 @@ public final class MatchListener implements Listener {
         Player player = event.getPlayer();
         Match m = match(player);
         if (m == null || !plugin.matches().isFrozen(m) || m.arena() == null) return;
-        if (player.isInsideVehicle()) return; // being carried back to spawn; moving it would dismount
+        if (plugin.respawnPull().pulling(player.getUniqueId())) return; // being thrown back to the spawn
         Location from = event.getFrom();
         Location to = event.getTo();
         if (from.getWorld() != m.arena().world()) return;

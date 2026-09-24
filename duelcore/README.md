@@ -52,8 +52,10 @@ instance when it's pasted):
 | Savanna | savanna | grass and coarse dirt, acacias |
 | Pinewood | taiga | podzol, ferns, leaf litter, spruce |
 
-Every map is 64×64 with invisible barrier walls and a ceiling. Trees only grow near the edges, and the ground
-around both spawns is levelled.
+Every map is 180×180 with a bedrock floor, invisible barrier walls and a ceiling. The spawns are 61 blocks
+apart on the middle line, the ground around them is levelled, and trees stay out of the corridor between them.
+The whole map can be mined during a match and is restored between rounds. Any arena without a full bedrock bottom
+layer gets one added automatically (`bedrock-floor: false` in its yml turns that off).
 
 **Building your own arena** (in the flat editor world):
 
@@ -94,7 +96,7 @@ rules:
   hunger: false
   fall-damage: true
   build: false
-  break: placed                  # none | placed (only blocks placed this round) | all
+  break: all                     # all (default: the map can be mined) | placed (only blocks placed this round) | none
   allowed-blocks: []             # when non-empty, only these can be placed
   ender-pearls: false
   pearl-cooldown: 1              # seconds
@@ -117,7 +119,8 @@ loadout:
 ```
 
 Item fields: `item`, `amount`, `enchants`, `name`, `lore`, `potion`, `unbreakable` and `components` (vanilla
-component string).
+component string). Kits with `build: true` keep what they mine: the block's normal drops go straight into the
+inventory.
 
 ---
 

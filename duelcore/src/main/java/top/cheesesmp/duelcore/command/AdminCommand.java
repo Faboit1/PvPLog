@@ -83,7 +83,13 @@ final class AdminCommand {
             .then(Commands.literal("matches").executes(ctx -> {
                 for (String line : plugin.diagnostics().matches()) ctx.getSource().getSender().sendMessage(line);
                 return Command.SINGLE_SUCCESS;
-            })));
+            }))
+            // preview the respawn throw: lands on the ground <distance> blocks ahead of where the player looks
+            .then(Commands.literal("throw").then(Commands.argument("player", StringArgumentType.word())
+                .suggests(cmd.onlineNames())
+                .executes(ctx -> throwPreview(ctx, 40))
+                .then(Commands.argument("distance", IntegerArgumentType.integer(1, 150))
+                    .executes(ctx -> throwPreview(ctx, IntegerArgumentType.getInteger(ctx, "distance")))))));
         root.then(Commands.literal("forceend").requires(CommandService.perm("duelcore.admin.match"))
             .then(Commands.argument("player", StringArgumentType.word()).suggests(cmd.onlineNames()).executes(ctx -> {
                 Player target = Bukkit.getPlayerExact(StringArgumentType.getString(ctx, "player"));
@@ -104,6 +110,35 @@ final class AdminCommand {
             if (sender.hasPermission("duelcore.admin." + child)) return true;
         }
         return false;
+    }
+
+    private int throwPreview(CommandContext<CommandSourceStack> ctx, int distance) {
+        Player target = Bukkit.getPlayerExact(StringArgumentType.getString(ctx, "player"));
+        if (target == null) {
+            ctx.getSource().getSender().sendMessage("Player not online.");
+            return 0;
+        }
+        if (plugin.matches().match(target.getUniqueId()) != null) {
+            ctx.getSource().getSender().sendMessage("Not during a match.");
+            return 0;
+        }
+        Location from = target.getLocation();
+        org.bukkit.util.Vector dir = from.getDirection().setY(0);
+        if (dir.lengthSquared() < 1e-6) dir = new org.bukkit.util.Vector(0, 0, 1);
+        Location to = from.clone().add(dir.normalize().multiply(distance));
+        // ground under the landing spot (scan down from a bit above the player, ignoring barrier walls/ceilings)
+        int y = Math.min(to.getWorld().getMaxHeight() - 2, from.getBlockY() + 24);
+        while (y > to.getWorld().getMinHeight()) {
+            org.bukkit.block.Block b = to.getWorld().getBlockAt(to.getBlockX(), y - 1, to.getBlockZ());
+            if (b.isSolid() && b.getType() != org.bukkit.Material.BARRIER) break;
+            y--;
+        }
+        to.setY(y);
+        to.setYaw(from.getYaw());
+        to.setPitch(0);
+        plugin.respawnPull().pull(target, to, plugin.settings().animRespawnThrowHeight, List.of(target), () -> { });
+        ctx.getSource().getSender().sendMessage("Throwing " + target.getName() + " " + distance + " blocks.");
+        return Command.SINGLE_SUCCESS;
     }
 
     private int debug(CommandContext<CommandSourceStack> ctx, boolean gc) {

@@ -69,6 +69,17 @@ function createBot (name, opts = {}) {
     if (bot.physics) bot.physics.movementSpeedAttribute = 'duelcore:ignored'
     log(name, 'spawn', { pos: bot.entity.position.floored(), gm: bot.game.gameMode })
   })
+  // mineflayer bug: since 1.21.9 entity_velocity carries an lpVec3 that minecraft-protocol already decodes to
+  // blocks/tick, but mineflayer still scales it by 1/8000 (the old fixed-point factor), so knockback and any
+  // server-set velocity reach the bot ~8000x too weak. Re-apply the decoded value after mineflayer's own handler.
+  // (registered on login: mineflayer injects its plugins a tick after createBot, and ours must run after its handler)
+  bot.once('login', () => {
+    bot._client.on('entity_velocity', packet => {
+      const e = bot.entities[packet.entityId]
+      if (!e || !packet.velocity) return
+      e.velocity.set(packet.velocity.x, packet.velocity.y, packet.velocity.z)
+    })
+  })
   bot.on('kicked', r => log(name, 'kicked', plain(r)))
   bot.on('error', e => log(name, 'error', e.message))
   bot.on('end', r => log(name, 'end', r))
@@ -201,7 +212,7 @@ function heldName (bot, slot) {
 }
 
 /**
- * Simple melee AI: walk at the nearest other player that is not in spectator mode, attack on cooldown.
+ * Simple melee AI: walk at the nearest other player, attack on cooldown.
  * Stops when stop() is called.
  */
 function fighter (bot, opts = {}) {
@@ -212,14 +223,20 @@ function fighter (bot, opts = {}) {
   let strafeUntil = 0
   let strafeDir = 'left'
   let stuckLogs = 0
+  let frozenSince = 0
+  let lastUnstick = 0
+  let realPos = null // progress for the diagnostics only (the strafe logic resets lastProgress)
+  let realProgress = Date.now()
   let lastStuckLog = 0
   const cooldown = opts.cooldownMs || 650
   const errors = {}
   const loop = async () => {
     while (running) {
       try {
+        // Arena slots are 1024 blocks apart, so the nearest other player is the opponent. (No gamemode filter: the
+        // tab-list gamemode can stay "spectator" after a death cam through ViaBackwards, which made bots idle.)
         const target = bot.nearestEntity(e => e.type === 'player' && e.username !== bot.username &&
-          e.position.distanceTo(bot.entity.position) < 60 && !(bot.players[e.username] && bot.players[e.username].gamemode === 3))
+          e.position.distanceTo(bot.entity.position) < 250)
         if (!target) {
           bot.clearControlStates()
           await sleep(200)
@@ -241,7 +258,20 @@ function fighter (bot, opts = {}) {
           lastProgress = now
         }
         const strafing = now < strafeUntil
-        if (now - lastProgress > 4000 && dist > 2.5 && stuckLogs < 3 && now - lastStuckLog > 5000) {
+        if (!realPos || Math.hypot(pos.x - realPos.x, pos.z - realPos.z) > 1.5) {
+          realPos = pos.clone()
+          realProgress = now
+        }
+        // mineflayer stops simulating after a death until the server sends a position; ask the test kit for one
+        const frozen = !bot.entity.onGround && Math.abs(bot.entity.velocity.y) < 0.001
+        if (frozen) frozenSince = frozenSince || now
+        else frozenSince = 0
+        if (frozenSince && now - frozenSince > 1500 && now - lastUnstick > 3000) {
+          lastUnstick = now
+          bot.chat('!unstick')
+          log(bot.dc.name, 'unstick', { pos: pos.floored() })
+        }
+        if (now - realProgress > 4000 && dist > 2.5 && stuckLogs < 3 && now - lastStuckLog > 5000) {
           // diagnostics: what is around the bot while it can't make progress
           stuckLogs++
           lastStuckLog = now

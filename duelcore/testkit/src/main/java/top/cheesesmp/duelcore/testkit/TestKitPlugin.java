@@ -191,6 +191,23 @@ public final class TestKitPlugin extends JavaPlugin implements Listener {
         return List.of();
     }
 
+    /**
+     * Bot-only "!unstick": mineflayer stops simulating physics after a (server-cancelled) death until it receives a
+     * position packet. Re-sending the bot its own position restores it. Only loopback dcbot players can use this.
+     */
+    @EventHandler(priority = org.bukkit.event.EventPriority.LOWEST)
+    public void onBotChat(io.papermc.paper.event.player.AsyncChatEvent event) {
+        org.bukkit.entity.Player p = event.getPlayer();
+        java.net.InetSocketAddress address = p.getAddress();
+        if (address == null || !address.getAddress().isLoopbackAddress() || !p.getName().toLowerCase().startsWith("dcbot")) return;
+        String text = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(event.message());
+        if (!text.equals("!unstick")) return;
+        event.setCancelled(true);
+        Bukkit.getScheduler().runTask(this, () -> {
+            if (p.isOnline()) p.teleport(p.getLocation());
+        });
+    }
+
     private static final List<String> EXEMPT = List.of("grim.exempt", "TotemGuard.Bypass", "sentry.bypass");
 
     @Override

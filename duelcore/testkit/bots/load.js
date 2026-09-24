@@ -40,11 +40,27 @@ async function runBot (i) {
     }
     await L.waitTitle(bot, /Fight/, 60000, m.titles)
     const f = L.fighter(bot, { slot: 0, cooldownMs: 600 + (i % 3) * 60 })
+    // mineflayer can get stuck on terrain steps; a pair that makes no round progress for 60 s forfeits so the
+    // load keeps cycling matches (create, paste/reuse, reset, persist, release)
+    let lastTitles = bot.dc.titles.length
+    let lastChange = Date.now()
+    const watchdog = setInterval(() => {
+      if (bot.dc.titles.length !== lastTitles) {
+        lastTitles = bot.dc.titles.length
+        lastChange = Date.now()
+      } else if (Date.now() - lastChange > 60000) {
+        lastChange = Date.now()
+        L.log(name, 'forfeit-stuck', {})
+        bot.chat('/leave')
+        setTimeout(() => bot.chat('/leave'), 800)
+      }
+    }, 2000)
     let outcome
     try {
       outcome = await L.waitTitle(bot, /Victory|Defeat|Draw/, 600000, m.titles)
     } finally {
       f.stop()
+      clearInterval(watchdog)
     }
     perBot[name]++
     if (/Victory/.test(outcome)) finished++ // exactly one Victory per decided match
