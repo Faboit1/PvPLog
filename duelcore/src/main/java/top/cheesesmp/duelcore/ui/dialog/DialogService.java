@@ -479,6 +479,68 @@ public final class DialogService {
         player.showDialog(dialog(title, List.of(text(body)), List.of(), DialogType.notice(close())));
     }
 
+    /**
+     * Minimal test dialogs that each add one feature, to find which part of a dialog a client (or a protocol
+     * translator such as ViaVersion) rejects. {@code /duelcore debug dialog <variant>}.
+     */
+    public static final List<String> DEBUG_VARIANTS = List.of("plain", "shadow", "sprite", "sprite-nofallback",
+        "sprite-gui", "sprite-block", "head", "head-nofallback", "button", "payload", "tooltip", "input-bool",
+        "input-text", "input-option", "input-range", "queue", "profile", "leaderboard", "settings", "spectate");
+
+    public boolean debugDialog(Player player, String variant) {
+        Component title = Component.text("DuelCore test: " + variant);
+        java.util.function.Function<Component, Dialog> noticeWith = body ->
+            dialog(title, List.of(text(body)), List.of(), DialogType.notice(close()));
+        Component plain = Component.text("Plain text. ");
+        switch (variant) {
+            case "plain" -> player.showDialog(noticeWith.apply(plain));
+            case "shadow" -> player.showDialog(noticeWith.apply(plain.append(Component.text("shadow none")
+                .shadowColor(net.kyori.adventure.text.format.ShadowColor.none()))));
+            case "sprite" -> player.showDialog(noticeWith.apply(plain.append(Icons.item("netherite_sword"))));
+            case "sprite-nofallback" -> player.showDialog(noticeWith.apply(plain.append(Component.object()
+                .contents(net.kyori.adventure.text.object.ObjectContents.sprite(Key.key("items"), Key.key("item/netherite_sword")))
+                .build())));
+            case "sprite-gui" -> player.showDialog(noticeWith.apply(plain.append(Icons.gui("hud/heart/full"))));
+            case "sprite-block" -> player.showDialog(noticeWith.apply(plain.append(Icons.parse("blocks:block/obsidian"))));
+            case "head" -> player.showDialog(noticeWith.apply(plain.append(Icons.head(player.getUniqueId(), player.getName()))));
+            case "head-nofallback" -> player.showDialog(noticeWith.apply(plain.append(Component.object()
+                .contents(net.kyori.adventure.text.object.ObjectContents.playerHead(player.getUniqueId())).build())));
+            case "button" -> player.showDialog(dialog(title, List.of(text(plain)), List.of(), DialogType.multiAction(List.of(
+                button(Component.text("No payload"), null, 150, "debug/none", Map.of()))).exitAction(close()).build()));
+            case "payload" -> player.showDialog(dialog(title, List.of(text(plain)), List.of(), DialogType.multiAction(List.of(
+                button(Component.text("With payload"), null, 150, "debug/none", payload("kit", "sword", "mode", "ranked"))))
+                .exitAction(close()).build()));
+            case "tooltip" -> player.showDialog(dialog(title, List.of(text(plain)), List.of(), DialogType.multiAction(List.of(
+                button(Component.text("Tooltip"), Component.text("A tooltip"), 150, "debug/none", Map.of())))
+                .exitAction(close()).build()));
+            case "input-bool" -> player.showDialog(dialog(title, List.of(text(plain)),
+                List.of(DialogInput.bool("b", Component.text("Bool")).initial(true).build()), DialogType.notice(close())));
+            case "input-text" -> player.showDialog(dialog(title, List.of(text(plain)),
+                List.of(DialogInput.text("t", Component.text("Text")).width(250).initial("x").maxLength(16).build()),
+                DialogType.notice(close())));
+            case "input-option" -> player.showDialog(dialog(title, List.of(text(plain)), List.of(DialogInput.singleOption("o",
+                Component.text("Option"), List.of(SingleOptionDialogInput.OptionEntry.create("a", Component.text("A"), true),
+                    SingleOptionDialogInput.OptionEntry.create("b", Component.text("B"), false))).width(250).build()),
+                DialogType.notice(close())));
+            case "input-range" -> player.showDialog(dialog(title, List.of(text(plain)), List.of(DialogInput.numberRange("r",
+                Component.text("Range"), 0f, 500f).step(25f).initial(100f).width(250).labelFormat("%s: %s").build()),
+                DialogType.notice(close())));
+            case "queue" -> queue(player, QueueMode.RANKED, false);
+            case "profile" -> {
+                PlayerProfile own = plugin.profiles().get(player);
+                if (own == null) return false;
+                profile(player, own, false);
+            }
+            case "leaderboard" -> leaderboard(player, "overall", null);
+            case "settings" -> settings(player);
+            case "spectate" -> spectate(player);
+            default -> {
+                return false;
+            }
+        }
+        return true;
+    }
+
     static TagResolver[] none() {
         return new TagResolver[0];
     }

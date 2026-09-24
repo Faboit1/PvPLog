@@ -84,6 +84,15 @@ final class AdminCommand {
                 for (String line : plugin.diagnostics().matches()) ctx.getSource().getSender().sendMessage(line);
                 return Command.SINGLE_SUCCESS;
             }))
+            // send a minimal test dialog (one feature at a time) to find what a client or translator rejects
+            .then(Commands.literal("dialog").then(Commands.argument("variant", StringArgumentType.word())
+                .suggests((c, b) -> {
+                    for (String v : top.cheesesmp.duelcore.ui.dialog.DialogService.DEBUG_VARIANTS) b.suggest(v);
+                    return b.buildFuture();
+                })
+                .executes(ctx -> debugDialog(ctx, CommandService.player(ctx)))
+                .then(Commands.argument("player", StringArgumentType.word()).suggests(cmd.onlineNames())
+                    .executes(ctx -> debugDialog(ctx, Bukkit.getPlayerExact(StringArgumentType.getString(ctx, "player")))))))
             // preview the respawn throw: lands on the ground <distance> blocks ahead of where the player looks
             .then(Commands.literal("throw").then(Commands.argument("player", StringArgumentType.word())
                 .suggests(cmd.onlineNames())
@@ -110,6 +119,35 @@ final class AdminCommand {
             if (sender.hasPermission("duelcore.admin." + child)) return true;
         }
         return false;
+    }
+
+    private int debugDialog(CommandContext<CommandSourceStack> ctx, @org.jspecify.annotations.Nullable Player p) {
+        org.bukkit.command.CommandSender sender = ctx.getSource().getSender();
+        if (p == null) {
+            sender.sendMessage("Player not online (from the console, name a player).");
+            return 0;
+        }
+        String variant = StringArgumentType.getString(ctx, "variant");
+        plugin.getLogger().info("[debug] dialog '" + variant + "' -> " + p.getName() + " (client protocol "
+            + clientProtocol(p) + ")");
+        if (!plugin.dialogs().debugDialog(p, variant)) {
+            sender.sendMessage("Variants: " + String.join(", ", top.cheesesmp.duelcore.ui.dialog.DialogService.DEBUG_VARIANTS));
+            return 0;
+        }
+        sender.sendMessage("Sent dialog '" + variant + "' to " + p.getName() + ".");
+        return Command.SINGLE_SUCCESS;
+    }
+
+    /** The client's protocol version as ViaVersion reports it (-1 without ViaVersion). */
+    private static int clientProtocol(Player p) {
+        try {
+            Class<?> via = Class.forName("com.viaversion.viaversion.api.Via");
+            Object api = via.getMethod("getAPI").invoke(null);
+            Object version = api.getClass().getMethod("getPlayerProtocolVersion", java.util.UUID.class).invoke(api, p.getUniqueId());
+            return (int) version.getClass().getMethod("getVersion").invoke(version);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+            return -1;
+        }
     }
 
     private int throwPreview(CommandContext<CommandSourceStack> ctx, int distance) {

@@ -57,10 +57,22 @@ async function runBot (i) {
     }, 2000)
     let outcome
     try {
-      outcome = await L.waitTitle(bot, /Victory|Defeat|Draw/, 600000, m.titles)
+      // a player who forfeits gets a chat line instead of the results title
+      outcome = await Promise.race([
+        L.waitTitle(bot, /Victory|Defeat|Draw/, 600000, m.titles),
+        L.waitChat(bot, /You forfeited the match/, 600000, m.chat).then(() => 'Defeat (forfeit)')
+      ])
     } finally {
       f.stop()
       clearInterval(watchdog)
+    }
+    if (/forfeit/.test(outcome)) {
+      perBot[name]++
+      L.log(name, 'match-done', { kit, outcome, n: perBot[name] })
+      if (finished >= target) break
+      await L.sleep(1500)
+      bot.chat('/queue ' + kit + ' ranked')
+      continue
     }
     perBot[name]++
     if (/Victory/.test(outcome)) finished++ // exactly one Victory per decided match
