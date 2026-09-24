@@ -68,12 +68,21 @@ identical run is the way to confirm a flat heap. Not done yet.
 
 - **WorldGuardExtraFlagsPlus** throws `NoClassDefFoundError: PlaceholderExpansion` on joins because PlaceholderAPI
   is not installed. This was already there before DuelCore.
-- **Lightning Grim 2.3.74-00dbb86** (newest build, June 27) throws PacketEvents `ArrayIndexOutOfBoundsException`s
-  (`ChangeGameState` reason 255) on Paper 26.2 build 128, about 60 stack traces in 12 s of one player moving. Upstream
-  GrimAC 2.3.74-8eb5f28 (Sep 10) runs the same scenario without errors, so it is installed for now. The Lightning
-  jar is kept in `duelcore-test/disabled/`.
+- **26.3 clients were kicked** with "invalid packet" on dialogs, later "Failed to decode packet
+  'clientbound/minecraft:player_position'" together with Grim flag spam. The cause was **packetevents 2.13.x**, used
+  by the standalone plugin and bundled in both Grim builds. It has no 26.3 support: it treats protocol 777 as 26.2 and
+  writes 26.2 packet IDs. 26.2's `player_rotation` (0x49) is 26.3's `player_position`, and 26.3's dialog IDs don't
+  exist in 26.2's table. The format of both packets is identical in 26.2 and 26.3 (Mojang classes compared) and
+  ViaVersion remaps their IDs correctly, so neither DuelCore nor ViaVersion is at fault. Fix: packetevents 2.14.0 (the
+  first version with 26.3 support), ViaVersion 1069 / ViaBackwards 634, and **Grim removed** at the owner's request
+  (no Grim build with packetevents 2.14 exists yet). Lightning Grim 2.3.74-00dbb86 had also thrown PacketEvents
+  `ArrayIndexOutOfBoundsException`s on Paper 26.2.
+- **WorldGuardExtraFlagsPlus** disabled itself once its `messages-wgefp.yml` passed YAML's 3 MB limit. Its save
+  doubles the apostrophes in "can't" on every write, so three messages had grown to about a million `'` each. The file
+  was repaired and the three messages now say "cannot", which the bug has nothing to double. The original is kept in
+  `duelcore-test/disabled/`.
 - **Sentry**'s anti-bot allows about one login per IP every few seconds and has no IP exemption. It was switched off
-  while the bots ran (all bots connect from 127.0.0.1) and must be switched back on afterwards.
+  while the bots ran (all bots connect from 127.0.0.1) and has been switched back on.
 
 ## Test harness limits (mineflayer, not the server)
 
