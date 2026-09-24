@@ -12,6 +12,11 @@ dependencies:
       load: BEFORE
       required: false
       join-classpath: true
+    # optional: lets /duelcore debug show each client's protocol version
+    ViaVersion:
+      load: BEFORE
+      required: false
+      join-classpath: true
 defaultPerm: OP
 permissions:
   duelcore.player:
