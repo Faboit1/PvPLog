@@ -1,0 +1,37 @@
+# Creeper: spawn creepers, light them, get out of the blast.
+display-name: "Creeper"
+description: "Creeper eggs and flint and steel. Blast your opponent."
+icon: creeper_spawn_egg
+category: extra
+order: 12
+enabled: true
+ranked: true
+first-to: 3
+round-time-limit: 240
+arena-tags: [terrain]
+rules:
+  natural-regen: true
+  hunger: false
+  fall-damage: true
+  build: false
+  ender-pearls: true
+  pearl-cooldown: 10
+  totems: false
+  crystals: false
+  anchors: false
+  cobwebs: false
+  spawn-eggs: true
+  item-drops: false
+loadout:
+  armor:
+    helmet: iron_helmet
+    chestplate: iron_chestplate
+    leggings: iron_leggings
+    boots: iron_boots
+  items:
+    0: stone_sword
+    1: { item: creeper_spawn_egg, amount: 32 }
+    2: flint_and_steel
+    3: { item: ender_pearl, amount: 4 }
+    4: { item: golden_apple, amount: 4 }
+  offhand: shield

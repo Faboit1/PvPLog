@@ -1,0 +1,38 @@
+# Mace: wind charges and pearls to get airborne, then smash.
+display-name: "Mace"
+description: "Mace, wind charges and pearls. Height is damage."
+icon: mace
+category: main
+order: 3
+enabled: true
+ranked: true
+first-to: 3
+round-time-limit: 240
+arena-tags: [terrain]
+rules:
+  natural-regen: true
+  hunger: false
+  fall-damage: true
+  build: false
+  ender-pearls: true
+  pearl-cooldown: 10
+  totems: true
+  crystals: false
+  anchors: false
+  cobwebs: false
+  item-drops: false
+loadout:
+  armor:
+    helmet: { item: netherite_helmet, enchants: { protection: 4, unbreaking: 3 } }
+    chestplate: { item: netherite_chestplate, enchants: { protection: 4, unbreaking: 3 } }
+    leggings: { item: netherite_leggings, enchants: { protection: 4, unbreaking: 3 } }
+    boots: { item: netherite_boots, enchants: { protection: 4, unbreaking: 3, feather_falling: 4 } }
+  items:
+    0: { item: netherite_sword, enchants: { sharpness: 5, unbreaking: 3 } }
+    1: { item: mace, enchants: { density: 5, wind_burst: 1, unbreaking: 3 } }
+    2: { item: wind_charge, amount: 64 }
+    3: { item: ender_pearl, amount: 16 }
+    4: { item: golden_apple, amount: 32 }
+    5: { item: totem_of_undying }
+    6: { item: totem_of_undying }
+  offhand: { item: totem_of_undying }

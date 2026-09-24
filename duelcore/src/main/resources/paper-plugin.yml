@@ -1,0 +1,116 @@
+name: DuelCore
+version: '${version}'
+main: top.cheesesmp.duelcore.DuelCorePlugin
+api-version: '26.2'
+description: Competitive 1v1 duels, ranked queues, tiers and seasons
+authors: [CheeseSMP]
+website: https://cheesesmp.top
+load: POSTWORLD
+dependencies:
+  server:
+    PlaceholderAPI:
+      load: BEFORE
+      required: false
+      join-classpath: true
+defaultPerm: OP
+permissions:
+  duelcore.player:
+    description: Everything a normal player needs
+    default: true
+    children:
+      duelcore.queue: true
+      duelcore.leave: true
+      duelcore.profile: true
+      duelcore.profile.others: true
+      duelcore.leaderboard: true
+      duelcore.spectate: true
+      duelcore.duel: true
+      duelcore.settings: true
+      duelcore.party: true
+      duelcore.tournament: true
+  duelcore.queue:
+    description: Join ranked and unranked queues (/queue)
+    default: true
+  duelcore.leave:
+    description: Leave a queue, stop spectating or forfeit (/leave)
+    default: true
+  duelcore.profile:
+    description: View your own profile (/profile)
+    default: true
+  duelcore.profile.others:
+    description: View other players' profiles (/profile <player>)
+    default: true
+  duelcore.leaderboard:
+    description: View leaderboards (/leaderboard)
+    default: true
+  duelcore.spectate:
+    description: Spectate live matches (/spectate)
+    default: true
+  duelcore.spectate.bypass:
+    description: Spectate players who disabled spectators
+    default: op
+  duelcore.duel:
+    description: Send and answer unranked duel requests (/duel)
+    default: true
+  duelcore.settings:
+    description: Change personal settings (/settings)
+    default: true
+  duelcore.party:
+    description: Create and join 2v2 parties (/party)
+    default: true
+  duelcore.tournament:
+    description: Sign up for tournaments (/tournament join)
+    default: true
+  duelcore.tier:
+    description: Staff tier overrides (/tier set|clear|info)
+    default: op
+  duelcore.bypass.commands:
+    description: Use any command during a match
+    default: op
+  duelcore.hub.build:
+    description: Build in the hub (in creative mode)
+    default: op
+  duelcore.admin:
+    description: All DuelCore admin commands (/duelcore)
+    default: op
+    children:
+      duelcore.admin.reload: true
+      duelcore.admin.sethub: true
+      duelcore.admin.arena: true
+      duelcore.admin.kit: true
+      duelcore.admin.season: true
+      duelcore.admin.rating: true
+      duelcore.admin.debug: true
+      duelcore.admin.match: true
+      duelcore.admin.tournament: true
+      duelcore.tier: true
+      duelcore.spectate.bypass: true
+      duelcore.bypass.commands: true
+      duelcore.hub.build: true
+  duelcore.admin.reload:
+    description: /duelcore reload
+    default: op
+  duelcore.admin.sethub:
+    description: /duelcore sethub
+    default: op
+  duelcore.admin.arena:
+    description: /duelcore arena ...
+    default: op
+  duelcore.admin.kit:
+    description: /duelcore kit ...
+    default: op
+  duelcore.admin.season:
+    description: /duelcore season info|reset|recalc
+    default: op
+  duelcore.admin.rating:
+    description: /duelcore player <name> setrating|setgames|setregion|setcountry
+    default: op
+  duelcore.admin.debug:
+    description: /duelcore debug
+    default: op
+  duelcore.admin.match:
+    description: /duelcore forceend
+    default: op
+  duelcore.admin.tournament:
+    description: /tournament create|start|cancel|export
+    default: op

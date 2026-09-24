@@ -1,0 +1,52 @@
+# SMP: netherite survival PvP with everything a real SMP fight has.
+display-name: "SMP"
+description: "Netherite SMP gear: pearls, gapples, totems, potions."
+icon: ender_pearl
+category: extra
+order: 11
+enabled: true
+ranked: true
+first-to: 3
+round-time-limit: 300
+arena-tags: [terrain]
+rules:
+  natural-regen: true
+  hunger: true
+  fall-damage: true
+  build: true
+  break: placed
+  allowed-blocks: [cobblestone, cobweb, water, lava]
+  ender-pearls: true
+  pearl-cooldown: 1
+  totems: true
+  crystals: false
+  anchors: false
+  cobwebs: true
+  buckets: true
+  item-drops: false
+loadout:
+  armor:
+    helmet: { item: netherite_helmet, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
+    chestplate: { item: netherite_chestplate, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
+    leggings: { item: netherite_leggings, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
+    boots: { item: netherite_boots, enchants: { protection: 4, feather_falling: 4, unbreaking: 3, mending: 1 } }
+  items:
+    0: { item: netherite_sword, enchants: { sharpness: 5, unbreaking: 3 } }
+    1: { item: netherite_axe, enchants: { sharpness: 5, unbreaking: 3 } }
+    2: { item: golden_apple, amount: 64 }
+    3: { item: ender_pearl, amount: 16 }
+    4: { item: wind_charge, amount: 32 }
+    5: water_bucket
+    6: { item: cobweb, amount: 16 }
+    7: { item: experience_bottle, amount: 64 }
+    8: { item: totem_of_undying }
+    9: { item: splash_potion, potion: strong_healing }
+    10: { item: splash_potion, potion: strong_healing }
+    11: { item: potion, potion: strong_strength }
+    12: { item: potion, potion: strong_swiftness }
+    13: { item: potion, potion: long_fire_resistance }
+    14: { item: cobblestone, amount: 64 }
+    15: lava_bucket
+    16: { item: totem_of_undying }
+    17: { item: totem_of_undying }
+  offhand: { item: shield, enchants: { unbreaking: 3 } }

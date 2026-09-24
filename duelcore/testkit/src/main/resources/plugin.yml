@@ -1,0 +1,12 @@
+name: DuelCoreTestKit
+version: 1.0.0
+main: top.cheesesmp.duelcore.testkit.TestKitPlugin
+api-version: '26.2'
+description: Test-only helper that runs headless bot scripts against this server. Do not install on production.
+commands:
+  dctest:
+    description: Run or stop bot scripts
+    permission: duelcore.testkit
+permissions:
+  duelcore.testkit:
+    default: op

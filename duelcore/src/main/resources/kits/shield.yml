@@ -1,0 +1,35 @@
+# Shield: axe to break shields, sword to punish.
+display-name: "Shield"
+description: "Axe, sword and shield. Break the guard, then strike."
+icon: diamond_axe
+category: main
+order: 4
+enabled: true
+ranked: true
+first-to: 3
+round-time-limit: 180
+arena-tags: [terrain]
+rules:
+  natural-regen: true
+  hunger: false
+  fall-damage: true
+  build: false
+  ender-pearls: false
+  totems: false
+  crystals: false
+  anchors: false
+  cobwebs: false
+  item-drops: false
+loadout:
+  armor:
+    helmet: diamond_helmet
+    chestplate: diamond_chestplate
+    leggings: diamond_leggings
+    boots: diamond_boots
+  items:
+    0: diamond_axe
+    1: diamond_sword
+    2: crossbow
+    3: bow
+    8: { item: arrow, amount: 6 }
+  offhand: shield

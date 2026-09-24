@@ -1,0 +1,119 @@
+# DuelCore – Architecture
+
+Target: **Paper 26.2 (build 128), Minecraft 26.2, Java 25**. That is what the "Cheese PvP - Main" server (555a69cf) runs, read from its `latest.log`:
+`This server is running Paper version 26.2-128 … (Implementing API version 26.2.build.128-stable)`.
+Server resources: 5 GB RAM, 2 vCPU (200 %), 23 GB disk, one port (25569), standalone (no proxy forwarding).
+
+Design rules:
+
+* **Main thread never touches the database or disk.** Every DB call goes through one executor. A guard counts any call made from the main thread, and `/duelcore debug` shows that count.
+* **Everything is config**: messages, kits, arenas, tiers, dialogs, hotbar and scoreboard, all in YAML with MiniMessage text.
+* **No hard dependencies.** PlaceholderAPI is optional. JDBC drivers come from the Paper server (it bundles sqlite-jdbc and mysql-connector-j), and HikariCP is shaded and relocated.
+* **Modern, quiet UI.** Menus are 1.21.6+ dialogs. Icons are atlas sprites (`minecraft:items`, `minecraft:gui`), and player faces use head objects. There's no chat prefix, no bold, and one accent colour.
+
+## Packages
+
+```
+top.cheesesmp.duelcore
+├── DuelCorePlugin            lifecycle, service wiring, reload
+├── api/                      DuelCoreApi + Bukkit events (MatchStart/End, RatingChange)
+├── config/                   ConfigManager, MainConfig (typed), Messages (MiniMessage templates)
+├── db/                       Database (Hikari, SQLite|MySQL dialect), DbExecutor, MainThreadGuard,
+│   │                         Migrations (versioned DDL)
+│   └── dao/                  PlayerDao, RatingDao, MatchDao, SeasonDao, LeaderboardDao
+├── profile/                  PlayerProfile, KitStats, PlayerSettings, ProfileService (cache + async save)
+├── kit/                      Kit, KitRules, KitLoader (YAML → Kit, vanilla item strings), KitManager
+├── arena/                    ArenaTemplate, ArenaSnapshot(+IO, .dca format), SchematicImporter (Sponge v2/v3),
+│                             ArenaGenerator (built-in defaults), ArenaWorld (void world), SlotGrid,
+│                             ArenaInstance, ArenaPool, BlockJobQueue (tick-budgeted), ArenaEditor, ArenaManager
+├── queue/                    QueueEntry, QueueService, Matchmaker, MatchPolicy (region/ping hook)
+├── match/                    Match, Participant, MatchState, RoundResult, MatchService, MatchListener,
+│                             Freeze, DuelRequestService, SpectateService, MatchResult
+├── rating/                   RatingSystem, EloRating, Glicko2Rating, Tier, TierLadder, TierService, SeasonService
+├── hub/                      HubService (send-to-hub, state reset), HubItems, HubListener (protection)
+├── ui/                       Dialogs (Queue/Profile/Leaderboard/Settings/Spectate/Results/DuelPicker),
+│                             ClickRouter (custom click keys), SidebarService, TagService (tab/chat/nametag),
+│                             TotemPop, Sounds, Icons (sprite helpers)
+├── leaderboard/              LeaderboardService (cached pages, async refresh, rank lookups)
+├── command/                  Brigadier tree registered in LifecycleEvents.COMMANDS
+├── hook/                     PlaceholderHook (loaded only when PlaceholderAPI exists)
+├── debug/                    Diagnostics (/duelcore debug: matches, instances, chunks, entities, tasks, heap, DB)
+└── (phase 2) feed/, tournament/, web/ (REST), party/
+```
+
+## Data model (SQLite default, MySQL optional)
+
+Compact, integer-keyed and clustered. UUIDs are stored once as 16-byte binary. Kits and seasons map to small integer ids, so the hot tables stay narrow. SQLite runs in WAL mode (`synchronous=NORMAL`) with `WITHOUT ROWID` clustered tables.
+
+```sql
+dc_meta          (k VARCHAR(32) PK, v VARCHAR(255))                    -- schema version etc.
+dc_players       (id INT PK AUTO, uuid BINARY(16) UNIQUE, name VARCHAR(16), name_lower VARCHAR(16) IDX,
+                  region VARCHAR(8), country CHAR(2), settings INT, max_ping SMALLINT,
+                  first_seen BIGINT, last_seen BIGINT)
+dc_kits          (id SMALLINT PK, kit_key VARCHAR(32) UNIQUE)            -- stable numeric kit ids
+dc_seasons       (id SMALLINT PK, name VARCHAR(32), started_at BIGINT, ended_at BIGINT NULL, legacy TINYINT)
+dc_ratings       (season_id, player_id, kit_id, rating DOUBLE, rd DOUBLE, vol DOUBLE, games INT, wins INT,
+                  losses INT, streak SMALLINT, best_streak SMALLINT, peak DOUBLE, tier_override TINYINT NULL,
+                  updated_at BIGINT, PK(season_id, player_id, kit_id))   -- WITHOUT ROWID
+                  IDX (season_id, kit_id, rating)
+dc_standings     (season_id, player_id, points SMALLINT, overall_tier TINYINT, PK(season_id, player_id))
+                  IDX (season_id, points)                                -- overall leaderboard
+dc_matches       (id BIGINT PK AUTO, season_id, kit_id, ranked TINYINT, arena VARCHAR(32), started_at BIGINT,
+                  duration_ms INT, end_reason TINYINT, winner_team TINYINT, first_to TINYINT, rounds VARCHAR(64))
+dc_match_players (match_id, player_id, team TINYINT, rounds_won TINYINT, hits INT, damage_dealt FLOAT,
+                  damage_taken FLOAT, rating_before FLOAT, rating_after FLOAT, PK(match_id, player_id))
+                  IDX (player_id, match_id)                              -- recent history
+```
+
+A **season reset ("beta reset")** creates a new `dc_seasons` row and marks the old one `legacy=1`. Nothing is copied. Old rows stay as the archive and can be read with `/profile <player> legacy`. Every read and write is scoped to the current season id.
+
+## Arena instancing
+
+* All matches run in one void world, `duelcore_arenas`. It's created by the plugin, autosave is off, and the folder is wiped on boot. The world is split into a grid of **slots** 1024 blocks apart, beyond any view distance, so matches can't see or reach each other.
+* A **template** is a block snapshot: a palette plus packed indices, saved as `arenas/<name>.dca` next to `arenas/<name>.yml` (spawns, tags, type). Templates come from:
+  1. the built-in generator (open `plains`, boxed `box`, `crystal` obsidian pad, `rails` for carts), so the plugin works out of the box;
+  2. an admin-captured region (`/duelcore arena create/pos1/pos2/setspawn1/setspawn2/save`);
+  3. a Sponge `.schem` import.
+* An **instance** is a template pasted into a free slot. The paste and every reset use one routine: diff the target state against the current world. It reads `ChunkSnapshot`s on the main thread (cheap), computes the diff off-thread, and writes back in tick-budgeted batches (configurable ms/tick). Then it removes every non-player entity in the box (crystals, items, arrows, carts, TNT). The same diff runs between rounds and after the match, so resets are exact even after crystal/TNT damage.
+* Instances hold plugin chunk tickets only while pasting or in use. Idle instances above `arena.keep-idle-per-template` are cleared back to air and their chunks are unloaded without saving. Per-player world borders mark the playable box.
+* Pools are chosen per kit through **tags**: a kit's `arena-tags: [boxed]` matches arenas with `tags: [boxed]`. The pool grows on demand up to `arena.max-instances`.
+
+## Queue & matchmaking
+
+* Queue entry: kit, ranked or unranked, rating at join time, join time, region, ping, and max-ping preference.
+* The **Matchmaker** runs every 20 ticks on the main thread, fully in memory. For each (kit, mode) bucket it sorts by wait time. Each player's acceptable rating window is `initial + growth × waitSeconds`, capped at `max`. Two players match when their difference fits **both** windows. Among acceptable partners it picks the lowest cost: `|Δrating| + regionPenalty + pingPenalty`, where the penalties come from the `MatchPolicy` hook and fade to zero after `relax-after` seconds. It never matches a player with themselves, and skips anyone offline, in a match or spectating.
+* Leaving: the hotbar item, `/leave`, or disconnecting (the quit event removes the entry).
+
+## Match lifecycle
+
+```
+PAIRED ── totem pop (kit item model) + title ─► ARENA_ACQUIRE (pooled or paste)
+   ► ROUND_PREP: reset player state, apply kit, teleport to spawns, freeze (attribute modifiers + move guard)
+   ► COUNTDOWN (5 s first round, 3 s later rounds)
+   ► FIGHTING: kit rules enforced; hits and damage tracked; round timer
+        ├─ lethal hit (PlayerDeathEvent cancelled) / void / timeout ─► ROUND_END
+        └─ quit, kick or /leave ─► MATCH_END (forfeit)
+   ROUND_END: score +1; winner reaches N? ─► MATCH_END, else arena diff-reset ─► ROUND_PREP
+   MATCH_END: rating update (ranked) ─► async transactional persist ─► results dialog + summary
+              ─► 3 s ─► hub (inventory/hotbar/scoreboard restored) ─► arena reset/release
+```
+
+A server shutdown during a match cancels it without any rating change. `/duelcore reload` leaves running matches alone, because each match keeps its own immutable `Kit` object.
+
+## Ratings & tiers
+
+* Default is **Elo**: K = 32, raised to 48 during the placement games (default 5). **Glicko-2** can be chosen in config. Each kit has its own rating, starting at 1000.
+* A kit tier comes from rating thresholds on the 15-step ladder (HT1 … LT5). Thresholds live in `tiers.yml` and can be overridden per kit. Until placement is done, the tier shows `???`.
+* **Global points** are the sum of per-kit tier points (config table), and the overall tier comes from the thresholds you specified. Both are stored in `dc_standings` for fast leaderboards.
+* `/tier set <player> <kit> <tier>` pins a tier (`tier_override`). `/tier clear` removes the pin.
+
+## UI
+
+* **Hub hotbar** (locked): Queue · Leaderboard · Profile · Settings · Spectate. While you're queued, the Queue item becomes "Leave queue".
+* **Dialogs** use fixed custom-click keys (`duelcore:queue`, …) handled by one `PlayerCustomClickEvent` router. There are no per-click callbacks to leak, and test bots can click them with the `custom_click_action` packet.
+* **Sidebar** uses a blank number format and per-line custom names. The hub shows name, tier and points, queued and live counts. In a match it shows score, round, timer and ping.
+* **Match found**: a totem-pop animation shows an item that represents the kit. The client displays the held `death_protection` item, so for two ticks the offhand gets an item with `death_protection` + `item_model = <kit icon>`, then an `EntityEffect.PROTECTED_FROM_DEATH` plays.
+
+## Testing approach
+
+Bots can't reach the game port from the build sandbox, because the proxy only tunnels TLS. So a test-only plugin (`testkit/`) launches **mineflayer** bots inside the server container. The bots are 26.1 clients connecting through ViaBackwards to 127.0.0.1. While the server is in offline mode for testing, the testkit only lets loopback `dcbot*` names log in. The bots drive the real UI: hotbar right-click, then the dialog arrives, then they send `custom_click_action`. They also fight, disconnect on purpose, and so on. Assertions read the console, the SQLite file and `/duelcore debug` output.

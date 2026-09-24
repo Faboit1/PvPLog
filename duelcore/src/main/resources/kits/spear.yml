@@ -1,0 +1,32 @@
+# Spear: the new spears with lunge, backed by a sword.
+display-name: "Spear"
+description: "Netherite spear with lunge. Close the gap, then finish."
+icon: netherite_spear
+category: main
+order: 2
+enabled: true
+ranked: true
+first-to: 3
+round-time-limit: 180
+arena-tags: [terrain]
+rules:
+  natural-regen: true
+  hunger: false
+  fall-damage: true
+  build: false
+  ender-pearls: false
+  totems: false
+  crystals: false
+  anchors: false
+  cobwebs: false
+  item-drops: false
+loadout:
+  armor:
+    helmet: { item: diamond_helmet, enchants: { protection: 2 } }
+    chestplate: { item: diamond_chestplate, enchants: { protection: 2 } }
+    leggings: { item: diamond_leggings, enchants: { protection: 2 } }
+    boots: { item: diamond_boots, enchants: { protection: 2 } }
+  items:
+    0: { item: netherite_spear, enchants: { lunge: 3, sharpness: 2 } }
+    1: { item: diamond_sword, enchants: { sharpness: 2 } }
+    2: { item: golden_apple, amount: 4 }

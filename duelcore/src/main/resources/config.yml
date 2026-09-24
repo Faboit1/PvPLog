@@ -1,0 +1,183 @@
+# ─────────────────────────────────────────────────────────────
+#  DuelCore — main configuration
+#  Text lives in messages.yml, visuals in gui.yml, tiers in tiers.yml,
+#  kits in kits/*.yml and arenas in arenas/*.yml.
+#  Reload everything with /duelcore reload (running matches keep their kit).
+# ─────────────────────────────────────────────────────────────
+config-version: 1
+
+database:
+  # sqlite (default, file in the plugin folder) or mysql (MySQL 8 / MariaDB 10.5+)
+  type: sqlite
+  sqlite:
+    file: data.db
+  mysql:
+    host: localhost
+    port: 3306
+    database: duelcore
+    username: duelcore
+    password: ""
+    pool-size: 6
+    properties:
+      useSSL: "false"
+      allowPublicKeyRetrieval: "true"
+
+hub:
+  # World players spawn in. The spawn point is set in-game with /duelcore sethub.
+  world: world
+  # When no spawn is set yet, build a small platform at 0 100 0 so the server is playable immediately.
+  generate-platform-if-missing: true
+  # Fixed time of day (ticks, 6000 = noon) and clear weather in the hub world.
+  time: 6000
+  lock-weather: true
+  # Teleport back to spawn when falling below this Y.
+  void-y: 0
+  # Show other hub players (false = everyone sees only themselves in the hub).
+  show-players: true
+
+queue:
+  # Allow being in queues for several kits at once. false = joining a new kit replaces the old queue.
+  allow-multiple: false
+  ranked: true
+  unranked: true
+  # Send a "still searching" action bar while queued.
+  searching-action-bar: true
+
+matchmaking:
+  # How often the matchmaker runs, in ticks (20 = every second).
+  interval-ticks: 20
+  # Acceptable rating gap = initial + growth-per-second × seconds waited, capped at max.
+  # A pair is only made when the gap fits BOTH players' windows.
+  window:
+    initial: 50
+    growth-per-second: 10
+    max: 500
+  # Latency preferences (see Settings → region / max ping). Penalties are in rating points and
+  # fade to zero after relax-after-seconds so nobody waits forever.
+  region:
+    enabled: true
+    cross-region-penalty: 250
+  ping:
+    enabled: true
+    penalty-per-ms: 0.5
+    over-max-ping-penalty: 300
+  relax-after-seconds: 30
+  # Anti-boosting: at most this many ranked games between the same two players per 24 h (0 = off).
+  max-ranked-rematches-per-day: 10
+  # Log every pairing decision (gap, windows, wait) to the console.
+  log-pairings: false
+
+match:
+  # Countdown before the first round and before later rounds (players are frozen meanwhile).
+  countdown-seconds: 5
+  round-countdown-seconds: 3
+  # Pause between a round ending and the next round starting.
+  round-end-delay-ticks: 50
+  # Time on the results screen before being sent back to the hub.
+  return-delay-seconds: 4
+  # When a round hits its time limit: "health" (higher health % wins) or "draw" (nobody scores).
+  timeout-decision: health
+  # Draw rounds still count towards the round number but give no point. Hard cap on rounds per match:
+  max-rounds: 15
+  # Commands usable during a match (everything else is blocked). Admins with duelcore.bypass.commands ignore this.
+  allowed-commands: [leave, forfeit, msg, tell, w, r, reply, profile, ping]
+  # Play the totem animation with the kit's item when a match is found.
+  totem-pop: true
+  # Out of bounds: a player this many blocks below the arena floor counts as dead.
+  void-depth: 6
+
+animations:
+  # From round 2 on, both fighters are carried along an arc back to their spawn instead of teleporting.
+  # They can look around but can't move while it plays.
+  respawn-pull: true
+  respawn-pull-ticks: 26
+  # Red burst and soul where a fighter dies.
+  death: true
+  # Golden spiral around the round winner.
+  round-win: true
+  # Firework bursts above the match winner.
+  match-win: true
+  # White ring at the fighters' feet when a round starts.
+  fight-start: true
+  # Title when joining the hub (text in messages.yml hub.join-title / hub.join-subtitle).
+  join-title: true
+
+rating:
+  # elo or glicko2
+  system: elo
+  default: 1000
+  # Ratings never drop below this.
+  floor: 100
+  elo:
+    k-factor: 32
+    # K-factor during placement (provisional) games, see tiers.yml placement-matches.
+    provisional-k-factor: 48
+  glicko2:
+    tau: 0.5
+    default-rd: 350
+    min-rd: 45
+    default-volatility: 0.06
+
+season:
+  # Name used for the first season on a fresh database.
+  first-name: "Beta"
+
+arena:
+  # Void world that hosts every match instance (world key duelcore:<name>).
+  world: arenas
+  # Keep the arena world between restarts. Pasted arenas are reused after a restart (verified block by block)
+  # and chunks are generated only once. false = delete and regenerate the world on every start (slow first pastes).
+  persistent-world: true
+  # Generate the chunks of this many instance slots in the background, so new instances paste in about a second.
+  pregenerate-slots: 16
+  # Void world for building and editing arena templates (/duelcore arena world). Kept between restarts.
+  editor-world: editor
+  # Distance between instance slots. Must be larger than your biggest arena plus render distance.
+  slot-spacing: 1024
+  base-y: 64
+  # Max instances alive at once (limits memory). Matches wait for a free arena when all are busy.
+  max-instances: 48
+  # Ready-to-use instances kept per template after matches end (instant match starts).
+  keep-idle-per-template: 2
+  # Paste one instance of every template at startup.
+  prewarm: true
+  # Main-thread time budget per tick for pasting/resetting blocks (milliseconds).
+  block-budget-ms: 4
+  # Arenas are reset between rounds (true) or only after the match (false).
+  reset-between-rounds: true
+  # View/simulation distance in the arena world. Arenas are small, so a low value saves memory and chunk loads.
+  view-distance: 5
+
+leaderboard:
+  # How often cached leaderboards refresh from the database.
+  refresh-seconds: 30
+  size: 100
+  # Region codes players can pick in Settings (used by leaderboards and matchmaking).
+  regions: [EU, NA, SA, AS, OC, AF]
+
+display:
+  # Show the tier tag in chat, the tab list and above heads. Formats are in gui.yml.
+  chat-tag: true
+  tab-tag: true
+  nametag-tag: true
+
+# Read-only JSON API for websites (phase 2). Needs a free port on your host.
+web-api:
+  enabled: false
+  bind: 0.0.0.0
+  port: 8765
+  # Requests must send "Authorization: Bearer <token>" (or ?token=). Change this!
+  token: "change-me"
+  # Cache responses for this many seconds.
+  cache-seconds: 10
+
+tournaments:
+  # Minimum and maximum signups for an automated bracket.
+  min-players: 4
+  max-players: 64
+  # Seconds between the signup closing and the first round.
+  start-delay-seconds: 10
+
+debug:
+  # Extra console output for matches and arena resets.
+  verbose: false

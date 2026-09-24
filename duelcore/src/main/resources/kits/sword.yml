@@ -1,0 +1,32 @@
+# Sword: diamond gear, melee only.
+# Items: "material" or a vanilla item string ("diamond_sword[enchantments={sharpness:2}]"),
+# or a map with item / amount / enchants / name / potion / unbreakable / components.
+display-name: "Sword"
+description: "Diamond armor and a sword. Pure melee."
+icon: netherite_sword
+category: main
+order: 1
+enabled: true
+ranked: true
+first-to: 3
+round-time-limit: 180
+arena-tags: [terrain]
+rules:
+  natural-regen: true
+  hunger: false
+  fall-damage: true
+  build: false
+  ender-pearls: false
+  totems: false
+  crystals: false
+  anchors: false
+  cobwebs: false
+  item-drops: false
+loadout:
+  armor:
+    helmet: { item: diamond_helmet, enchants: { protection: 1 } }
+    chestplate: { item: diamond_chestplate, enchants: { protection: 1 } }
+    leggings: { item: diamond_leggings, enchants: { protection: 1 } }
+    boots: { item: diamond_boots, enchants: { protection: 1 } }
+  items:
+    0: { item: diamond_sword, enchants: { sharpness: 1 } }

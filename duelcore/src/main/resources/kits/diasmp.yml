@@ -1,0 +1,48 @@
+# Diamond SMP: maxed diamond survival gear.
+display-name: "Diamond SMP"
+description: "Maxed diamond gear, shield, bow and a couple of totems."
+icon: diamond_sword
+category: extra
+order: 10
+enabled: true
+ranked: true
+first-to: 3
+round-time-limit: 300
+arena-tags: [terrain]
+rules:
+  natural-regen: true
+  hunger: true
+  fall-damage: true
+  build: true
+  break: placed
+  allowed-blocks: [cobblestone, cobweb, water]
+  ender-pearls: true
+  pearl-cooldown: 1
+  totems: true
+  crystals: false
+  anchors: false
+  cobwebs: true
+  buckets: true
+  item-drops: false
+loadout:
+  armor:
+    helmet: { item: diamond_helmet, enchants: { protection: 4, unbreaking: 3 } }
+    chestplate: { item: diamond_chestplate, enchants: { protection: 4, unbreaking: 3 } }
+    leggings: { item: diamond_leggings, enchants: { protection: 4, unbreaking: 3 } }
+    boots: { item: diamond_boots, enchants: { protection: 4, feather_falling: 4, unbreaking: 3 } }
+  items:
+    0: { item: diamond_sword, enchants: { sharpness: 5, unbreaking: 3 } }
+    1: { item: diamond_axe, enchants: { sharpness: 5, unbreaking: 3 } }
+    2: { item: bow, enchants: { power: 5, unbreaking: 3 } }
+    3: { item: golden_apple, amount: 32 }
+    4: { item: ender_pearl, amount: 16 }
+    5: water_bucket
+    6: { item: cobweb, amount: 8 }
+    7: { item: cobblestone, amount: 64 }
+    8: { item: totem_of_undying }
+    9: { item: arrow, amount: 64 }
+    10: { item: potion, potion: strong_swiftness }
+    11: { item: potion, potion: strong_strength }
+    12: { item: cooked_beef, amount: 64 }
+    13: { item: totem_of_undying }
+  offhand: { item: shield, enchants: { unbreaking: 3 } }

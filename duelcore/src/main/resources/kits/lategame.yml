@@ -1,0 +1,47 @@
+# Late Game: late survival gear. Mixed diamond/netherite, webs, lava and a totem.
+display-name: "Late Game"
+description: "Enchanted late-game survival loadout."
+icon: diamond_chestplate
+category: main
+order: 8
+enabled: true
+ranked: true
+first-to: 3
+round-time-limit: 300
+arena-tags: [terrain]
+rules:
+  natural-regen: true
+  hunger: true
+  fall-damage: true
+  build: true
+  break: placed
+  allowed-blocks: [cobblestone, oak_planks, cobweb, water, lava]
+  ender-pearls: true
+  pearl-cooldown: 1
+  totems: true
+  crystals: false
+  anchors: false
+  cobwebs: true
+  buckets: true
+  item-drops: false
+loadout:
+  armor:
+    helmet: { item: diamond_helmet, enchants: { protection: 4, unbreaking: 3 } }
+    chestplate: { item: netherite_chestplate, enchants: { protection: 4, unbreaking: 3 } }
+    leggings: { item: netherite_leggings, enchants: { protection: 4, unbreaking: 3 } }
+    boots: { item: diamond_boots, enchants: { protection: 4, feather_falling: 4, unbreaking: 3 } }
+  items:
+    0: { item: netherite_sword, enchants: { sharpness: 5, unbreaking: 3 } }
+    1: { item: netherite_axe, enchants: { sharpness: 5, unbreaking: 3 } }
+    2: { item: bow, enchants: { power: 5, unbreaking: 3 } }
+    3: { item: crossbow, enchants: { quick_charge: 3, piercing: 4 } }
+    4: water_bucket
+    5: lava_bucket
+    6: { item: golden_apple, amount: 16 }
+    7: { item: ender_pearl, amount: 8 }
+    8: { item: cobblestone, amount: 64 }
+    9: { item: arrow, amount: 64 }
+    10: { item: cobweb, amount: 8 }
+    11: { item: cooked_beef, amount: 64 }
+    12: { item: diamond_pickaxe, enchants: { efficiency: 5 } }
+  offhand: { item: shield, enchants: { unbreaking: 3 } }

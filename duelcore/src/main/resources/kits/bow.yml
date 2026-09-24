@@ -1,0 +1,32 @@
+# Bow: arrows only.
+display-name: "Bow"
+description: "Infinity bow and light armor. Aim wins."
+icon: bow
+category: extra
+order: 14
+enabled: true
+ranked: true
+first-to: 5
+round-time-limit: 180
+arena-tags: [terrain]
+rules:
+  natural-regen: false
+  hunger: false
+  fall-damage: true
+  build: false
+  ender-pearls: false
+  totems: false
+  crystals: false
+  anchors: false
+  cobwebs: false
+  item-drops: false
+loadout:
+  armor:
+    helmet: leather_helmet
+    chestplate: chainmail_chestplate
+    leggings: chainmail_leggings
+    boots: leather_boots
+  items:
+    0: { item: bow, enchants: { power: 2, infinity: 1, unbreaking: 3 } }
+    1: wooden_sword
+    9: arrow

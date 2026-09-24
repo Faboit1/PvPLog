@@ -1,0 +1,43 @@
+# Cart: rails, TNT minecarts and a flame bow.
+display-name: "Cart"
+description: "Place rails, drop TNT carts, light them with a flame bow."
+icon: tnt_minecart
+category: extra
+order: 13
+enabled: true
+ranked: true
+first-to: 3
+round-time-limit: 240
+arena-tags: [terrain]
+rules:
+  natural-regen: true
+  hunger: false
+  fall-damage: true
+  build: true
+  break: placed
+  allowed-blocks: [rail, cobblestone]
+  ender-pearls: true
+  pearl-cooldown: 1
+  totems: true
+  crystals: false
+  anchors: false
+  cobwebs: false
+  minecarts: true
+  item-drops: false
+loadout:
+  armor:
+    helmet: { item: diamond_helmet, enchants: { protection: 4 } }
+    chestplate: { item: diamond_chestplate, enchants: { protection: 4 } }
+    leggings: { item: diamond_leggings, enchants: { blast_protection: 4 } }
+    boots: { item: diamond_boots, enchants: { protection: 4, feather_falling: 4 } }
+  items:
+    0: { item: diamond_sword, enchants: { sharpness: 3 } }
+    1: { item: bow, enchants: { flame: 1, power: 3, infinity: 1 } }
+    2: { item: rail, amount: 64 }
+    3: { item: tnt_minecart, amount: 64 }
+    4: { item: ender_pearl, amount: 16 }
+    5: { item: golden_apple, amount: 16 }
+    6: { item: cobblestone, amount: 64 }
+    7: { item: totem_of_undying }
+    8: arrow
+  offhand: { item: totem_of_undying }

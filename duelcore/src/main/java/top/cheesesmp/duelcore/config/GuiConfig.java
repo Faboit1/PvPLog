@@ -1,0 +1,75 @@
+package top.cheesesmp.duelcore.config;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.bukkit.Material;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.jspecify.annotations.Nullable;
+
+/** Typed view of gui.yml. */
+public final class GuiConfig {
+
+    public record HotbarItem(int slot, Material material, String name, List<String> lore) {
+    }
+
+    public final Map<String, HotbarItem> hotbar = new HashMap<>();
+    public final boolean sidebarEnabled;
+    public final String sidebarTitle;
+    public final List<String> sidebarHub;
+    public final List<String> sidebarQueue;
+    public final List<String> sidebarMatch;
+    public final List<String> sidebarSpectate;
+    public final String chatFormat;
+    public final String tabFormat;
+    public final String nametagPrefix;
+    public final boolean hideUnrankedTag;
+    public final int kitColumns;
+    public final int kitButtonWidth;
+    public final int wideWidth;
+    public final int leaderboardLines;
+    public final int spectateLimit;
+    public final boolean motdEnabled;
+    public final boolean motdCenter;
+    public final java.util.List<String> motdLines;
+    public final java.util.List<String> motdHover;
+    public final int historyLines;
+
+    public GuiConfig(YamlConfiguration y) {
+        ConfigurationSection hb = y.getConfigurationSection("hotbar");
+        if (hb != null) {
+            for (String key : hb.getKeys(false)) {
+                ConfigurationSection s = hb.getConfigurationSection(key);
+                if (s == null) continue;
+                Material m = Material.matchMaterial(s.getString("item", "stone"));
+                hotbar.put(key, new HotbarItem(Math.clamp(s.getInt("slot", 0), 0, 8), m == null ? Material.STONE : m,
+                    s.getString("name", key), s.getStringList("lore")));
+            }
+        }
+        sidebarEnabled = y.getBoolean("sidebar.enabled", true);
+        sidebarTitle = y.getString("sidebar.title", "<accent>Duels</accent>");
+        sidebarHub = y.getStringList("sidebar.hub");
+        sidebarQueue = y.getStringList("sidebar.queue");
+        sidebarMatch = y.getStringList("sidebar.match");
+        sidebarSpectate = y.getStringList("sidebar.spectate");
+        chatFormat = y.getString("tags.chat", "<tier> <text><name></text><muted>:</muted> <message>");
+        tabFormat = y.getString("tags.tab", "<tier> <text><name></text>");
+        nametagPrefix = y.getString("tags.nametag-prefix", "<tier> ");
+        hideUnrankedTag = y.getBoolean("tags.hide-unranked", false);
+        kitColumns = Math.clamp(y.getInt("dialogs.kit-columns", 3), 1, 6);
+        kitButtonWidth = Math.clamp(y.getInt("dialogs.kit-button-width", 110), 40, 400);
+        wideWidth = Math.clamp(y.getInt("dialogs.wide-width", 310), 100, 1024);
+        leaderboardLines = Math.clamp(y.getInt("dialogs.leaderboard-lines", 10), 3, 50);
+        spectateLimit = Math.clamp(y.getInt("dialogs.spectate-limit", 30), 1, 100);
+        motdEnabled = y.getBoolean("motd.enabled", true);
+        motdCenter = y.getBoolean("motd.center", true);
+        motdLines = y.getStringList("motd.lines");
+        motdHover = y.getStringList("motd.hover");
+        historyLines = Math.clamp(y.getInt("dialogs.history-lines", 5), 0, 20);
+    }
+
+    public @Nullable HotbarItem item(String key) {
+        return hotbar.get(key);
+    }
+}
