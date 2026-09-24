@@ -38,9 +38,10 @@ public final class DuelCoreApi {
         return p == null ? null : p.overall();
     }
 
-    public int points(UUID player) {
+    /** Overall Elo (average rating of the kits with finished placement), 0 while unranked or offline. */
+    public int elo(UUID player) {
         PlayerProfile p = profile(player);
-        return p == null ? 0 : p.points();
+        return p == null ? 0 : p.elo();
     }
 
     public @Nullable Tier kitTier(UUID player, String kit) {

@@ -131,16 +131,11 @@ profile:
   not-found: "<muted>No profile for <text><player></text>.</muted>"
   no-legacy: "<muted>There is no previous season yet.</muted>"
 
-# Overall standing with its unit (<standing> placeholder). Which one is used follows tiers.yml overall-mode.
-standing:
-  elo: "<value> Elo"
-  points: "<value> pts"
-
 tier:
   unknown: "<bad>Unknown tier. Use HT1, MT1, LT1 … LT5."
   set: "<muted>Pinned <text><player></text> to <tier> in <kit>.</muted>"
   cleared: "<muted>Cleared the tier pin of <text><player></text> in <kit>.</muted>"
-  info-header: "<text><player></text> <muted>· <tier> · <standing></muted>"
+  info-header: "<text><player></text> <muted>· <tier> · <elo> Elo</muted>"
   info-line: "<muted>  <kit>: <tier> · <rating> · <games> games <override></muted>"
 
 season:
@@ -206,7 +201,7 @@ dialog:
     leave: "<bad>Leave queue</bad>"
   profile:
     title: "<player>"
-    header: "<head> <text><player></text>  <tier> <muted>· <standing> · <region> <country></muted>"
+    header: "<head> <text><player></text>  <tier> <muted>· <elo> Elo · <region> <country></muted>"
     record: "<muted><text><wins></text> wins · <text><losses></text> losses · <text><winrate>%</text></muted>"
     legacy: "<muted>Legacy season</muted>"
     kit-line: "<kit_icon> <text><kit></text>  <tier> <muted>· <rating> · <wins>W <losses>L · best streak <best_streak></muted>"
@@ -222,7 +217,7 @@ dialog:
     global: "global"
     overall: "Overall"
     empty: "<muted>Nobody is ranked here yet.</muted>"
-    line-overall: "<muted><rank>.</muted> <head> <text><player></text>  <tier> <muted>· <standing> · <wins>W</muted>"
+    line-overall: "<muted><rank>.</muted> <head> <text><player></text>  <tier> <muted>· <elo> Elo · <wins>W</muted>"
     line-kit: "<muted><rank>.</muted> <head> <text><player></text>  <tier> <muted>· <value> · <wins>W <losses>L</muted>"
     you: "<muted>You · #<rank> · <value></muted>"
     overall-button: "<sprite:items:item/nether_star>"

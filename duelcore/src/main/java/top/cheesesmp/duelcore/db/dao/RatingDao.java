@@ -71,14 +71,14 @@ public final class RatingDao {
         }
     }
 
-    public static void upsertStanding(Connection c, Dialect d, int seasonId, int playerId, int points, @Nullable Tier overall)
+    public static void upsertStanding(Connection c, Dialect d, int seasonId, int playerId, int elo, @Nullable Tier overall)
         throws SQLException {
         try (PreparedStatement ps = c.prepareStatement(
-            "INSERT INTO dc_standings (season_id, player_id, points, overall_tier) VALUES (?, ?, ?, ?)"
-                + d.upsert("season_id, player_id", "points", "overall_tier"))) {
+            "INSERT INTO dc_standings (season_id, player_id, elo, overall_tier) VALUES (?, ?, ?, ?)"
+                + d.upsert("season_id, player_id", "elo", "overall_tier"))) {
             ps.setInt(1, seasonId);
             ps.setInt(2, playerId);
-            ps.setInt(3, points);
+            ps.setInt(3, elo);
             if (overall == null) ps.setNull(4, Types.TINYINT);
             else ps.setInt(4, overall.id());
             ps.executeUpdate();

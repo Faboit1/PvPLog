@@ -7,6 +7,12 @@ commands:
   dctest:
     description: Run or stop bot scripts
     permission: duelcore.testkit
+  tester:
+    description: Let a player join while the server is in testing mode
+    usage: /tester add <player> | remove <player> | list
+    permission: duelcore.tester
 permissions:
+  duelcore.tester:
+    default: op
   duelcore.testkit:
     default: op

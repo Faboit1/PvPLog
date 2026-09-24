@@ -11,7 +11,7 @@ import java.util.List;
 /** Versioned schema. Append new versions; never edit a released one. */
 public final class Migrations {
 
-    public static final int LATEST = 2;
+    public static final int LATEST = 3;
 
     private Migrations() {
     }
@@ -38,6 +38,15 @@ public final class Migrations {
             c.setAutoCommit(auto);
         }
         return currentVersion(c);
+    }
+
+    /** Schema version before migrating (0 on a fresh database). */
+    public static int installedVersion(Connection c) {
+        try {
+            return currentVersion(c);
+        } catch (SQLException e) {
+            return 0; // no dc_meta table yet
+        }
     }
 
     private static int currentVersion(Connection c) throws SQLException {
@@ -140,6 +149,12 @@ public final class Migrations {
                     + "finished_at BIGINT NULL, "
                     + "winner_id INT NULL, "
                     + "bracket TEXT NULL)" + d.tableSuffix());
+            }
+            case 3 -> {
+                // the overall standing is the overall Elo now (tier points were removed)
+                s.add(d == Dialect.SQLITE
+                    ? "ALTER TABLE dc_standings RENAME COLUMN points TO elo"
+                    : "ALTER TABLE dc_standings CHANGE points elo SMALLINT NOT NULL");
             }
             default -> throw new IllegalStateException("unknown schema version " + version);
         }

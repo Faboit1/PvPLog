@@ -15,7 +15,7 @@ public final class LeaderboardDao {
 
     /**
      * One leaderboard line. For kit boards {@code value} is the rating and {@code tier} the pinned tier (if any);
-     * for the overall board {@code value} is global points and {@code tier} the overall tier.
+     * for the overall board {@code value} is the overall Elo and {@code tier} the overall tier.
      */
     public record Row(int rank, UUID uuid, String name, double value, @Nullable Tier tier, int wins, int losses,
                       @Nullable String region, @Nullable String country) {
@@ -48,7 +48,7 @@ public final class LeaderboardDao {
     public static List<Row> overall(Connection c, int seasonId, @Nullable String region, @Nullable String country, int limit)
         throws SQLException {
         StringBuilder sql = new StringBuilder(
-            "SELECT p.uuid, p.name, s.points, s.overall_tier, "
+            "SELECT p.uuid, p.name, s.elo, s.overall_tier, "
                 + "(SELECT COALESCE(SUM(r.wins), 0) FROM dc_ratings r WHERE r.season_id = s.season_id AND r.player_id = s.player_id), "
                 + "(SELECT COALESCE(SUM(r.losses), 0) FROM dc_ratings r WHERE r.season_id = s.season_id AND r.player_id = s.player_id), "
                 + "p.region, p.country "
@@ -56,7 +56,7 @@ public final class LeaderboardDao {
                 + "WHERE s.season_id = ? AND s.overall_tier IS NOT NULL");
         if (region != null) sql.append(" AND p.region = ?");
         if (country != null) sql.append(" AND p.country = ?");
-        sql.append(" ORDER BY s.points DESC, p.name ASC LIMIT ?");
+        sql.append(" ORDER BY s.elo DESC, p.name ASC LIMIT ?");
         try (PreparedStatement ps = c.prepareStatement(sql.toString())) {
             int i = 1;
             ps.setInt(i++, seasonId);
@@ -83,11 +83,11 @@ public final class LeaderboardDao {
         }
     }
 
-    public static int overallRank(Connection c, int seasonId, int points) throws SQLException {
+    public static int overallRank(Connection c, int seasonId, int elo) throws SQLException {
         try (PreparedStatement ps = c.prepareStatement(
-            "SELECT COUNT(*) FROM dc_standings WHERE season_id = ? AND points > ? AND overall_tier IS NOT NULL")) {
+            "SELECT COUNT(*) FROM dc_standings WHERE season_id = ? AND elo > ? AND overall_tier IS NOT NULL")) {
             ps.setInt(1, seasonId);
-            ps.setInt(2, points);
+            ps.setInt(2, elo);
             try (ResultSet rs = ps.executeQuery()) {
                 rs.next();
                 return rs.getInt(1) + 1;

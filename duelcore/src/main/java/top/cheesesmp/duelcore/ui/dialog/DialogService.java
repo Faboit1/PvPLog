@@ -36,6 +36,7 @@ import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.queue.QueueMode;
 import top.cheesesmp.duelcore.rating.Tier;
+import top.cheesesmp.duelcore.rating.TierService;
 import top.cheesesmp.duelcore.ui.Icons;
 
 /**
@@ -179,7 +180,7 @@ public final class DialogService {
             Messages.comp("head", Icons.head(target.uuid(), target.name())),
             Messages.text("player", target.name()),
             Messages.comp("tier", plugin.tiers().format(target.overall())),
-            plugin.tiers().standingTags(msg(), target.points()),
+            Messages.text("elo", TierService.eloText(target)),
             Messages.text("region", target.region() == null ? "—" : target.region()),
             Messages.text("country", target.country() == null ? "—" : target.country())));
         body.add(msg().get("dialog.profile.record", Messages.num("wins", wins), Messages.num("losses", losses),
@@ -258,7 +259,7 @@ public final class DialogService {
                 Messages.text("player", r.name()),
                 Messages.comp("tier", plugin.tiers().format(tier)),
                 Messages.num("value", (int) Math.round(r.value())),
-                plugin.tiers().standingTags(msg(), (int) Math.round(r.value())),
+                Messages.num("elo", (int) Math.round(r.value())),
                 Messages.num("wins", r.wins()), Messages.num("losses", r.losses()),
                 Messages.text("region", r.region() == null ? "" : r.region())));
         }
@@ -268,7 +269,7 @@ public final class DialogService {
                 body.add(Component.empty());
                 body.add(msg().get("dialog.leaderboard.you", Messages.num("rank", r.rank()),
                     Messages.num("value", (int) Math.round(r.value())),
-                    plugin.tiers().standingTags(msg(), (int) Math.round(r.value()))));
+                    Messages.num("elo", (int) Math.round(r.value()))));
             }
         }
         List<ActionButton> buttons = new ArrayList<>();

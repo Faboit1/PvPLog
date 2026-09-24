@@ -10,13 +10,11 @@ import top.cheesesmp.duelcore.profile.KitStats;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 
 /**
- * Turns stats into tiers, the overall standing and their display. Immutable; replaced on reload.
- * The overall standing is either the player's overall Elo (average rating of the kits they finished placement in)
- * or the legacy sum of kit tier points, depending on tiers.yml {@code overall-mode}.
+ * Turns stats into tiers, the overall Elo and their display. Immutable; replaced on reload.
+ * Overall Elo = average rating of the kits a player finished placement in; the overall tier uses the same thresholds
+ * as kit tiers (tiers.yml kit-thresholds.overall when present, otherwise default).
  */
 public final class TierService {
-
-    public enum OverallMode { ELO, POINTS }
 
     private static final MiniMessage MM = MiniMessage.miniMessage();
 
@@ -24,23 +22,17 @@ public final class TierService {
     private final String unrankedLabel;
     private final Map<Tier, String> formats;
     private final String unrankedFormat;
-    private final OverallMode mode;
 
-    public TierService(TierLadder ladder, String unrankedLabel, Map<Tier, String> formats, String unrankedFormat,
-                       OverallMode mode) {
-        this.mode = mode;
+    public TierService(TierLadder ladder, String unrankedLabel, Map<Tier, String> formats, String unrankedFormat) {
         this.ladder = ladder;
         this.unrankedLabel = unrankedLabel;
-        this.formats = new EnumMap<>(formats);
+        this.formats = new EnumMap<>(Tier.class); // not new EnumMap<>(map): that throws for an empty non-EnumMap
+        this.formats.putAll(formats);
         this.unrankedFormat = unrankedFormat;
     }
 
     public TierLadder ladder() {
         return ladder;
-    }
-
-    public OverallMode mode() {
-        return mode;
     }
 
     public int placementMatches() {
@@ -55,20 +47,11 @@ public final class TierService {
         return ladder.kitTier(kit, stats.rating);
     }
 
-    public int points(PlayerProfile profile) {
-        int total = 0;
-        for (Map.Entry<String, KitStats> e : profile.allStats().entrySet()) {
-            total += ladder.points(kitTier(e.getKey(), e.getValue()));
-        }
-        return total;
-    }
-
     /** Overall Elo: average rating over the kits whose placement is finished (0 when none). */
     public int overallElo(PlayerProfile profile) {
         double sum = 0;
         int n = 0;
-        for (Map.Entry<String, KitStats> e : profile.allStats().entrySet()) {
-            KitStats s = e.getValue();
+        for (KitStats s : profile.allStats().values()) {
             if (s.games < ladder.placementMatches()) continue;
             sum += s.rating;
             n++;
@@ -76,40 +59,23 @@ public final class TierService {
         return n == 0 ? 0 : (int) Math.round(sum / n);
     }
 
-    /** The overall standing value: overall Elo or global points (see {@link OverallMode}). */
-    public int standing(PlayerProfile profile) {
-        return mode == OverallMode.ELO ? overallElo(profile) : points(profile);
-    }
-
-    /** Overall tier, or null when the player has no ranked kit yet. */
-    public @Nullable Tier overall(PlayerProfile profile, int value) {
-        boolean anyRanked = false;
+    /** Overall tier from the overall Elo, or null when the player has no ranked kit yet. */
+    public @Nullable Tier overall(PlayerProfile profile, int elo) {
         for (Map.Entry<String, KitStats> e : profile.allStats().entrySet()) {
-            if (kitTier(e.getKey(), e.getValue()) != null) {
-                anyRanked = true;
-                break;
-            }
+            if (kitTier(e.getKey(), e.getValue()) != null) return ladder.kitTier("overall", elo);
         }
-        if (!anyRanked) return null;
-        return mode == OverallMode.ELO ? ladder.kitTier("overall", value) : ladder.overallTier(value);
+        return null;
     }
 
-    /** Recomputes and stores the standing value + overall tier on the profile. */
+    /** Recomputes and stores the overall Elo + overall tier on the profile. */
     public void refresh(PlayerProfile profile) {
-        int value = standing(profile);
-        profile.standing(value, overall(profile, value));
+        int elo = overallElo(profile);
+        profile.standing(elo, overall(profile, elo));
     }
 
-    /** Placeholders for an overall standing value: {@code <elo>}, {@code <points>} (both the raw number) and
-     * {@code <standing>} (the number with its unit, from messages.yml standing.elo / standing.points). */
-    public net.kyori.adventure.text.minimessage.tag.resolver.TagResolver standingTags(
-            top.cheesesmp.duelcore.config.Messages messages, int value) {
-        return net.kyori.adventure.text.minimessage.tag.resolver.TagResolver.resolver(
-            top.cheesesmp.duelcore.config.Messages.num("elo", value),
-            top.cheesesmp.duelcore.config.Messages.num("points", value),
-            top.cheesesmp.duelcore.config.Messages.comp("standing", messages.get(
-                mode == OverallMode.ELO ? "standing.elo" : "standing.points",
-                top.cheesesmp.duelcore.config.Messages.num("value", value))));
+    /** The overall Elo for display: the number, or "—" while no kit has finished placement. */
+    public static String eloText(@Nullable PlayerProfile profile) {
+        return profile == null || profile.overall() == null ? "—" : String.valueOf(profile.elo());
     }
 
     public String label(@Nullable Tier tier) {

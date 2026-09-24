@@ -44,37 +44,158 @@ public final class TestKitPlugin extends JavaPlugin implements Listener {
         processes.clear();
     }
 
-    /** Names allowed from anywhere while in offline test mode: {root}/allow.txt, one per line. Re-read on each login. */
-    private boolean allowListed(String name) {
-        File file = new File(root, "allow.txt");
-        if (!file.isFile()) return false;
+    /*
+     * Testers allowed in while the server runs in offline test mode: {root}/allow.txt, one "name [ip]" per line,
+     * re-read on every login. Offline mode can't verify names, so each name is locked to the IP it first joins
+     * from (trust on first use); /tester add clears the lock. Names on the vanilla whitelist are admitted the same way.
+     */
+    private File allowFile() {
+        return new File(root, "allow.txt");
+    }
+
+    private synchronized Map<String, String> readAllow() {
+        Map<String, String> map = new java.util.LinkedHashMap<>();
+        File file = allowFile();
+        if (!file.isFile()) return map;
         try {
             for (String line : java.nio.file.Files.readAllLines(file.toPath())) {
-                if (line.trim().equalsIgnoreCase(name)) return true;
+                String[] parts = line.trim().split("\\s+");
+                if (parts.length == 0 || parts[0].isEmpty() || parts[0].startsWith("#")) continue;
+                map.put(parts[0], parts.length > 1 ? parts[1] : "");
             }
         } catch (IOException e) {
             getLogger().warning("[testkit] cannot read allow.txt: " + e.getMessage());
         }
-        return false;
+        return map;
     }
 
-    @EventHandler
+    private synchronized void writeAllow(Map<String, String> map) {
+        List<String> lines = new ArrayList<>();
+        map.forEach((name, ip) -> lines.add(ip.isEmpty() ? name : name + " " + ip));
+        try {
+            root.mkdirs();
+            java.nio.file.Files.write(allowFile().toPath(), lines);
+        } catch (IOException e) {
+            getLogger().warning("[testkit] cannot write allow.txt: " + e.getMessage());
+        }
+    }
+
+    private static @org.jetbrains.annotations.Nullable String key(Map<String, String> map, String name) {
+        for (String k : map.keySet()) if (k.equalsIgnoreCase(name)) return k;
+        return null;
+    }
+
+    /** null = allowed; otherwise the kick reason. Pins the IP on first use. */
+    private synchronized @org.jetbrains.annotations.Nullable String checkTester(String name, String ip) {
+        Map<String, String> map = readAllow();
+        String k = key(map, name);
+        if (k == null) {
+            boolean whitelisted = Bukkit.getWhitelistedPlayers().stream().anyMatch(o -> name.equalsIgnoreCase(o.getName()));
+            if (!whitelisted) return "Server is in maintenance for testing. Ask an op to /tester add you.";
+            k = name;
+            map.put(k, "");
+        }
+        String pinned = map.get(k);
+        if (pinned.isEmpty()) {
+            map.put(k, ip);
+            writeAllow(map);
+            getLogger().info("[testkit] tester " + k + " locked to " + ip);
+            return null;
+        }
+        if (!pinned.equals(ip)) {
+            getLogger().warning("[testkit] refused " + name + " from " + ip + " (locked to another IP)");
+            return "This name is locked to another IP while the server is in testing mode. Ask an op to /tester add you again.";
+        }
+        return null;
+    }
+
+    /**
+     * The test-mode login guard (offline mode only): loopback "dcbot*" connections are the test bots; everyone else
+     * must be a tester (allow.txt or the vanilla whitelist) joining from the IP their name is locked to.
+     */
+    @EventHandler(priority = org.bukkit.event.EventPriority.LOWEST)
     public void onPreLogin(AsyncPlayerPreLoginEvent event) {
         if (Bukkit.getOnlineMode()) return;
         boolean loopback = event.getAddress().isLoopbackAddress();
         boolean botName = event.getName().toLowerCase().startsWith("dcbot");
-        if (allowListed(event.getName())) {
-            getLogger().info("[testkit] allow-listed login: " + event.getName() + " from " + event.getAddress().getHostAddress());
-            return;
+        if (loopback && botName) return;
+        String reason;
+        try {
+            reason = checkTester(event.getName(), event.getAddress().getHostAddress());
+        } catch (RuntimeException e) {
+            getLogger().warning("[testkit] login check failed for " + event.getName() + ": " + e);
+            reason = "Server is in maintenance for testing. Try again later."; // fail closed
         }
-        if (!loopback || !botName) {
-            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER,
-                Component.text("Server is in maintenance for testing. Try again later."));
+        if (reason == null) {
+            getLogger().info("[testkit] tester login: " + event.getName() + " from " + event.getAddress().getHostAddress());
+        } else {
+            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_WHITELIST, Component.text(reason));
         }
     }
 
+    /**
+     * Test bots (loopback + dcbot name, see onPreLogin) are exempt from the anticheats: mineflayer movement is not
+     * vanilla-exact, and the bots are there to test DuelCore, not to be flagged. Real players are never exempted.
+     */
+    @EventHandler(priority = org.bukkit.event.EventPriority.LOWEST)
+    public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) {
+        org.bukkit.entity.Player p = event.getPlayer();
+        java.net.InetSocketAddress address = p.getAddress();
+        if (Bukkit.getOnlineMode() || address == null || !address.getAddress().isLoopbackAddress()
+            || !p.getName().toLowerCase().startsWith("dcbot")) return;
+        org.bukkit.permissions.PermissionAttachment a = p.addAttachment(this);
+        for (String perm : EXEMPT) a.setPermission(perm, true);
+    }
+
+    /** /tester add|remove|list (ops): manage who may join while the server is in testing mode. */
+    private boolean tester(CommandSender sender, String[] args) {
+        String sub = args.length > 0 ? args[0].toLowerCase() : "";
+        Map<String, String> map = readAllow();
+        switch (sub) {
+            case "add" -> {
+                if (args.length < 2 || !args[1].matches("[A-Za-z0-9_]{1,16}")) {
+                    sender.sendMessage("Usage: /tester add <player>");
+                    return true;
+                }
+                String k = key(map, args[1]);
+                map.remove(k == null ? args[1] : k);
+                map.put(args[1], ""); // (re)lock to the IP they join from next
+                writeAllow(map);
+                sender.sendMessage(args[1] + " can join now (locked to the IP they join from next).");
+                getLogger().info("[testkit] " + sender.getName() + " added tester " + args[1]);
+            }
+            case "remove" -> {
+                String k = args.length < 2 ? null : key(map, args[1]);
+                if (k == null) {
+                    sender.sendMessage("Not a tester: " + (args.length < 2 ? "?" : args[1]));
+                    return true;
+                }
+                map.remove(k);
+                writeAllow(map);
+                sender.sendMessage("Removed tester " + k + ".");
+                getLogger().info("[testkit] " + sender.getName() + " removed tester " + k);
+            }
+            case "list" -> sender.sendMessage("Testers (" + map.size() + "): " + String.join(", ",
+                map.entrySet().stream().map(e -> e.getKey() + (e.getValue().isEmpty() ? " (not joined yet)" : "")).toList()));
+            default -> sender.sendMessage("/tester add <player> | remove <player> | list");
+        }
+        return true;
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (!command.getName().equalsIgnoreCase("tester")) return List.of();
+        if (args.length == 1) return List.of("add", "remove", "list").stream().filter(s -> s.startsWith(args[0].toLowerCase())).toList();
+        if (args.length == 2 && args[0].equalsIgnoreCase("remove")) return new ArrayList<>(readAllow().keySet());
+        if (args.length == 2) return Bukkit.getOnlinePlayers().stream().map(org.bukkit.entity.Player::getName).toList();
+        return List.of();
+    }
+
+    private static final List<String> EXEMPT = List.of("grim.exempt", "TotemGuard.Bypass", "sentry.bypass");
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (command.getName().equalsIgnoreCase("tester")) return tester(sender, args);
         if (!(sender instanceof ConsoleCommandSender)) {
             sender.sendMessage("console only");
             return true;

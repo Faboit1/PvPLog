@@ -87,9 +87,7 @@ public final class ConfigManager {
                 perKit.put(kit.toLowerCase(java.util.Locale.ROOT), doubles(kits.getConfigurationSection(kit)));
             }
         }
-        Map<Tier, Integer> points = ints(y.getConfigurationSection("tier-points"));
-        Map<Tier, Integer> overall = ints(y.getConfigurationSection("overall-thresholds"));
-        TierLadder ladder = new TierLadder(y.getInt("placement-matches", 5), defaults, perKit, points, overall);
+        TierLadder ladder = new TierLadder(y.getInt("placement-matches", 5), defaults, perKit);
         Map<Tier, String> formats = new EnumMap<>(Tier.class);
         ConfigurationSection f = y.getConfigurationSection("format");
         if (f != null) {
@@ -99,9 +97,7 @@ public final class ConfigManager {
             }
         }
         String unrankedFormat = f == null ? "<gray><tier>" : f.getString("unranked", "<gray><tier>");
-        TierService.OverallMode mode = "points".equalsIgnoreCase(y.getString("overall-mode", "elo"))
-            ? TierService.OverallMode.POINTS : TierService.OverallMode.ELO;
-        return new TierService(ladder, y.getString("unranked-label", "???"), formats, unrankedFormat, mode);
+        return new TierService(ladder, y.getString("unranked-label", "???"), formats, unrankedFormat);
     }
 
     private static Map<Tier, Double> doubles(ConfigurationSection s) {

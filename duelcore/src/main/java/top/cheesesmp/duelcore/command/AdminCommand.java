@@ -387,7 +387,7 @@ final class AdminCommand {
                         st.updatedAt = System.currentTimeMillis();
                         plugin.tiers().refresh(p);
                         plugin.profiles().persistRating(p.uuid(), new ProfileService.RatingWrite(p.id(), kit.id(), st.snapshot(),
-                            p.points(), p.overall()));
+                            p.elo(), p.overall()));
                         plugin.leaderboards().invalidate(kit.id());
                         send(sender, "admin.rating-set", Messages.text("player", p.name()), Messages.comp("kit", kit.displayName()),
                             Messages.num("rating", (int) rating));
@@ -406,7 +406,7 @@ final class AdminCommand {
                         st.updatedAt = System.currentTimeMillis();
                         plugin.tiers().refresh(p);
                         plugin.profiles().persistRating(p.uuid(), new ProfileService.RatingWrite(p.id(), kit.id(), st.snapshot(),
-                            p.points(), p.overall()));
+                            p.elo(), p.overall()));
                         send(sender, "admin.games-set", Messages.text("player", p.name()), Messages.num("games", games));
                     });
                     return Command.SINGLE_SUCCESS;

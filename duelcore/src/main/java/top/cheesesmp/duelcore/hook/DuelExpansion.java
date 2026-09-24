@@ -12,7 +12,7 @@ import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.rating.Tier;
 
 /**
- * %duelcore_tier%, %duelcore_tier_formatted%, %duelcore_points%, %duelcore_wins%, %duelcore_losses%,
+ * %duelcore_tier%, %duelcore_tier_formatted%, %duelcore_elo% (overall Elo), %duelcore_wins%, %duelcore_losses%,
  * %duelcore_tier_<kit>%, %duelcore_rating_<kit>%, %duelcore_wins_<kit>%, %duelcore_losses_<kit>%,
  * %duelcore_queued%, %duelcore_live%, %duelcore_in_match%, %duelcore_region%.
  * Only cached data of online players is used; nothing blocks on the database.
@@ -64,8 +64,8 @@ final class DuelExpansion extends PlaceholderExpansion {
                 return plugin.tiers().label(profile.overall());
             case "tier_formatted":
                 return LegacyComponentSerializer.legacySection().serialize(plugin.tiers().format(profile.overall()));
-            case "points", "elo":
-                return String.valueOf(profile.points());
+            case "elo":
+                return String.valueOf(profile.elo());
             case "wins":
                 return String.valueOf(profile.totalWins());
             case "losses":

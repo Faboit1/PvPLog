@@ -402,7 +402,7 @@ public final class CommandService {
                         PlayerProfile p = o.get();
                         plugin.messages().send(sender, "tier.info-header", Messages.text("player", p.name()),
                             Messages.comp("tier", plugin.tiers().format(p.overall())),
-                            plugin.tiers().standingTags(plugin.messages(), p.points()));
+                            Messages.text("elo", top.cheesesmp.duelcore.rating.TierService.eloText(p)));
                         p.allStats().forEach((kit, s) -> plugin.messages().send(sender, "tier.info-line",
                             Messages.text("kit", kit), Messages.comp("tier", plugin.tiers().format(plugin.tiers().kitTier(kit, s))),
                             Messages.num("rating", (int) Math.round(s.rating)), Messages.num("games", s.games),
@@ -429,7 +429,7 @@ public final class CommandService {
             stats.updatedAt = System.currentTimeMillis();
             plugin.tiers().refresh(p);
             plugin.profiles().persistRating(p.uuid(), new ProfileService.RatingWrite(p.id(), kit.id(), stats.snapshot(),
-                p.points(), p.overall()));
+                p.elo(), p.overall()));
             plugin.leaderboards().invalidate(kit.id());
             Player online = Bukkit.getPlayer(p.uuid());
             if (online != null) {

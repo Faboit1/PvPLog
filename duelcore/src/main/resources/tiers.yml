@@ -1,6 +1,8 @@
 # ─────────────────────────────────────────────────────────────
 #  Tiers: HT1 > MT1 > LT1 > HT2 > MT2 > LT2 > HT3 > MT3 > LT3 > HT4 > MT4 > LT4 > HT5 > MT5 > LT5
-#  After changing thresholds, points or the overall mode run /duelcore season recalc to rebuild the standings.
+#  A tier is just a rating range: players are ranked by Elo, the tier is the label for where that Elo sits.
+#  The overall ranking is the overall Elo = the average rating of every kit the player finished placement in.
+#  After changing thresholds run /duelcore season recalc to rebuild the overall tiers.
 # ─────────────────────────────────────────────────────────────
 
 # Ranked games a player needs in a kit before a tier shows (until then: unranked-label).
@@ -27,51 +29,9 @@ kit-thresholds:
     LT5: 0
   # mace:
   #   HT1: 2100
-  # "overall" overrides the thresholds used for the overall tier (overall-mode: elo).
+  # "overall" overrides the thresholds used for the overall tier (from the overall Elo).
   # overall:
   #   HT1: 1950
-
-# How the overall ranking works:
-#   elo    - overall Elo = average rating of every kit the player finished placement in. The overall tier uses the
-#            thresholds above (kit-thresholds.overall if present, otherwise default). Leaderboards sort by it.
-#   points - legacy: every kit tier adds tier-points to a global total; the overall tier uses overall-thresholds.
-overall-mode: elo
-
-# overall-mode: points only. Points a kit tier adds to the global total.
-tier-points:
-  HT1: 60
-  MT1: 50
-  LT1: 45
-  HT2: 40
-  MT2: 32
-  LT2: 28
-  HT3: 22
-  MT3: 16
-  LT3: 12
-  HT4: 8
-  MT4: 5
-  LT4: 3
-  HT5: 2
-  MT5: 1
-  LT5: 0
-
-# overall-mode: points only. Overall tier from global points (sum of the kit tier points).
-overall-thresholds:
-  HT1: 400
-  MT1: 350
-  LT1: 300
-  HT2: 250
-  MT2: 200
-  LT2: 150
-  HT3: 125
-  MT3: 100
-  LT3: 75
-  HT4: 50
-  MT4: 30
-  LT4: 15
-  HT5: 5
-  MT5: 1
-  LT5: 0
 
 # How each tier is drawn (MiniMessage). <tier> is the tier name. Kept subtle on purpose.
 format:

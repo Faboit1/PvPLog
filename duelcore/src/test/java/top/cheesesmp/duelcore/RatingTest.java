@@ -1,16 +1,19 @@
 package top.cheesesmp.duelcore;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Method;
 import org.junit.jupiter.api.Test;
 import top.cheesesmp.duelcore.profile.KitStats;
+import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.rating.EloRating;
 import top.cheesesmp.duelcore.rating.Glicko2Rating;
 import top.cheesesmp.duelcore.rating.RatingSystem;
 import top.cheesesmp.duelcore.rating.Tier;
 import top.cheesesmp.duelcore.rating.TierLadder;
+import top.cheesesmp.duelcore.rating.TierService;
 
 class RatingTest {
 
@@ -69,13 +72,30 @@ class RatingTest {
         assertEquals(Tier.LT5, ladder.kitTier("sword", 1000));
         assertEquals(Tier.MT5, ladder.kitTier("sword", 1050));
         assertEquals(Tier.HT1, ladder.kitTier("sword", 2400));
-        assertEquals(Tier.HT1, ladder.overallTier(400));
-        assertEquals(Tier.MT1, ladder.overallTier(399));
-        assertEquals(Tier.MT5, ladder.overallTier(1));
-        assertEquals(Tier.LT5, ladder.overallTier(0));
-        assertEquals(60, ladder.points(Tier.HT1));
-        assertEquals(0, ladder.points(null));
         assertEquals(3, Tier.HT3.level());
         assertEquals("MT", Tier.MT4.band());
+    }
+
+    @Test
+    void overallEloAveragesPlacedKits() {
+        TierService tiers = new TierService(TierLadder.defaults(), "???", java.util.Map.of(), "<tier>");
+        java.util.Map<String, KitStats> stats = new java.util.HashMap<>();
+        PlayerProfile p = new PlayerProfile(1, java.util.UUID.randomUUID(), "p", 0, null, null, 0, stats);
+        tiers.refresh(p);
+        assertEquals(0, p.elo());
+        assertNull(p.overall());
+        KitStats sword = new KitStats(1500, 350, 0.06);
+        sword.games = 7;
+        KitStats axe = new KitStats(1300, 350, 0.06);
+        axe.games = 5;
+        KitStats mace = new KitStats(2400, 350, 0.06);
+        mace.games = 2; // still in placement: ignored
+        stats.put("sword", sword);
+        stats.put("axe", axe);
+        stats.put("mace", mace);
+        p = new PlayerProfile(1, p.uuid(), "p", 0, null, null, 0, stats); // the profile copies the map
+        tiers.refresh(p);
+        assertEquals(1400, p.elo());
+        assertEquals(Tier.LT3, p.overall()); // 1350 <= 1400 < 1410
     }
 }

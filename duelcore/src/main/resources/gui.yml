@@ -67,11 +67,11 @@ motd:
 sidebar:
   enabled: true
   title: "<accent>Duels</accent>"
-  # Placeholders: <player> <tier> <standing> (e.g. "1520 Elo") <elo> <queued> <live> <online> <region> <ping>
+  # Placeholders: <player> <tier> <elo> (overall Elo) <queued> <live> <online> <region> <ping>
   hub:
     - ""
     - "<text><player></text>"
-    - "<tier> <muted>· <standing></muted>"
+    - "<tier> <muted>· <elo> Elo</muted>"
     - ""
     - "<muted>Queued</muted>  <text><queued></text>"
     - "<muted>Live</muted>  <text><live></text>"
@@ -81,7 +81,7 @@ sidebar:
   queue:
     - ""
     - "<text><player></text>"
-    - "<tier> <muted>· <standing></muted>"
+    - "<tier> <muted>· <elo> Elo</muted>"
     - ""
     - "<kit_icon> <text><kit></text> <muted><mode></muted>"
     - "<muted>Searching</muted>  <text><wait></text>"

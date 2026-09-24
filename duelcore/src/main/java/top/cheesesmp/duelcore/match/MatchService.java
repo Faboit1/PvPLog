@@ -577,7 +577,7 @@ public final class MatchService implements Runnable {
             p.ratingAfter = stats.rating;
             p.tierAfter = plugin.tiers().kitTier(m.kit().id(), stats);
             plugin.tiers().refresh(profile);
-            writes.add(new ProfileService.RatingWrite(profile.id(), m.kit().id(), stats.snapshot(), profile.points(),
+            writes.add(new ProfileService.RatingWrite(profile.id(), m.kit().id(), stats.snapshot(), profile.elo(),
                 profile.overall()));
             profile.recent(null);
         }

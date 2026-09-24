@@ -47,7 +47,19 @@ function plain (json) {
   return s
 }
 
+// Sentry's anti-bot allows one login per second per IP, and every bot connects from 127.0.0.1:
+// each createBot() waits for its own slot 1.2 s after the previous one.
+let nextSlot = 0
 function createBot (name, opts = {}) {
+  const now = Date.now()
+  const wait = Math.max(0, nextSlot - now)
+  nextSlot = Math.max(now, nextSlot) + 1200
+  if (wait > 0) {
+    // busy-wait (blocks the event loop for at most ~1.2 s, only while bots are still logging in) so createBot
+    // stays synchronous for the scripts that call it
+    const start = Date.now() + wait
+    while (Date.now() < start) { /* wait for this bot's login slot */ }
+  }
   const bot = mineflayer.createBot({ host: HOST, port: PORT, username: name, version: process.env.BOT_VERSION || '1.21.11', auth: 'offline', hideErrors: false, ...opts })
   bot.dc = { name, dialogs: [], titles: [], chat: [], matchesEnded: 0, matchState: 'hub', opponent: null }
   bot.on('login', () => log(name, 'login'))
@@ -231,7 +243,9 @@ function fighter (bot, opts = {}) {
         bot.setControlState('right', !!(strafing && strafeDir === 'right'))
         bot.setControlState('forward', !!(dist > 2.2))
         bot.setControlState('sprint', !!(dist > 3 && !strafing))
-        bot.setControlState('jump', !strafing && (!!bot.entity.isCollidedHorizontally || (!!opts.jump && Math.random() < 0.05)))
+        // jump at walls and whenever progress stalls (1-block terrain steps don't always report a collision)
+        const stalled = dist > 2.5 && now - lastProgress > 300
+        bot.setControlState('jump', !!bot.entity.isCollidedHorizontally || stalled || strafing || (!!opts.jump && Math.random() < 0.05))
         if (dist < 3.1 && now - lastAttack > cooldown) {
           if (opts.slot !== undefined && bot.quickBarSlot !== opts.slot) bot.setQuickBarSlot(opts.slot)
           bot.attack(target)
