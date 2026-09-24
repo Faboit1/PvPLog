@@ -91,6 +91,31 @@ public final class ArenaSnapshot {
     }
 
     /** Builder that interns block-state strings into a palette. */
+    /** True when every cell of the bottom layer is bedrock. */
+    public boolean hasBedrockFloor() {
+        for (int i = 0; i < sizeX * sizeZ; i++) {
+            if (!"minecraft:bedrock".equals(palette[getAt(i)])) return false;
+        }
+        return true;
+    }
+
+    /** A copy one block taller with a full bedrock layer underneath. */
+    public ArenaSnapshot withBedrockFloor() {
+        Builder b = new Builder(sizeX, sizeY + 1, sizeZ);
+        for (int x = 0; x < sizeX; x++) {
+            for (int z = 0; z < sizeZ; z++) b.set(x, 0, z, "minecraft:bedrock");
+        }
+        for (int y = 0; y < sizeY; y++) {
+            for (int z = 0; z < sizeZ; z++) {
+                for (int x = 0; x < sizeX; x++) {
+                    String state = palette[getAt((y * sizeZ + z) * sizeX + x)];
+                    if (!AIR.equals(state)) b.set(x, y + 1, z, state);
+                }
+            }
+        }
+        return b.build();
+    }
+
     public static final class Builder {
         private final int sizeX;
         private final int sizeY;

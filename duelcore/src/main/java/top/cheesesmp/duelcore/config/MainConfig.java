@@ -60,8 +60,8 @@ public final class MainConfig {
     public final int maxRounds;
     public final Set<String> allowedCommands;
     public final boolean totemPop;
-    public final boolean animRespawnPull;
-    public final int animRespawnPullTicks;
+    public final boolean animRespawnThrow;
+    public final double animRespawnThrowHeight;
     public final boolean animDeath;
     public final boolean animRoundWin;
     public final boolean animMatchWin;
@@ -164,8 +164,8 @@ public final class MainConfig {
         maxRounds = Math.max(1, c.getInt("match.max-rounds", 15));
         allowedCommands = lower(c.getStringList("match.allowed-commands"));
         totemPop = c.getBoolean("match.totem-pop", true);
-        animRespawnPull = c.getBoolean("animations.respawn-pull", true);
-        animRespawnPullTicks = Math.clamp(c.getInt("animations.respawn-pull-ticks", 26), 6, 100);
+        animRespawnThrow = c.getBoolean("animations.respawn-throw", true);
+        animRespawnThrowHeight = Math.clamp(c.getDouble("animations.respawn-throw-height", 10), 2, 40);
         animDeath = c.getBoolean("animations.death", true);
         animRoundWin = c.getBoolean("animations.round-win", true);
         animMatchWin = c.getBoolean("animations.match-win", true);
@@ -194,7 +194,7 @@ public final class MainConfig {
         prewarm = c.getBoolean("arena.prewarm", true);
         blockBudgetMs = Math.max(0.5, c.getDouble("arena.block-budget-ms", 4));
         resetBetweenRounds = c.getBoolean("arena.reset-between-rounds", true);
-        arenaViewDistance = Math.clamp(c.getInt("arena.view-distance", 5), 2, 32);
+        arenaViewDistance = Math.clamp(c.getInt("arena.view-distance", 7), 2, 32);
         arenaPersistentWorld = c.getBoolean("arena.persistent-world", true);
         arenaPregenerateSlots = Math.clamp(c.getInt("arena.pregenerate-slots", 16), 0, 256);
 

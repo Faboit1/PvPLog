@@ -9,9 +9,9 @@ import java.util.SplittableRandom;
  * own biome (the biome is applied to the instance when it is pasted). They are plain snapshots, written to
  * {@code arenas/<name>.dca} + {@code .yml} on first start and editable afterwards like any other arena.
  *
- * <p>Every map is {@value #SIZE}×{@value #SIZE} blocks, fenced by invisible barrier walls and a barrier ceiling.
- * Hills get gentler towards the middle, the ground around both spawns is levelled, and trees only grow near the
- * edges so the fighting area stays open.
+ * <p>Every map is {@value #SIZE}×{@value #SIZE} blocks with a bedrock floor, fenced by invisible barrier walls and a
+ * barrier ceiling. Hills get gentler towards the middle, the ground around both spawns is levelled, and trees stay out
+ * of the corridor between the spawns so the fighting area stays open.
  */
 public final class ArenaGenerator {
 
@@ -19,12 +19,17 @@ public final class ArenaGenerator {
                             RelPos spawn1, RelPos spawn2, int buildHeight, String biome) {
     }
 
-    static final int SIZE = 64;
+    static final int SIZE = 180;
     static final int HEIGHT = 56;
     /** Mean surface height inside the snapshot. */
     static final int GROUND = 10;
-    static final int SPAWN_Z1 = 16;
+    /** The spawns sit on the middle line, {@code SPAWN_Z2 - SPAWN_Z1} (61) blocks apart. */
+    static final int SPAWN_Z1 = 59;
     static final int SPAWN_Z2 = SIZE - 1 - SPAWN_Z1;
+    /** Trees stay this far from the line between the spawns (the fighting corridor). */
+    private static final double CORRIDOR = 20;
+    /** Size factor against the original 64-block maps, for scaling tree counts. */
+    private static final double AREA_SCALE = (SIZE / 64.0) * (SIZE / 64.0);
     static final List<String> TAGS = List.of("terrain");
 
     private static final String AIR = "minecraft:air";
@@ -174,10 +179,11 @@ public final class ArenaGenerator {
         double c = (SIZE - 1) / 2.0;
         for (int x = 0; x < SIZE; x++) {
             for (int z = 0; z < SIZE; z++) {
-                double n = 0.65 * noise(s.seed(), x / 14.0, z / 14.0) + 0.35 * noise(s.seed() + 7, x / 6.0, z / 6.0);
+                double n = 0.55 * noise(s.seed(), x / 26.0, z / 26.0) + 0.3 * noise(s.seed() + 7, x / 11.0, z / 11.0)
+                    + 0.15 * noise(s.seed() + 13, x / 5.0, z / 5.0);
                 double dist = Math.hypot(x - c, z - c);
-                double amp = 0.45 + 0.55 * Math.clamp((dist - 12) / 14.0, 0, 1);
-                raw[x][z] = GROUND + s.hills() * amp * n;
+                double amp = 0.4 + 0.6 * Math.clamp((dist - 30) / 45.0, 0, 1);
+                raw[x][z] = GROUND + s.hills() * 1.4 * amp * n;
             }
         }
         int[][] h = new int[SIZE][SIZE];
@@ -188,8 +194,8 @@ public final class ArenaGenerator {
                 for (int[] sp : spawns) {
                     double level = Math.round((raw[sp[0]][sp[1]] + raw[sp[0] - 1][sp[1]]) / 2);
                     double d = Math.hypot(x + 0.5 - sp[0], z + 0.5 - (sp[1] + 0.5));
-                    if (d <= 3.5) v = level;
-                    else if (d < 7) v = level + (v - level) * (d - 3.5) / 3.5;
+                    if (d <= 4) v = level;
+                    else if (d < 9) v = level + (v - level) * (d - 4) / 5;
                 }
                 h[x][z] = (int) Math.clamp(Math.round(v), 3, HEIGHT - 20);
             }
@@ -201,11 +207,14 @@ public final class ArenaGenerator {
         if (s.treeCount() <= 0 || s.trees().isEmpty()) return;
         List<int[]> placed = new ArrayList<>();
         double c = (SIZE - 1) / 2.0;
-        for (int attempt = 0; attempt < 600 && placed.size() < s.treeCount(); attempt++) {
+        int target = (int) Math.round(s.treeCount() * AREA_SCALE);
+        for (int attempt = 0; attempt < target * 60 && placed.size() < target; attempt++) {
             int x = 4 + r.nextInt(SIZE - 8);
             int z = 4 + r.nextInt(SIZE - 8);
-            if (Math.hypot(x - c, z - c) < 21) continue; // keep the middle open
-            if (Math.hypot(x - SIZE / 2.0, z - SPAWN_Z1) < 11 || Math.hypot(x - SIZE / 2.0, z - SPAWN_Z2) < 11) continue;
+            // keep the fighting corridor between (and a bit around) the spawns open
+            double along = Math.clamp(z, SPAWN_Z1 - 8, SPAWN_Z2 + 8);
+            if (Math.hypot(x - SIZE / 2.0, z - along) < CORRIDOR) continue;
+            if (Math.hypot(x - c, z - c) < 24) continue;
             boolean crowded = false;
             for (int[] p : placed) {
                 if (Math.abs(p[0] - x) + Math.abs(p[1] - z) < 7) {

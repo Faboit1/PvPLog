@@ -477,6 +477,12 @@ public final class ArenaManager {
             errors.add("arena " + name + ": spawn1/spawn2 missing");
             return null;
         }
+        if (y.getBoolean("bedrock-floor", true) && !snapshot.hasBedrockFloor()) {
+            // nothing can be mined through into the void: add a bedrock layer under the arena, spawns move up with it
+            snapshot = snapshot.withBedrockFloor();
+            s1 = new RelPos(s1.x(), s1.y() + 1, s1.z(), s1.yaw(), s1.pitch());
+            s2 = new RelPos(s2.x(), s2.y() + 1, s2.z(), s2.yaw(), s2.pitch());
+        }
         File source = data.exists() ? data : new File(yml.getParentFile(), y.getString("schematic", ""));
         org.bukkit.block.@Nullable Biome biome = null;
         String biomeName = y.getString("biome", "");

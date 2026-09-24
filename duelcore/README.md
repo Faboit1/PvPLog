@@ -179,7 +179,7 @@ Every file is commented, and new keys are added to your files automatically on u
 | `queue` | multiple queues at once, ranked/unranked on/off, "searching" action bar |
 | `matchmaking` | `interval-ticks`, rating window (`initial`, `growth-per-second`, `max`), region and ping penalties, `max-ranked-rematches-per-day`, `log-pairings` |
 | `match` | countdowns, `round-end-delay-ticks`, `return-delay-seconds`, `timeout-decision: health\|draw`, `max-rounds`, `allowed-commands`, `totem-pop`, `void-depth` |
-| `animations` | `respawn-pull` (+ `-ticks`), `death`, `round-win`, `match-win`, `fight-start`, `join-title` |
+| `animations` | `respawn-throw` (+ `-height`), `death`, `round-win`, `match-win`, `fight-start`, `join-title` |
 | `rating` | `system: elo\|glicko2`, `default`, `floor`, Elo K-factors (normal and provisional), Glicko-2 tau/RD/volatility |
 | `season` | first season name |
 | `arena` | `world`, `persistent-world`, `pregenerate-slots`, `slot-spacing`, `base-y`, `max-instances`, `keep-idle-per-template`, `prewarm`, `block-budget-ms`, `reset-between-rounds`, `view-distance` |

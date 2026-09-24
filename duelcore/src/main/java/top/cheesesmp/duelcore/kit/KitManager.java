@@ -120,7 +120,7 @@ public final class KitManager {
             r.getBoolean("hunger", false),
             r.getBoolean("fall-damage", true),
             r.getBoolean("build", false),
-            KitRules.BreakMode.parse(r.getString("break", "placed")),
+            KitRules.BreakMode.parse(r.getString("break", "all")),
             allowed,
             r.getBoolean("ender-pearls", false),
             Math.max(0, (int) Math.round(r.getDouble("pearl-cooldown", 1) * 20)),

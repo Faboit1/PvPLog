@@ -58,7 +58,7 @@ class ArenaGeneratorTest {
             // the snapshot stays small on disk (run-length encoded)
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             s.write(out);
-            assertTrue(out.size() < 120_000, g.name() + " is " + out.size() + " bytes");
+            assertTrue(out.size() < 1_000_000, g.name() + " is " + out.size() + " bytes");
             assertTrue(Math.abs(g.spawn1().y() - g.spawn2().y()) <= 2, g.name() + " spawns at very different heights");
         }
         assertTrue(names.size() >= 6);

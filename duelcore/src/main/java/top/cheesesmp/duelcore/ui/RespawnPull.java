@@ -9,42 +9,42 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
-import org.bukkit.entity.ItemDisplay;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDismountEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 import top.cheesesmp.duelcore.DuelCorePlugin;
 
 /**
- * The between-round "yoink": the player is seated on an invisible display entity that glides along an arc back to
- * their spawn. Display entities interpolate teleports on the client ({@code teleport_duration}), so the camera moves
- * smoothly even though the server only moves the seat every other tick. The player can look around but not move or
- * dismount. Seats are never saved (non-persistent) and the arena reset skips them (scoreboard tag {@link #TAG}).
+ * The between-round respawn: the player is thrown back to their spawn along a real ballistic arc.
+ *
+ * <p>The arc is a true projectile path under Minecraft's player gravity (0.08 blocks/tick²): constant horizontal speed,
+ * a parabola vertically, peaking well above both ends. The flight time follows from the height of the arc the same
+ * way it would for a thrown player. It is driven through the player's own velocity every tick, so the client moves
+ * them with its normal physics and interpolation (no teleport stutter). Their own input is overwritten each tick, so
+ * they can look around but not steer. On landing they are put exactly on the spawn.
  */
 public final class RespawnPull implements Listener {
 
-    public static final String TAG = "duelcore_seat";
-    private static final int STEP = 2;
+    /** Minecraft's gravity for players, blocks per tick². */
+    private static final double GRAVITY = 0.08;
 
     private final DuelCorePlugin plugin;
-    private final Map<UUID, Pull> active = new HashMap<>();
+    private final Map<UUID, Throw> active = new HashMap<>();
 
-    private final class Pull {
+    private final class Throw {
         final Player player;
-        final ItemDisplay seat;
         final Location target;
         final Runnable done;
         BukkitTask task;
-        boolean finishing;
+        boolean finished;
 
-        Pull(Player player, ItemDisplay seat, Location target, Runnable done) {
+        Throw(Player player, Location target, Runnable done) {
             this.player = player;
-            this.seat = seat;
             this.target = target;
             this.done = done;
         }
@@ -63,121 +63,133 @@ public final class RespawnPull implements Listener {
     }
 
     /**
-     * Carries the player to {@code target} over about {@code ticks} ticks, then teleports them exactly onto it and
-     * runs {@code done}. Falls back to a plain teleport when the target is in another world or far away.
-     * {@code done} always runs exactly once (also when the pull is cut short), on the main thread.
+     * Throws the player to {@code target}. {@code minHeight} is how far the top of the arc rises above the higher end
+     * point at least (longer throws go higher). Falls back to a teleport for another world or an absurd distance.
+     * {@code done} always runs exactly once, on the main thread, after the player is standing on the target.
      */
-    public void pull(Player player, Location target, int ticks, List<Player> viewers, Runnable done) {
+    public void pull(Player player, Location target, double minHeight, List<Player> viewers, Runnable done) {
         cancel(player.getUniqueId());
-        Location start = player.getLocation();
-        if (ticks < STEP * 3 || start.getWorld() != target.getWorld() || start.distanceSquared(target) > 160 * 160) {
+        if (player.getWorld() != target.getWorld() || player.getLocation().distanceSquared(target) > 300 * 300) {
             player.teleportAsync(target).thenRun(done);
             return;
         }
-        if (player.getGameMode() == GameMode.SPECTATOR) player.setGameMode(GameMode.SURVIVAL); // spectators can't ride
+        if (player.getGameMode() == GameMode.SPECTATOR) player.setGameMode(GameMode.SURVIVAL);
         player.leaveVehicle();
+        player.setFlying(false);
+        player.setAllowFlight(false);
         player.setFallDistance(0);
-        ItemDisplay seat = start.getWorld().spawn(start, ItemDisplay.class, d -> {
-            d.setPersistent(false);
-            d.addScoreboardTag(TAG);
-            d.setTeleportDuration(STEP);
-            d.setInvulnerable(true);
-        });
-        if (!seat.addPassenger(player)) {
-            seat.remove();
-            player.teleportAsync(target).thenRun(done);
-            return;
-        }
-        Pull pull = new Pull(player, seat, target.clone(), done);
-        active.put(player.getUniqueId(), pull);
+        Location start = freeSpot(player.getLocation());
+        if (!start.equals(player.getLocation())) player.teleport(start); // the death cam may end inside terrain
+
         Vector a = start.toVector();
         Vector b = target.toVector();
-        double dist = a.distance(b);
-        Vector control = a.clone().add(b).multiply(0.5).add(new Vector(0, Math.min(14, 2.5 + dist * 0.35), 0));
-        int total = Math.max(STEP * 3, ticks);
-        for (Player v : viewers) v.playSound(start, Sound.ENTITY_BREEZE_WIND_BURST, 0.6f, 1.3f);
-        pull.task = plugin.getServer().getScheduler().runTaskTimer(plugin, new Runnable() {
-            int t;
+        double horizontal = Math.hypot(b.getX() - a.getX(), b.getZ() - a.getZ());
+        double top = Math.max(a.getY(), b.getY()) + Math.clamp(minHeight + horizontal * 0.2, minHeight, minHeight + 16);
+        // the path is the straight chord plus a parabolic bulge A (height of the top above the chord's middle)
+        double bulge = top - (a.getY() + b.getY()) / 2;
+        // p(u) = chord(u) + 4A·u(1-u) accelerates downwards by 8A/T² per tick²: pick T so that equals GRAVITY
+        int ticks = (int) Math.clamp(Math.round(Math.sqrt(8 * bulge / GRAVITY)), 14, 80);
+        Throw t = new Throw(player, target.clone(), done);
+        active.put(player.getUniqueId(), t);
+        for (Player v : viewers) {
+            if (!v.isOnline() || v.getWorld() != start.getWorld()) continue;
+            v.playSound(start, Sound.ENTITY_WIND_CHARGE_WIND_BURST, 0.7f, 0.9f);
+            v.spawnParticle(Particle.GUST, start.clone().add(0, 0.2, 0), 1);
+        }
+        t.task = plugin.getServer().getScheduler().runTaskTimer(plugin, new Runnable() {
+            int k;
+            int settle;
 
             @Override
             public void run() {
-                t += STEP;
-                if (!player.isOnline() || !seat.isValid()) {
-                    finish(pull);
+                if (!player.isOnline()) {
+                    finish(t, false);
                     return;
                 }
-                double p = Math.min(1, (double) t / total);
-                double e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; // ease in-out cubic
-                Vector pos = bezier(a, control, b, e);
-                Location loc = pos.toLocation(seat.getWorld(), seat.getYaw(), seat.getPitch());
-                seat.teleport(loc); // passengers ride along since 1.21.10
-                Location trail = loc.clone().add(0, 0.9, 0);
+                if (k < ticks) {
+                    Vector here = point(a, b, bulge, (double) k / ticks);
+                    Vector next = point(a, b, bulge, (double) (k + 1) / ticks);
+                    player.setVelocity(next.subtract(here));
+                    player.setFallDistance(0);
+                    if (k % 2 == 0) {
+                        Location trail = player.getLocation().add(0, 0.2, 0);
+                        for (Player v : viewers) {
+                            if (v.isOnline() && v.getWorld() == trail.getWorld()) {
+                                v.spawnParticle(Particle.CLOUD, trail, 2, 0.1, 0.1, 0.1, 0.01);
+                            }
+                        }
+                    }
+                    k++;
+                    return;
+                }
+                // arrived (or blocked on the way): wait for the ground briefly, then stand exactly on the spawn
+                if (k == ticks) {
+                    player.setVelocity(new Vector(0, -0.1, 0));
+                    k++;
+                }
+                boolean grounded = player.getLocation().subtract(0, 0.08, 0).getBlock().isSolid();
+                if (!grounded && settle++ < 10) return;
                 for (Player v : viewers) {
-                    if (v.isOnline() && v.getWorld() == trail.getWorld()) {
-                        v.spawnParticle(Particle.END_ROD, trail, 2, 0.12, 0.12, 0.12, 0.005);
-                    }
+                    if (!v.isOnline() || v.getWorld() != target.getWorld()) continue;
+                    v.playSound(target, Sound.ENTITY_PLAYER_BIG_FALL, 0.8f, 0.9f);
+                    v.spawnParticle(Particle.CLOUD, target.clone().add(0, 0.1, 0), 8, 0.3, 0.05, 0.3, 0.02);
                 }
-                if (p >= 1) {
-                    for (Player v : viewers) {
-                        if (v.isOnline()) v.playSound(target, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.8f, 1.4f);
-                    }
-                    finish(pull);
-                }
+                finish(t, true);
             }
-        }, STEP, STEP);
+        }, 1L, 1L);
     }
 
-    private static Vector bezier(Vector a, Vector c, Vector b, double t) {
-        double u = 1 - t;
-        return a.clone().multiply(u * u).add(c.clone().multiply(2 * u * t)).add(b.clone().multiply(t * t));
+    /** Point at progress {@code u} (0..1): straight chord plus a parabolic bulge of height {@code bulge}. */
+    private static Vector point(Vector a, Vector b, double bulge, double u) {
+        Vector p = a.clone().add(b.clone().subtract(a).multiply(u));
+        return p.setY(p.getY() + 4 * bulge * u * (1 - u));
     }
 
-    private void finish(Pull pull) {
-        finish(pull, true);
-    }
-
-    private void finish(Pull pull, boolean land) {
-        if (pull.finishing) return;
-        pull.finishing = true;
-        active.remove(pull.player.getUniqueId(), pull);
-        if (pull.task != null) pull.task.cancel();
-        pull.seat.eject();
-        pull.seat.remove();
-        if (land && pull.player.isOnline()) {
-            pull.player.setFallDistance(0);
-            pull.player.teleportAsync(pull.target).whenComplete((ok, err) -> pull.done.run());
-        } else {
-            pull.done.run();
+    /** The nearest spot at or above {@code loc} where a player fits (feet and head not in solid blocks). */
+    private static Location freeSpot(Location loc) {
+        Location l = loc.clone();
+        for (int i = 0; i < 24; i++) {
+            Block feet = l.getBlock();
+            if (!feet.isSolid() && !feet.getRelative(0, 1, 0).isSolid()) return l;
+            l.setY(Math.floor(l.getY()) + 1);
         }
+        return loc;
     }
 
-    /** Ends a pull early (the player still lands on the target). */
+    private void finish(Throw t, boolean land) {
+        if (t.finished) return;
+        t.finished = true;
+        active.remove(t.player.getUniqueId(), t);
+        if (t.task != null) t.task.cancel();
+        if (land && t.player.isOnline()) {
+            t.player.setVelocity(new Vector());
+            t.player.setFallDistance(0);
+            if (t.player.getLocation().distanceSquared(t.target) > 0.25) {
+                t.player.teleportAsync(t.target).whenComplete((ok, err) -> t.done.run());
+                return;
+            }
+        }
+        t.done.run();
+    }
+
+    /** Ends a throw early; the player still ends up on the target. */
     public void cancel(UUID player) {
-        Pull pull = active.get(player);
-        if (pull != null) finish(pull);
+        Throw t = active.get(player);
+        if (t != null) finish(t, true);
     }
 
-    /** Drops the player off where they are (no landing teleport); used when the match ends mid-pull. */
+    /** Ends a throw without moving the player (the match ended mid-flight). */
     public void abort(UUID player) {
-        Pull pull = active.get(player);
-        if (pull != null) finish(pull, false);
+        Throw t = active.get(player);
+        if (t != null) finish(t, false);
     }
 
     public void cancelAll() {
-        for (Pull pull : new ArrayList<>(active.values())) finish(pull, false);
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST)
-    public void onDismount(EntityDismountEvent event) {
-        Pull pull = active.get(event.getEntity().getUniqueId());
-        if (pull != null && !pull.finishing && event.getDismounted() == pull.seat && event.isCancellable()) {
-            event.setCancelled(true);
-        }
+        for (Throw t : new ArrayList<>(active.values())) finish(t, false);
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onQuit(PlayerQuitEvent event) {
-        Pull pull = active.get(event.getPlayer().getUniqueId());
-        if (pull != null) finish(pull, false);
+        abort(event.getPlayer().getUniqueId());
     }
 }

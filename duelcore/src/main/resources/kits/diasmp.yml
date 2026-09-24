@@ -14,7 +14,7 @@ rules:
   hunger: true
   fall-damage: true
   build: true
-  break: placed
+  break: all
   allowed-blocks: [cobblestone, cobweb, water]
   ender-pearls: true
   pearl-cooldown: 1

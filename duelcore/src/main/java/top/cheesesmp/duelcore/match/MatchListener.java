@@ -367,7 +367,7 @@ public final class MatchListener implements Listener {
         ArenaInstance arena = m.arena();
         Participant p = m.participant(player.getUniqueId());
         KitRules rules = m.kit().rules();
-        boolean ok = arena != null && p != null && p.alive && m.state() == Match.State.FIGHTING && rules.build()
+        boolean ok = arena != null && p != null && p.alive && m.state() == Match.State.FIGHTING
             && arena.containsBlock(block.getX(), block.getY(), block.getZ())
             && switch (rules.breakMode()) {
                 case NONE -> false;
@@ -380,6 +380,12 @@ public final class MatchListener implements Listener {
         }
         event.setDropItems(false);
         event.setExpToDrop(0);
+        if (rules.build() && player.getGameMode() == org.bukkit.GameMode.SURVIVAL) {
+            // building kits keep what they mine (straight into the inventory, no item entities to clean up)
+            for (ItemStack drop : block.getDrops(player.getInventory().getItemInMainHand(), player)) {
+                player.getInventory().addItem(drop);
+            }
+        }
         arena.forgetPlaced(block.getX(), block.getY(), block.getZ());
     }
 

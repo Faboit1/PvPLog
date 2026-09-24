@@ -14,6 +14,7 @@ rules:
   hunger: true
   fall-damage: true
   build: false
+  break: all
   ender-pearls: true
   pearl-cooldown: 15
   totems: true

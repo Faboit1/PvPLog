@@ -87,10 +87,11 @@ match:
   void-depth: 6
 
 animations:
-  # From round 2 on, both fighters are carried along an arc back to their spawn instead of teleporting.
-  # They can look around but can't move while it plays.
-  respawn-pull: true
-  respawn-pull-ticks: 26
+  # From round 2 on, both fighters are thrown back to their spawn along a real Minecraft arc (normal player gravity)
+  # instead of teleporting. They can look around but can't steer.
+  respawn-throw: true
+  # How high the top of the arc is at least, in blocks above the higher end (longer throws go a bit higher).
+  respawn-throw-height: 10
   # Red burst and soul where a fighter dies.
   death: true
   # Golden spiral around the round winner.
@@ -145,8 +146,8 @@ arena:
   block-budget-ms: 4
   # Arenas are reset between rounds (true) or only after the match (false).
   reset-between-rounds: true
-  # View/simulation distance in the arena world. Arenas are small, so a low value saves memory and chunk loads.
-  view-distance: 5
+  # View distance in the arena world (simulation distance is capped at 4). The default maps are 180 blocks wide.
+  view-distance: 7
 
 leaderboard:
   # How often cached leaderboards refresh from the database.

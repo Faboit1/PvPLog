@@ -34,33 +34,34 @@ async function main () {
 
   let corrections = 0
   a.on('forcedMove', () => { corrections++ })
-  // respawn animation: from round 2 on the server seats the player on an item_display and glides it to the spawn
-  const pulls = []
+  // respawn throw: from round 2 on the server throws both players back to their spawn along an arc
+  const throws = []
   for (const bot of [a, b]) {
-    bot.on('mount', () => {
-      const v = bot.vehicle
-      pulls.push({ bot: bot.username, vehicle: v && v.name, from: bot.entity.position.floored(), t: Date.now() })
-      L.log('test', 'mounted', { bot: bot.username, vehicle: v && v.name, pos: bot.entity.position.floored() })
-    })
-    bot.on('dismount', () => {
-      const p = pulls.filter(x => x.bot === bot.username).slice(-1)[0]
-      L.log('test', 'dismounted', { bot: bot.username, pos: bot.entity.position.floored(), ms: p ? Date.now() - p.t : -1 })
-    })
+    let base = null
+    let peak = null
+    setInterval(() => {
+      const e = bot.entity
+      if (!e) return
+      if (e.onGround) {
+        if (base !== null && peak !== null && peak - base >= 6) {
+          throws.push({ bot: bot.username, rise: +(peak - base).toFixed(1), landed: e.position.floored() })
+          L.log('test', 'thrown', throws[throws.length - 1])
+        }
+        base = e.position.y
+        peak = null
+      } else if (base !== null) {
+        peak = Math.max(peak === null ? e.position.y : peak, e.position.y)
+      }
+    }, 100)
   }
-  const tele = setInterval(() => {
-    const e = a.entity
-    L.log('telemetry', 'a', { pos: e.position, vel: e.velocity, onGround: e.onGround, ctl: a.controlState,
-      speedKey: a.physics && a.physics.movementSpeedAttribute, attrs: Object.keys(e.attributes || {}).join(','),
-      corrections, gm: a.game.gameMode, target: !!a.nearestEntity(x => x.type === 'player' && x.username === B) })
-  }, 2000)
   const fa = L.fighter(a, { slot: 0 })
   const fb = L.fighter(b, { slot: 0, cooldownMs: 700 })
   const endRe = /Victory|Defeat|Draw/
   const ea = L.mark(a)
   await Promise.all([L.waitTitle(a, endRe, 600000, ma.titles), L.waitTitle(b, endRe, 600000, mb.titles)])
   fa.stop(); fb.stop(); clearInterval(tele)
-  L.log('test', 'match-ended', { a: a.dc.titles.slice(-1)[0], b: b.dc.titles.slice(-1)[0], pulls: pulls.length })
-  if (pulls.length === 0) throw new Error('no respawn pull seen (expected one per bot from round 2)')
+  L.log('test', 'match-ended', { a: a.dc.titles.slice(-1)[0], b: b.dc.titles.slice(-1)[0], throws: throws.length })
+  if (throws.length === 0) throw new Error('no respawn throw seen (expected one per bot from round 2)')
 
   // back in the hub: results dialog + hub hotbar
   const rd = await L.waitDialog(a, /Victory|Defeat|Draw/, 20000, ea.dialogs)

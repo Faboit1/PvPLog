@@ -261,12 +261,12 @@ public final class MatchService implements Runnable {
                 applyBorder(player, arena);
                 plugin.sidebar().refresh(player);
             };
-            if (m.round > 1 && plugin.settings().animRespawnPull && player.getWorld() == arena.world()) {
-                // later rounds: carry the player back instead of teleporting (see RespawnPull)
+            if (m.round > 1 && plugin.settings().animRespawnThrow && player.getWorld() == arena.world()) {
+                // later rounds: throw the player back instead of teleporting (see RespawnPull)
                 player.setFireTicks(0);
                 player.getInventory().clear();
                 m.pulling++;
-                plugin.respawnPull().pull(player, spawn, plugin.settings().animRespawnPullTicks, audience(m), () -> {
+                plugin.respawnPull().pull(player, spawn, plugin.settings().animRespawnThrowHeight, audience(m), () -> {
                     m.pulling--;
                     arrive.run();
                 });

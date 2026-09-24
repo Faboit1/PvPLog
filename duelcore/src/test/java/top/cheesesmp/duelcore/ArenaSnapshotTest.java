@@ -90,4 +90,20 @@ class ArenaSnapshotTest {
         out.writeShort(b.length);
         out.write(b);
     }
+
+    @Test
+    void bedrockFloorIsAddedUnderneath() {
+        ArenaSnapshot.Builder b = new ArenaSnapshot.Builder(4, 3, 4);
+        for (int x = 0; x < 4; x++) for (int z = 0; z < 4; z++) b.set(x, 0, z, "minecraft:grass_block");
+        b.set(1, 1, 1, "minecraft:oak_log[axis=y]");
+        ArenaSnapshot s = b.build();
+        assertTrue(!s.hasBedrockFloor());
+        ArenaSnapshot f = s.withBedrockFloor();
+        assertTrue(f.hasBedrockFloor());
+        assertEquals(4, f.sizeY());
+        // everything moved up one layer
+        assertEquals("minecraft:grass_block", f.palette()[f.getAt((1 * 4 + 0) * 4 + 0)]);
+        assertEquals("minecraft:oak_log[axis=y]", f.palette()[f.getAt((2 * 4 + 1) * 4 + 1)]);
+        assertEquals(s.nonAirCount() + 16, f.nonAirCount());
+    }
 }

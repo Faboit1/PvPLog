@@ -16,6 +16,7 @@ rules:
   hunger: false
   fall-damage: true
   build: false
+  break: all
   ender-pearls: false
   totems: false
   crystals: false

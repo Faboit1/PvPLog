@@ -48,14 +48,14 @@ function plain (json) {
 }
 
 // Sentry's anti-bot allows one login per second per IP, and every bot connects from 127.0.0.1:
-// each createBot() waits for its own slot 1.2 s after the previous one.
+// each createBot() waits for its own slot 2.2 s after the previous one.
 let nextSlot = 0
 function createBot (name, opts = {}) {
   const now = Date.now()
   const wait = Math.max(0, nextSlot - now)
-  nextSlot = Math.max(now, nextSlot) + 1200
+  nextSlot = Math.max(now, nextSlot) + 2200
   if (wait > 0) {
-    // busy-wait (blocks the event loop for at most ~1.2 s, only while bots are still logging in) so createBot
+    // busy-wait (blocks the event loop for at most ~2.2 s, only while bots are still logging in) so createBot
     // stays synchronous for the scripts that call it
     const start = Date.now() + wait
     while (Date.now() < start) { /* wait for this bot's login slot */ }
@@ -211,6 +211,8 @@ function fighter (bot, opts = {}) {
   let lastProgress = Date.now()
   let strafeUntil = 0
   let strafeDir = 'left'
+  let stuckLogs = 0
+  let lastStuckLog = 0
   const cooldown = opts.cooldownMs || 650
   const errors = {}
   const loop = async () => {
@@ -239,6 +241,25 @@ function fighter (bot, opts = {}) {
           lastProgress = now
         }
         const strafing = now < strafeUntil
+        if (now - lastProgress > 4000 && dist > 2.5 && stuckLogs < 3 && now - lastStuckLog > 5000) {
+          // diagnostics: what is around the bot while it can't make progress
+          stuckLogs++
+          lastStuckLog = now
+          const around = {}
+          for (const [k, o] of Object.entries({ feet: [0, 0, 0], head: [0, 1, 0], below: [0, -1, 0] })) {
+            const blk = bot.blockAt(pos.offset(o[0], o[1], o[2]))
+            around[k] = blk && blk.name
+          }
+          const yaw = bot.entity.yaw
+          const ahead = pos.offset(-Math.sin(yaw), 0, -Math.cos(yaw))
+          const af = bot.blockAt(ahead)
+          const ah = bot.blockAt(ahead.offset(0, 1, 0))
+          around.ahead = af && af.name
+          around.aheadUp = ah && ah.name
+          log(bot.dc.name, 'stuck', { pos, dist: +dist.toFixed(1), onGround: bot.entity.onGround,
+            collided: bot.entity.isCollidedHorizontally, vel: bot.entity.velocity, controls: bot.controlState,
+            around, target: target.position })
+        }
         bot.setControlState('left', !!(strafing && strafeDir === 'left'))
         bot.setControlState('right', !!(strafing && strafeDir === 'right'))
         bot.setControlState('forward', !!(dist > 2.2))
