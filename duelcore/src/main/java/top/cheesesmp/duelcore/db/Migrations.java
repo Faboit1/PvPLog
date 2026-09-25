@@ -11,7 +11,7 @@ import java.util.List;
 /** Versioned schema. Append new versions; never edit a released one. */
 public final class Migrations {
 
-    public static final int LATEST = 6;
+    public static final int LATEST = 7;
 
     private Migrations() {
     }
@@ -189,6 +189,17 @@ public final class Migrations {
             case 6 -> {
                 // QUEUE_MUSIC (bit 9) defaults to on as well
                 s.add("UPDATE dc_players SET settings = settings | 512");
+            }
+            case 7 -> {
+                // kit editor: a player's own arrangement per kit (kit/editor/KitLayout), with the fingerprint of the
+                // kit loadout it was made for (a changed kit makes the layout stale)
+                s.add("CREATE TABLE IF NOT EXISTS dc_kit_layouts ("
+                    + "player_id INT NOT NULL, "
+                    + "kit_id SMALLINT NOT NULL, "
+                    + "layout VARCHAR(255) NOT NULL, "
+                    + "kit_hash INT NOT NULL, "
+                    + "updated_at BIGINT NOT NULL, "
+                    + "PRIMARY KEY (player_id, kit_id))" + d.clustered());
             }
             default -> throw new IllegalStateException("unknown schema version " + version);
         }

@@ -18,7 +18,7 @@ everything is in YAML with MiniMessage.
 2. Stand where players should spawn and run `/duelcore sethub`. If the hub world is empty, a small platform is
    generated.
 3. That's it. 15 kits and 7 terrain maps are created on the first start, and players get the hub hotbar
-   (Play, Party, Leaderboard, Profile, Settings, Spectate).
+   (Play, Party, Leaderboard, Kit Editor, Profile, Settings, Friends, Spectate).
 
 Optional:
 
@@ -171,6 +171,7 @@ Player commands (all players by default):
 | `/settings` | | Duel requests, sidebar, sounds, chat tags, hub visibility, spectators, friend alerts, party invites, music while searching, region, country, max ping |
 | `/friends [add\|remove <player>\|list]` | `/f`, `/friend` | Friends dialog: follows, followers and friends (mutual follows), online first, filter, add back, duel or spectate a friend. `add` works for offline players by exact name |
 | `/follow <player>`, `/unfollow <player>` | | Follow or unfollow; when both follow each other they're friends |
+| `/kit edit [kit]` | `/kiteditor [kit]` | Kit editor (see *Kit editor*): the kit picker, or the editor of one kit. `/kit` alone opens the picker too |
 
 Staff:
 
@@ -201,6 +202,7 @@ arrives after the join).
 | `duelcore.party` | true | Parties: `/party`, `/pc` and the Party hotbar item (the 2v2 party queue is still to come) |
 | `duelcore.queue`, `.leave`, `.profile`, `.profile.others`, `.leaderboard`, `.spectate`, `.duel`, `.settings` | true | The matching commands and hotbar items |
 | `duelcore.friends` | true | `/friends`, `/follow`, `/unfollow`, the Friends hotbar item |
+| `duelcore.kiteditor` | true | The kit editor: `/kit edit`, `/kiteditor` and the Kit Editor hotbar item |
 | `duelcore.tournament` | true | Reserved for tournaments (not in this build yet) |
 | `duelcore.spectate.bypass` | op | Spectate players who turned spectators off |
 | `duelcore.tier` | op | `/tier` |
@@ -339,6 +341,40 @@ For developers, `ui/anim` has the shared toolkit: `plugin.anim()` runs one anima
 fade), `BlinkFade`, `ProgressBar` and `Sfx` (arpeggios, ticks, flourish). `plugin.progress()` keeps each player's
 before/after per kit from their last ranked matches until the queue menu has shown it.
 
+## Kit editor
+
+Players arrange every kit the way they like: which item goes into which hotbar or inventory slot, and what goes into
+the offhand. Every match of that kit (queue, duel, party split, party FFA, party vs party, every round) then gives
+them their items that way; armour always stays in the armour slots.
+
+- **Opening it.** The Kit Editor item (hotbar slot 4, `hotbar.kit-editor` in gui.yml) and `/kit edit` open the kit
+  picker: every kit grouped like the queue menu's tabs, with its sprite, and a green ✎ on kits you saved a layout for.
+  `/kit edit <kit>` (or `/kiteditor <kit>`) goes straight to one kit. Dialogs open a kit's editor with the click
+  `duelcore:kiteditor/open {kit:"<id>"}` (the picker, the queue menu and the results screen use it). Only in the hub,
+  not while fighting or spectating; queued players can edit while they wait.
+- **The editor** is a 6-row chest titled "Editing · <kit>" that looks like the inventory: rows 1–3 are the inventory,
+  row 4 the hotbar, row 5 the armour (locked), the offhand slot (next to the "← Offhand" label) and an info item,
+  row 6 the buttons *Save*, *Reset to default* (put everything back where the kit file has it), *Clear layout*
+  (delete the saved layout) and *Cancel*. Click an item to pick up the whole stack, click a slot to put it down or to
+  swap it with what you hold (left or right click). Shift-clicks, number keys, the offhand key, dropping, double
+  clicks, dragging over several slots and clicks in your own inventory do nothing, so an item can never leave the
+  editor, split or get duplicated. The title gets a "•" while there are unsaved changes (the Save button glints).
+- **Saving.** Save plays a chime and closes the editor. A layout is only saved when every item of the kit is placed
+  exactly once (an item still on the cursor is put back into a free slot first). Closing with Escape or Cancel keeps
+  the old layout. When a match is found (or a party leader starts a party match) while you're editing, the editor
+  closes and the arrangement is saved, and you're told. Your own inventory (the hub hotbar) is put aside while
+  editing and comes back when the editor closes.
+- **Kit changes.** A layout stores a fingerprint of the kit's items (type and amount per slot). When an admin
+  changes a kit's items (not just enchantments or names), layouts made for the old version stop being used, are
+  deleted, and each player is told once (on `/duelcore reload`, on join, or at their next match of that kit).
+  Admins' `/duelcore kit give` always gives the kit file's own layout.
+- **Storage.** `dc_kit_layouts` (schema v7): one row per player and kit with the arrangement (for each of the 37
+  slots, which slot of the kit's default loadout goes there), the kit fingerprint and the time. Layouts are loaded
+  async when a player joins, kept while they're online and saved async; choosing the default deletes the row.
+- **Look.** gui.yml `kit-editor`: the items of the fixed slots, the picker's columns and width, and the sounds (open,
+  pick, place, swap, deny, save, reset, clear, cancel; players' own sound setting applies). Texts are in
+  messages.yml `kit-editor`. `/animtest play kit-editor-save` and `kit-editor-pick` preview the sounds.
+
 ## Parties
 
 The Party item (second hotbar slot, `hotbar.party` in gui.yml) and `/party` open the party menu. Without a party it offers *Create Party* (with an
@@ -415,6 +451,7 @@ Scripts:
 | `tagcheck.js [kit] [icon]` | Tab header/footer, slur blocked, swearing masked, clean text untouched, tab tag switches to the match kit's icon during a match and back after, kit loadout |
 | `ping.js` | Server list MOTD and hover |
 | `guard.js [testers\|open]` | Login guard: unknown names, bots, IP locks and (open) guests and unlocked operator names (setup in the script header) |
+| `kiteditor.js [kit]` | Kit editor: `/kit edit` opens it, the hub hotbar is put aside and comes back, items are moved with window clicks, shift-click / number key / offhand key / drop / double click / clicks in the own inventory change nothing and leak nothing, save, then a `/duel` between two bots gives the items in the saved slots (and the other bot the default), Clear layout goes back to the default |
 | `party.js [kit]` | Party create/invite/accept, leader and member menus, party chat (`@`, `/pc`, toggle) only reaching members and passing the chat filter, a 3-bot Party FFA, leader succession, persistence across a rejoin, disband |
 
 Never install the test kit on a production server.

@@ -3,6 +3,7 @@ package top.cheesesmp.duelcore.kit;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -28,6 +29,7 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.jspecify.annotations.Nullable;
+import top.cheesesmp.duelcore.kit.editor.KitLayout;
 import top.cheesesmp.duelcore.ui.Icons;
 
 /** Loads kits/*.yml, hot-reloadable, and applies kits to players. */
@@ -226,19 +228,87 @@ public final class KitManager {
         return kits.size();
     }
 
-    /** Resets the player to a clean survival state and gives the kit. */
+    /** Where a player's own kit layouts come from (the kit editor); null = everyone gets the default layout. */
+    @FunctionalInterface
+    public interface LayoutSource {
+        /** The player's valid layout for this kit ({@link KitLayout}), or null for the default. Main thread. */
+        int @Nullable [] layout(Player player, Kit kit);
+    }
+
+    private static volatile @Nullable LayoutSource layouts;
+
+    /** Set by the plugin on enable (the kit editor's saved layouts), cleared on disable. */
+    public static void layouts(@Nullable LayoutSource source) {
+        layouts = source;
+    }
+
+    /**
+     * Resets the player to a clean survival state and gives the kit, laid out the way the player saved it in the kit
+     * editor (the default when they have no valid layout). Armour always goes to the armour slots. Every match type
+     * and every round goes through here.
+     */
     public static void apply(Player player, Kit kit) {
+        resetState(player, kit.rules().maxHealth()); // closes an open kit editor first (it may auto-save the layout)
+        LayoutSource source = layouts;
+        int[] layout = null;
+        if (source != null) {
+            try {
+                layout = source.layout(player, kit);
+            } catch (RuntimeException e) {
+                layout = null; // a broken layout must never stop a round: the default it is
+            }
+        }
+        give(player, kit, layout);
+    }
+
+    /** Like {@link #apply} but always in the kit's default layout (admin /duelcore kit give, before a kit save). */
+    public static void applyDefault(Player player, Kit kit) {
         resetState(player, kit.rules().maxHealth());
+        give(player, kit, null);
+    }
+
+    private static void give(Player player, Kit kit, int @Nullable [] layout) {
         PlayerInventory inv = player.getInventory();
-        inv.setContents(kit.contents());
+        if (layout == null) {
+            inv.setContents(kit.contents());
+            inv.setItemInOffHand(kit.offhand());
+        } else {
+            ItemStack[] placed = KitLayout.arrange(sources(kit), layout);
+            inv.setContents(Arrays.copyOf(placed, 36));
+            inv.setItemInOffHand(placed[KitLayout.OFFHAND]);
+        }
         inv.setHelmet(kit.helmet());
         inv.setChestplate(kit.chestplate());
         inv.setLeggings(kit.leggings());
         inv.setBoots(kit.boots());
-        inv.setItemInOffHand(kit.offhand());
         inv.setHeldItemSlot(0);
         for (PotionEffect effect : kit.effects()) player.addPotionEffect(effect);
         player.updateInventory();
+    }
+
+    /** The kit's items by layout position (copies): inventory slots 0–35, then the offhand at {@link KitLayout#OFFHAND}. */
+    public static @Nullable ItemStack[] sources(Kit kit) {
+        ItemStack[] out = new ItemStack[KitLayout.SIZE];
+        ItemStack[] contents = kit.contents();
+        for (int i = 0; i < 36 && i < contents.length; i++) out[i] = empty(contents[i]) ? null : contents[i];
+        ItemStack offhand = kit.offhand();
+        out[KitLayout.OFFHAND] = empty(offhand) ? null : offhand;
+        return out;
+    }
+
+    /** The kit's loadout fingerprint for layouts ({@link KitLayout#part}: item type and amount per position). */
+    public static String[] fingerprint(Kit kit) {
+        ItemStack[] sources = sources(kit);
+        String[] parts = new String[KitLayout.SIZE];
+        for (int i = 0; i < KitLayout.SIZE; i++) {
+            ItemStack s = sources[i];
+            parts[i] = s == null ? "" : KitLayout.part(s.getType().getKey().toString(), s.getAmount());
+        }
+        return parts;
+    }
+
+    private static boolean empty(@Nullable ItemStack stack) {
+        return stack == null || stack.getType().isAir() || stack.getAmount() <= 0;
     }
 
     /** Clears everything that could carry over between rounds or back to the hub. */

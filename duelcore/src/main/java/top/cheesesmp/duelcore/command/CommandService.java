@@ -66,6 +66,7 @@ public final class CommandService {
         commands.register(tier(), "Tier management", List.of());
         commands.register(plugin.tester().command(), "Animation test mode: preview animations, simulated progress", List.of());
         new top.cheesesmp.duelcore.friends.FriendCommands(plugin, plugin.friends()).register(commands);
+        new top.cheesesmp.duelcore.kit.editor.KitEditorCommands(plugin).register(commands); // /kit edit, /kiteditor
         commands.register(new AdminCommand(plugin, this).build(), "DuelCore administration", List.of("dc"));
     }
 

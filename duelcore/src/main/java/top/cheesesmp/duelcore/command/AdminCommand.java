@@ -365,7 +365,7 @@ final class AdminCommand {
             Kit kit = plugin.kits().get(StringArgumentType.getString(ctx, "kit"));
             if (p == null || kit == null) return 0;
             if (plugin.matches().match(p.getUniqueId()) != null) return 0;
-            KitManager.apply(p, kit);
+            KitManager.applyDefault(p, kit); // the kit file's own layout (a kit save writes it back)
             p.setGameMode(org.bukkit.GameMode.CREATIVE);
             send(p, "kit.given", Messages.comp("kit", kit.displayName()));
             return Command.SINGLE_SUCCESS;
