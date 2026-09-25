@@ -39,6 +39,8 @@ import top.cheesesmp.duelcore.profile.ProfileService;
 import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.rating.RatingSystem;
 import top.cheesesmp.duelcore.rating.Tier;
+import top.cheesesmp.duelcore.ui.MatchSounds;
+import top.cheesesmp.duelcore.ui.SoundPool;
 import top.cheesesmp.duelcore.ui.TotemPop;
 
 /**
@@ -122,6 +124,8 @@ public final class MatchService implements Runnable {
         Match match = new Match(nextId++, kit, ranked && participants.size() == 2, origin, participants);
         matches.put(match.id(), match);
         created++;
+        // both sides hear the same combination; it varies from match to match
+        List<SoundPool.Played> foundSounds = plugin.settings().matchFoundSounds.pick(java.util.concurrent.ThreadLocalRandom.current());
         for (Participant p : participants) {
             byPlayer.put(p.uuid(), match);
             plugin.queue().removeAll(p.uuid());
@@ -133,6 +137,7 @@ public final class MatchService implements Runnable {
             player.setInvulnerable(true);
             player.getInventory().clear();
             if (plugin.settings().totemPop) TotemPop.play(plugin, player, kit.icon());
+            MatchSounds.play(plugin, player, foundSounds, 1);
             Participant opp = match.opponentOf(p);
             PlayerProfile oppProfile = opp == null ? null : plugin.profiles().get(opp.uuid());
             player.showTitle(Title.title(
@@ -271,6 +276,16 @@ public final class MatchService implements Runnable {
                     m.pulling--;
                     arrive.run();
                 });
+            } else if (plugin.settings().animSpawnRise) {
+                // round 1 (or no throw): rise out of the ground at the spawn (see SpawnRise); waits for the round reset
+                player.setFireTicks(0);
+                player.getInventory().clear();
+                m.pulling++;
+                plugin.spawnRise().rise(player, spawn, audience(m), () -> !m.arenaResetting,
+                    () -> match(player.getUniqueId()) == m && !m.isOver(), () -> {
+                        m.pulling--;
+                        arrive.run();
+                    });
             } else {
                 player.teleportAsync(spawn).thenRun(arrive);
             }
@@ -291,6 +306,7 @@ public final class MatchService implements Runnable {
         m.stateTicks = 0;
         m.roundTicks = 0;
         if (m.firstFightAt == 0) m.firstFightAt = System.currentTimeMillis();
+        List<SoundPool.Played> fightSounds = plugin.settings().fightStartSounds.pick(java.util.concurrent.ThreadLocalRandom.current());
         for (Participant p : m.participants()) {
             Player player = Bukkit.getPlayer(p.uuid());
             if (player == null || !p.alive) continue;
@@ -299,7 +315,7 @@ public final class MatchService implements Runnable {
             plugin.animations().fightStart(player, audience(m));
             player.showTitle(Title.title(plugin.messages().get("match.fight"), Component.empty(),
                 Title.Times.times(Duration.ZERO, Duration.ofMillis(600), Duration.ofMillis(250))));
-            sound(player, Sound.BLOCK_NOTE_BLOCK_PLING, 1.6f);
+            MatchSounds.play(plugin, player, fightSounds, 0);
         }
     }
 
@@ -538,6 +554,7 @@ public final class MatchService implements Runnable {
             Player player = Bukkit.getPlayer(p.uuid());
             if (player == null) continue;
             plugin.respawnPull().abort(p.uuid());
+            plugin.spawnRise().abort(p.uuid());
             player.setInvulnerable(true);
             unfreeze(player);
             if (p.alive && player.getGameMode() == GameMode.SPECTATOR) player.setGameMode(GameMode.SURVIVAL);

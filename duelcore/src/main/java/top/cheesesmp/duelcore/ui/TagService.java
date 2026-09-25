@@ -7,6 +7,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -34,15 +35,22 @@ import top.cheesesmp.duelcore.rating.Tier;
  * <p>A tag is the icon of a kit followed by the player's tier in it: in the hub their best kit (best tier, then
  * highest rating), during a match the match's kit with the tier they had when it started. Nametags use one scoreboard
  * team per shown kit + tier; team names start with the tier's rank, so the tab list is sorted best tier first.
+ *
+ * <p>Spectators of a match look like vanilla spectator-mode entries: a grey italic name, sorted last (their team
+ * name sorts after every tier team). Their chat tag stays their normal one.
  */
 public final class TagService implements Listener, Runnable {
 
     private static final String PREFIX = "dct_";
 
-    /** What a player's tag shows: a kit (null = none ranked yet) and their tier in it (null = unranked). */
-    private record Shown(@Nullable Kit kit, @Nullable Tier tier) {
+    /**
+     * What a player's tag shows: a kit (null = none ranked yet) and their tier in it (null = unranked); spectators
+     * of a match are listed apart.
+     */
+    private record Shown(@Nullable Kit kit, @Nullable Tier tier, boolean spectator) {
 
         String team() {
+            if (spectator) return PREFIX + "zz_spectators"; // after every "dct_NN" tier team
             int rank = tier != null ? tier.ordinal() : kit != null ? Tier.values().length : Tier.values().length + 1;
             return PREFIX + String.format(Locale.ROOT, "%02d", rank) + (kit == null ? "" : "_" + kit.id());
         }
@@ -62,10 +70,11 @@ public final class TagService implements Listener, Runnable {
         Match match = plugin.matches().match(player.getUniqueId());
         if (match != null && !match.isOver()) {
             Participant p = match.participant(player.getUniqueId());
-            return new Shown(match.kit(), p == null ? null : p.tierBefore());
+            return new Shown(match.kit(), p == null ? null : p.tierBefore(), false);
         }
+        boolean spectator = plugin.spectate().spectating(player.getUniqueId()) != null;
         PlayerProfile profile = plugin.profiles().get(player);
-        if (profile == null) return new Shown(null, null);
+        if (profile == null) return new Shown(null, null, spectator);
         Kit best = null;
         Tier bestTier = null;
         double bestRating = 0;
@@ -80,7 +89,7 @@ public final class TagService implements Listener, Runnable {
                 bestRating = e.getValue().rating;
             }
         }
-        return new Shown(best, bestTier);
+        return new Shown(best, bestTier, spectator);
     }
 
     /** Icon + tier, or empty for "nothing ranked" when hide-unranked is on. */
@@ -112,6 +121,10 @@ public final class TagService implements Listener, Runnable {
                 return sb.getTeam(name);
             }
             team.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
+            if (s.spectator()) {
+                team.color(NamedTextColor.GRAY);
+                return team;
+            }
             Component tag = tagFor(s);
             team.prefix(plugin.settings().nametagTag && !tag.equals(Component.empty())
                 ? plugin.messages().parse(plugin.gui().nametagPrefix, Messages.comp("tier", tag)) : Component.empty());
@@ -134,11 +147,16 @@ public final class TagService implements Listener, Runnable {
         Component tag = tagFor(s);
         tags.put(player.getUniqueId(), tag);
         Shown before = shown.put(player.getUniqueId(), s);
-        if (plugin.settings().tabTag) {
+        if (s.spectator()) {
+            player.playerListName(plugin.messages().parse(plugin.gui().tabSpectatorFormat, Messages.comp("tier", tag),
+                Messages.text("name", player.getName())));
+        } else if (plugin.settings().tabTag) {
             player.playerListName(tag.equals(Component.empty())
                 ? null
                 : plugin.messages().parse(plugin.gui().tabFormat, Messages.comp("tier", tag),
                     Messages.text("name", player.getName())));
+        } else if (before != null && before.spectator()) {
+            player.playerListName(null);
         }
         plugin.sidebar().board(player);
         String name = player.getName();
@@ -152,7 +170,7 @@ public final class TagService implements Listener, Runnable {
             Team team = team(sb, s);
             if (team != null) team.addEntry(name);
         }
-        if (before == null) header(player);
+        if (before == null || before.spectator() != s.spectator()) header(player);
     }
 
     /** Tab header and footer for everyone; runs every second. */
@@ -164,14 +182,20 @@ public final class TagService implements Listener, Runnable {
     private void header(Player player) {
         GuiConfig gui = plugin.gui();
         if (gui.tabHeader.isEmpty() && gui.tabFooter.isEmpty()) return;
+        // the match this player is fighting in or watching, for <watching>
+        Match match = plugin.matches().match(player.getUniqueId());
+        if (match == null) match = plugin.spectate().spectating(player.getUniqueId());
         TagResolver tags = TagResolver.resolver(
             Messages.num("online", Bukkit.getOnlinePlayers().size()),
             Messages.num("live", plugin.matches().count()),
             Messages.num("fighting", plugin.matches().playersInMatches()),
             Messages.num("queued", plugin.queue().totalQueued()),
+            Messages.num("spectators", plugin.spectate().count()),
+            Messages.num("watching", match == null ? 0 : match.spectators().size()),
             Messages.num("ping", player.getPing()),
             Messages.text("tps", String.format(Locale.ROOT, "%.1f", Math.min(20.0, Bukkit.getTPS()[0]))));
-        player.sendPlayerListHeaderAndFooter(lines(gui.tabHeader, tags), lines(gui.tabFooter, tags));
+        java.util.List<String> footer = match != null && !gui.tabFooterMatch.isEmpty() ? gui.tabFooterMatch : gui.tabFooter;
+        player.sendPlayerListHeaderAndFooter(lines(gui.tabHeader, tags), lines(footer, tags));
     }
 
     private Component lines(java.util.List<String> raw, TagResolver tags) {

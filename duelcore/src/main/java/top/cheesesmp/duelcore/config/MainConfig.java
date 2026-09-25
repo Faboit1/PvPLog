@@ -67,6 +67,11 @@ public final class MainConfig {
     public final boolean animMatchWin;
     public final boolean animFightStart;
     public final boolean animJoinTitle;
+    public final boolean animSpawnRise;
+    public final int animSpawnRiseDepth;
+    public final int animSpawnRiseTicks;
+    public final top.cheesesmp.duelcore.ui.SoundPool matchFoundSounds;
+    public final top.cheesesmp.duelcore.ui.SoundPool fightStartSounds;
     public final int voidDepth;
 
     // rating
@@ -171,6 +176,11 @@ public final class MainConfig {
         animMatchWin = c.getBoolean("animations.match-win", true);
         animFightStart = c.getBoolean("animations.fight-start", true);
         animJoinTitle = c.getBoolean("animations.join-title", true);
+        animSpawnRise = c.getBoolean("animations.spawn-rise", true);
+        animSpawnRiseDepth = Math.clamp(c.getInt("animations.spawn-rise-depth", 3), 1, 6);
+        animSpawnRiseTicks = Math.clamp(c.getInt("animations.spawn-rise-ticks", 50), 10, 60);
+        matchFoundSounds = top.cheesesmp.duelcore.ui.SoundPool.parse(c.getStringList("animations.match-found-sounds"));
+        fightStartSounds = top.cheesesmp.duelcore.ui.SoundPool.parse(c.getStringList("animations.fight-start-sounds"));
         voidDepth = Math.max(1, c.getInt("match.void-depth", 6));
 
         ratingSystem = c.getString("rating.system", "elo").toLowerCase(Locale.ROOT);

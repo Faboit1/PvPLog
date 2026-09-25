@@ -5,6 +5,8 @@
 # ─────────────────────────────────────────────────────────────
 
 # Hub hotbar. Items can't be moved or dropped. "player_head" shows the player's own skin.
+# action-bar: hint shown above the hotbar when the item comes into the hand (empty = none). While queued, the queue's
+# "searching" bar is shown instead.
 hotbar:
   queue:
     slot: 0
@@ -12,36 +14,42 @@ hotbar:
     name: "<text>Play</text>"
     lore:
       - "<muted>Pick a kit and find a match"
+    action-bar: "<accent>Right click</accent> <text>to play</text> <muted>— pick a kit and queue</muted>"
   leave-queue:
     slot: 0
     item: gray_dye
     name: "<bad>Leave queue</bad>"
     lore:
       - "<muted>Stop searching"
+    action-bar: "<accent>Right click</accent> <text>to leave the queue</text>"
   leaderboard:
     slot: 2
     item: nether_star
     name: "<text>Leaderboards</text>"
     lore:
       - "<muted>Top players, overall and per kit"
+    action-bar: "<accent>Right click</accent> <text>for leaderboards</text> <muted>— top players, overall and per kit</muted>"
   profile:
     slot: 4
     item: player_head
     name: "<text>Profile</text>"
     lore:
       - "<muted>Your tiers, stats and history"
+    action-bar: "<accent>Right click</accent> <text>for your profile</text> <muted>— tiers, stats and history</muted>"
   settings:
     slot: 6
     item: comparator
     name: "<text>Settings</text>"
     lore:
       - "<muted>Region, ping, sidebar, requests"
+    action-bar: "<accent>Right click</accent> <text>for settings</text> <muted>— region, ping, sidebar, requests</muted>"
   spectate:
     slot: 8
     item: ender_eye
     name: "<text>Spectate</text>"
     lore:
       - "<muted>Watch a live match"
+    action-bar: "<accent>Right click</accent> <text>to spectate</text> <muted>— watch a live match</muted>"
   # Given to spectators instead of the hub items.
   stop-spectating:
     slot: 8
@@ -49,6 +57,7 @@ hotbar:
     name: "<bad>Stop spectating</bad>"
     lore:
       - "<muted>Back to the hub"
+    action-bar: "<accent>Right click</accent> <text>to stop spectating</text> <muted>— back to the hub</muted>"
 
 # Server list entry. Placeholders: <online> <max> <live> (matches) <fighting> <queued> <kits>
 motd:
@@ -121,12 +130,15 @@ tags:
   icon-tier: "<icon><tier>"
   chat: "<tier> <text><name></text><muted>:</muted> <message>"
   tab: "<tier> <text><name></text>"
+  # Tab name of players spectating a match (like vanilla spectators: grey, italic, listed last). <tier> works too.
+  tab-spectator: "<gray><i><name></i></gray>"
   nametag-prefix: "<tier> "
   # Hide the tag for players who have no ranked kit yet (instead of showing "???").
   hide-unranked: false
 
 # Tab list header and footer, refreshed every 2 s. Empty lists = none.
-# Placeholders: <online> <live> <fighting> <queued> <ping> <tps>
+# Placeholders: <online> <live> <fighting> <queued> <ping> <tps> <spectators> (spectating any match)
+#   <watching> (spectators of the player's own match, or of the match they watch)
 tab:
   header:
     - ""
@@ -136,6 +148,14 @@ tab:
   footer:
     - ""
     - "<#8b9099>Ping</#8b9099> <#d8dbe0><ping>ms</#d8dbe0> <#4b4f57>·</#4b4f57> <#8b9099>TPS</#8b9099> <#d8dbe0><tps></#d8dbe0>"
+    - "<#8b9099><spectators> spectating</#8b9099>"
+    - "<#4b4f57>cheesesmp.top</#4b4f57>"
+    - ""
+  # Footer instead of the one above for players in a match or spectating one. Empty = the normal footer.
+  footer-match:
+    - ""
+    - "<#8b9099>Ping</#8b9099> <#d8dbe0><ping>ms</#d8dbe0> <#4b4f57>·</#4b4f57> <#8b9099>TPS</#8b9099> <#d8dbe0><tps></#d8dbe0>"
+    - "<#8b9099><watching> watching this match</#8b9099> <#4b4f57>·</#4b4f57> <#8b9099><spectators> spectating</#8b9099>"
     - "<#4b4f57>cheesesmp.top</#4b4f57>"
     - ""
 

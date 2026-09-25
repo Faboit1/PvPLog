@@ -212,7 +212,7 @@ Every file is commented, and new keys are added to your files automatically on u
 | `queue` | multiple queues at once, ranked/unranked on/off, "searching" action bar |
 | `matchmaking` | `interval-ticks`, rating window (`initial`, `growth-per-second`, `max`), region and ping penalties, `max-ranked-rematches-per-day`, `log-pairings` |
 | `match` | countdowns, `round-end-delay-ticks`, `return-delay-seconds`, `timeout-decision: health\|draw`, `max-rounds`, `allowed-commands`, `totem-pop`, `void-depth` |
-| `animations` | `respawn-throw` (+ `-height`), `death`, `round-win`, `match-win`, `fight-start`, `join-title` |
+| `animations` | `respawn-throw` (+ `-height`), `spawn-rise` (+ `-depth`, `-ticks`), `death`, `round-win`, `match-win`, `fight-start`, `join-title`, `match-found-sounds`, `fight-start-sounds` |
 | `rating` | `system: elo\|glicko2`, `default`, `floor`, Elo K-factors (normal and provisional), Glicko-2 tau/RD/volatility |
 | `season` | first season name |
 | `arena` | `world`, `persistent-world`, `pregenerate-slots`, `slot-spacing`, `base-y`, `max-instances`, `keep-idle-per-template`, `prewarm`, `block-budget-ms`, `reset-between-rounds`, `view-distance` |
@@ -231,12 +231,16 @@ the overall Elo: the average rating of every kit a player has finished placement
 
 **gui.yml**
 
-- Hotbar items.
+- Hotbar items, each with an optional `action-bar` hint shown when it comes into the hand (the queue's
+  "searching" bar has priority while queued; switching to an empty slot clears the hint).
 - Sidebar lines for hub, queue, match and spectate.
 - Tier tags (`tags`): the icon of a kit followed by the tier in it (`icon-tier: "<icon><tier>"`). In the hub a
   player shows their best kit (best tier, then highest rating), during a match the match's kit with the tier they had
-  when it started. Chat, tab and nametag formats. The tab list is sorted by tier, best first.
-- Tab header and footer (`tab`): online/live/queued counts, ping and TPS.
+  when it started. Chat, tab and nametag formats. The tab list is sorted by tier, best first. Players spectating a
+  match show like vanilla spectators (`tab-spectator`: grey, italic, listed last).
+- Tab header and footer (`tab`): online/live/queued counts, ping, TPS and spectators (`<spectators>` in total,
+  `<watching>` for the player's own match in `footer-match`, the footer used during a match or while spectating).
+  Existing servers keep their old `footer`; add the `<spectators>` line from the bundled gui.yml to show it in the hub.
 - Dialog sizes (`kit-columns`, `wide-width`, `leaderboard-lines`, `spectate-limit`).
 - `motd`: two server-list lines, centered automatically, plus the hover text.
 

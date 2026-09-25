@@ -58,6 +58,7 @@ public final class SpectateService implements Listener {
         if (previous != null) previous.spectators().remove(viewer.getUniqueId());
         spectating.put(viewer.getUniqueId(), match);
         match.spectators().add(viewer.getUniqueId());
+        plugin.tags().update(viewer); // grey, italic and last in the tab list
         Location to = focus != null && match.arena().contains(focus) ? focus.clone().add(0, 3, 0) : match.arena().center().add(0, 6, 0);
         KitManager.resetState(viewer, 20);
         viewer.setGameMode(GameMode.ADVENTURE);
@@ -82,6 +83,7 @@ public final class SpectateService implements Listener {
         Match match = spectating.remove(player.getUniqueId());
         if (match == null) return false;
         match.spectators().remove(player.getUniqueId());
+        plugin.tags().update(player);
         player.setCollidable(true);
         player.setAllowFlight(false);
         player.setFlying(false);
