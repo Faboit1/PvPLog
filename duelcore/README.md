@@ -165,7 +165,9 @@ Player commands (all players by default):
 | `/leaderboard [kit\|overall] [region]` | `/lb`, `/top` | Leaderboards, global or per region |
 | `/spectate [player]` | `/spec` | Watch a match. Without a name it opens the live list (search; highest Elo first, then by name). `/spectate stop` |
 | `/duel [player] [kit]` | | Unranked challenge. Without arguments it opens a player picker. `/duel accept\|deny <player>` |
-| `/settings` | | Duel requests, sidebar, sounds, chat tags, hub visibility, spectators, region, country, max ping |
+| `/settings` | | Duel requests, sidebar, sounds, chat tags, hub visibility, spectators, friend alerts, party invites, region, country, max ping |
+| `/friends [add\|remove <player>\|list]` | `/f`, `/friend` | Friends dialog: follows, followers and friends (mutual follows), online first, filter, add back, duel or spectate a friend. `add` works for offline players by exact name |
+| `/follow <player>`, `/unfollow <player>` | | Follow or unfollow; when both follow each other they're friends |
 
 Staff:
 
@@ -189,6 +191,7 @@ Staff:
 | --- | --- | --- |
 | `duelcore.player` | true | Parent of everything below marked "true" |
 | `duelcore.queue`, `.leave`, `.profile`, `.profile.others`, `.leaderboard`, `.spectate`, `.duel`, `.settings` | true | The matching commands and hotbar items |
+| `duelcore.friends` | true | `/friends`, `/follow`, `/unfollow`, the Friends hotbar item |
 | `duelcore.party`, `duelcore.tournament` | true | Reserved for the 2v2 queue and tournaments (not in this build yet) |
 | `duelcore.spectate.bypass` | op | Spectate players who turned spectators off |
 | `duelcore.tier` | op | `/tier` |

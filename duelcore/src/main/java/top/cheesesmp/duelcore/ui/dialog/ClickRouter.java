@@ -145,6 +145,8 @@ public final class ClickRouter implements Listener {
         setBool(p, Setting.CHAT_TAGS, view.getBoolean("chat_tags"));
         setBool(p, Setting.HIDE_HUB_PLAYERS, view.getBoolean("hide_hub"));
         setBool(p, Setting.ALLOW_SPECTATORS, view.getBoolean("spectators"));
+        setBool(p, Setting.FRIEND_ALERTS, view.getBoolean("friend_alerts"));
+        setBool(p, Setting.PARTY_INVITES, view.getBoolean("party_invites"));
         String region = view.getText("region");
         if (region != null) {
             String up = region.toUpperCase(Locale.ROOT);

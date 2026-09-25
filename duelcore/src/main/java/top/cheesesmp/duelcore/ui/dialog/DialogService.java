@@ -72,13 +72,13 @@ public final class DialogService {
         return sb.append('}').toString();
     }
 
-    private static Map<String, String> payload(String... kv) {
+    public static Map<String, String> payload(String... kv) {
         Map<String, String> map = new LinkedHashMap<>();
         for (int i = 0; i + 1 < kv.length; i += 2) map.put(kv[i], kv[i + 1]);
         return map;
     }
 
-    private ActionButton button(Component label, @Nullable Component tooltip, int width, @Nullable String action,
+    public ActionButton button(Component label, @Nullable Component tooltip, int width, @Nullable String action,
                                 Map<String, String> payload) {
         ActionButton.Builder b = ActionButton.builder(label).width(Math.clamp(width, 1, 1024));
         if (tooltip != null) b.tooltip(tooltip);
@@ -89,11 +89,11 @@ public final class DialogService {
         return b.build();
     }
 
-    private ActionButton close() {
+    public ActionButton close() {
         return button(msg().get("dialog.close"), null, 120, null, Map.of());
     }
 
-    private static Dialog dialog(Component title, List<DialogBody> body, List<DialogInput> inputs, DialogType type) {
+    public static Dialog dialog(Component title, List<DialogBody> body, List<DialogInput> inputs, DialogType type) {
         return Dialog.create(f -> f.empty()
             .base(DialogBase.builder(title)
                 .canCloseWithEscape(true)
@@ -105,11 +105,11 @@ public final class DialogService {
             .type(type));
     }
 
-    private DialogBody text(Component content) {
+    public DialogBody text(Component content) {
         return DialogBody.plainMessage(content, plugin.gui().wideWidth);
     }
 
-    private Component lines(List<Component> lines) {
+    public Component lines(List<Component> lines) {
         return Component.join(JoinConfiguration.newlines(), lines);
     }
 
@@ -190,6 +190,8 @@ public final class DialogService {
         List<ActionButton> buttons = new ArrayList<>();
         buttons.add(button(msg().get("dialog.profile.leaderboards"), null, 150, "leaderboard/view", payload("cat", "overall")));
         buttons.add(button(msg().get("dialog.profile.recent-refresh"), null, 150, "profile/view", payload("name", target.name())));
+        ActionButton follow = plugin.friends() == null ? null : plugin.friends().dialogs().profileButton(viewer, target);
+        if (follow != null) buttons.add(follow);
         Dialog d = dialog(msg().get("dialog.profile.title", Messages.text("player", target.name())),
             List.of(text(lines(body))), List.of(), DialogType.multiAction(buttons).columns(2).exitAction(close()).build());
         viewer.showDialog(d);
@@ -279,6 +281,8 @@ public final class DialogService {
         inputs.add(bool("chat_tags", "dialog.settings.chat-tags", p.setting(Setting.CHAT_TAGS)));
         inputs.add(bool("hide_hub", "dialog.settings.hide-hub", p.setting(Setting.HIDE_HUB_PLAYERS)));
         inputs.add(bool("spectators", "dialog.settings.spectators", p.setting(Setting.ALLOW_SPECTATORS)));
+        inputs.add(bool("friend_alerts", "dialog.settings.friend-alerts", p.setting(Setting.FRIEND_ALERTS)));
+        inputs.add(bool("party_invites", "dialog.settings.party-invites", p.setting(Setting.PARTY_INVITES)));
         List<SingleOptionDialogInput.OptionEntry> regions = new ArrayList<>();
         regions.add(SingleOptionDialogInput.OptionEntry.create("none", msg().get("dialog.settings.region-none"), p.region() == null));
         for (String r : plugin.settings().regions) {

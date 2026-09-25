@@ -50,6 +50,13 @@ hotbar:
     lore:
       - "<muted>Watch a live match"
     action-bar: "<accent>Right click</accent> <text>to spectate</text> <muted>— watch a live match</muted>"
+  friends:
+    slot: 7
+    item: name_tag
+    name: "<text>Friends</text>"
+    lore:
+      - "<muted>Who's online, follow players, duel friends"
+    action-bar: "<accent>Right click</accent> <text>for friends</text> <muted>— who's online, follow players, duel friends</muted>"
   # Given to spectators instead of the hub items.
   stop-spectating:
     slot: 8
