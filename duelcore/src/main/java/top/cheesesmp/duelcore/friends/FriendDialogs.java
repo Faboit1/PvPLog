@@ -23,10 +23,13 @@ import top.cheesesmp.duelcore.match.SpectateService;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.ui.Icons;
 import top.cheesesmp.duelcore.ui.dialog.DialogService;
+import top.cheesesmp.duelcore.ui.dialog.Fingerprint;
+import top.cheesesmp.duelcore.ui.dialog.OpenDialogs;
 
 /**
  * The friends dialogs (list, person, add) and their {@code duelcore:friend/…} clicks. Every click payload is
- * client input: uuids, pages and filters are parsed and checked again against the cache.
+ * client input: uuids, pages and filters are parsed and checked again against the cache. The list and a person's
+ * dialog are refreshed while open (online / in match states); "Add Friends" isn't (its search box).
  */
 public final class FriendDialogs {
 
@@ -90,6 +93,14 @@ public final class FriendDialogs {
             service.ensureLoaded(viewer);
             return;
         }
+        UUID uuid = viewer.getUniqueId();
+        plugin.openDialogs().show(viewer, OpenDialogs.Kind.FRIENDS, buildList(g, page, filter), p -> {
+            FriendService.Graph now = service.graph(uuid);
+            return now == null ? null : buildList(now, page, filter);
+        });
+    }
+
+    private OpenDialogs.Rendered buildList(FriendService.Graph g, int page, Filter filter) {
         List<Entry> entries = entries(g, filter);
         int pages = Math.max(1, (entries.size() + PAGE_SIZE - 1) / PAGE_SIZE);
         int p = Math.clamp(page, 0, pages - 1);
@@ -124,8 +135,10 @@ public final class FriendDialogs {
         body.add(msg().get("friends.dialog.body", Messages.num("page", p + 1), Messages.num("pages", pages),
             Messages.text("filter", filterName(filter)), Messages.num("shown", entries.size())));
         if (entries.isEmpty()) body.add(msg().get("friends.dialog.empty-" + f));
-        viewer.showDialog(DialogService.dialog(msg().get("friends.dialog.title"), List.of(ui().text(ui().lines(body))),
-            List.of(), DialogType.multiAction(buttons).columns(COLUMNS).exitAction(ui().close()).build()));
+        Component title = msg().get("friends.dialog.title");
+        return new OpenDialogs.Rendered(DialogService.dialog(title, List.of(ui().text(ui().lines(body))),
+            List.of(), DialogType.multiAction(buttons).columns(COLUMNS).exitAction(ui().close()).build()),
+            Fingerprint.of(title, body, buttons));
     }
 
     List<Entry> entries(FriendService.Graph g, Filter filter) {
@@ -175,13 +188,24 @@ public final class FriendDialogs {
             service.ensureLoaded(viewer);
             return;
         }
-        Person following = g.following.get(target);
-        Person follower = g.followers.get(target);
-        Person known = following != null ? following : follower;
-        if (known == null || target.equals(viewer.getUniqueId())) {
+        OpenDialogs.Rendered shown = buildPerson(viewer, g, target, page, filter);
+        if (shown == null) {
             open(viewer, page, filter);
             return;
         }
+        UUID uuid = viewer.getUniqueId();
+        plugin.openDialogs().show(viewer, OpenDialogs.Kind.FRIEND_PERSON, shown, p -> {
+            FriendService.Graph now = service.graph(uuid);
+            return now == null ? null : buildPerson(p, now, target, page, filter);
+        });
+    }
+
+    /** A person's dialog, or null when the viewer neither follows them nor is followed by them (any more). */
+    private OpenDialogs.@Nullable Rendered buildPerson(Player viewer, FriendService.Graph g, UUID target, int page, Filter filter) {
+        Person following = g.following.get(target);
+        Person follower = g.followers.get(target);
+        Person known = following != null ? following : follower;
+        if (known == null || target.equals(viewer.getUniqueId())) return null;
         Relation relation = following == null ? Relation.FOLLOWER
             : follower != null ? Relation.MUTUAL : Relation.FOLLOWING;
         Entry e = entry(known, relation);
@@ -216,9 +240,9 @@ public final class FriendDialogs {
         }
         buttons.add(ui().button(msg().get("friends.person.back"), null, w, "friend/open",
             DialogService.payload("page", pg, "filter", f)));
-        viewer.showDialog(DialogService.dialog(msg().get("friends.person.title", Messages.text("player", name)),
-            List.of(ui().text(ui().lines(body))), List.of(),
-            DialogType.multiAction(buttons).columns(2).exitAction(ui().close()).build()));
+        Component title = msg().get("friends.person.title", Messages.text("player", name));
+        return new OpenDialogs.Rendered(DialogService.dialog(title, List.of(ui().text(ui().lines(body))), List.of(),
+            DialogType.multiAction(buttons).columns(2).exitAction(ui().close()).build()), Fingerprint.of(title, body, buttons));
     }
 
     private static String ago(long at) {
@@ -275,8 +299,9 @@ public final class FriendDialogs {
             : msg().get("friends.add.body", Messages.num("shown", shown.size()), Messages.num("total", candidates.size()));
         List<DialogInput> inputs = List.of(DialogInput.text("search", msg().get("friends.add.search-label"))
             .width(COLUMNS * BUTTON_WIDTH + 2 * (COLUMNS - 1)).initial(q).maxLength(16).build());
-        viewer.showDialog(DialogService.dialog(msg().get("friends.add.title"), List.of(ui().text(body)), inputs,
-            DialogType.multiAction(buttons).columns(COLUMNS).exitAction(ui().close()).build()));
+        // not refreshed: it would clear the search box
+        plugin.openDialogs().show(viewer, OpenDialogs.Kind.FRIEND_ADD, DialogService.dialog(msg().get("friends.add.title"),
+            List.of(ui().text(body)), inputs, DialogType.multiAction(buttons).columns(COLUMNS).exitAction(ui().close()).build()));
     }
 
     // ------------------------------------------------------------------ profile dialog
@@ -309,21 +334,27 @@ public final class FriendDialogs {
         UUID target = uuid(data.get("target"));
         switch (action) {
             case "friend/open" -> open(player, page, filter);
-            case "friend/refresh" -> service.reload(player, () -> open(player, page, filter));
+            case "friend/refresh" -> {
+                plugin.openDialogs().awaitNext(player); // the list stays until it is reloaded
+                service.reload(player, () -> open(player, page, filter));
+            }
             case "friend/add" -> add(player, "");
             case "friend/search" -> add(player, view == null ? "" : Objects.requireNonNullElse(view.getText("search"), ""));
             case "friend/person" -> {
                 if (target != null) person(player, target, page, filter);
             }
+            // the dialog stays until the follow is saved and the dialog it came from is shown again ("back")
             case "friend/follow" -> {
-                if (target != null) service.follow(player, target, back(player, data, target, page, filter));
+                if (target != null) service.follow(player, target, awaiting(player, back(player, data, target, page, filter)));
             }
             case "friend/unfollow" -> {
-                if (target != null) service.unfollow(player, target, back(player, data, target, page, filter));
+                if (target != null) service.unfollow(player, target, awaiting(player, back(player, data, target, page, filter)));
             }
             case "friend/follow-name" -> {
                 String name = data.getOrDefault("name", "");
-                if (FriendService.NAME.matcher(name).matches()) service.followByName(player, name, () -> add(player, ""));
+                if (FriendService.NAME.matcher(name).matches()) {
+                    service.followByName(player, name, awaiting(player, () -> add(player, "")));
+                }
             }
             case "friend/duel" -> {
                 Player other = target == null ? null : Bukkit.getPlayer(target);
@@ -341,17 +372,25 @@ public final class FriendDialogs {
                     msg().send(player, "duel.result.offline");
                     return;
                 }
+                plugin.openDialogs().close(player);
                 SpectateService.Result r = plugin.spectate().spectate(player, other);
                 if (r != SpectateService.Result.OK) {
                     msg().send(player, "spectate.result." + r.name().toLowerCase(Locale.ROOT),
                         Messages.text("player", other.getName()));
-                } else {
-                    player.closeDialog();
                 }
             }
             default -> {
             }
         }
+    }
+
+    /**
+     * A follow's "then": the click's dialog waits for it (the follow may be saved first); without one (a chat click)
+     * nothing waits and the click closes its dialog.
+     */
+    private @Nullable Runnable awaiting(Player player, @Nullable Runnable then) {
+        if (then != null) plugin.openDialogs().awaitNext(player);
+        return then;
     }
 
     /** What to show after a follow or unfollow, from the click's "back" field. */

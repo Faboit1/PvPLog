@@ -232,19 +232,24 @@ public final class KitEditor implements Listener {
         String refusal = refusal(player);
         if (refusal != null) {
             plugin.messages().send(player, refusal);
+            plugin.openDialogs().abandon(player); // (after loading: a match was found meanwhile)
             return;
         }
         if (!layouts.loaded(player.getUniqueId())) {
+            plugin.openDialogs().awaitNext(player); // a dialog it was opened from stays until the editor opens
             layouts.load(player).thenRun(() -> {
                 if (player.isOnline() && layouts.loaded(player.getUniqueId())) open(player, kit);
-                else if (player.isOnline()) plugin.messages().send(player, "kit-editor.not-ready");
+                else if (player.isOnline()) {
+                    plugin.messages().send(player, "kit-editor.not-ready");
+                    plugin.openDialogs().abandon(player);
+                }
             });
             return;
         }
         Session old = sessions.get(player.getUniqueId());
         if (old != null) close(player, old);
 
-        player.closeDialog();
+        plugin.openDialogs().close(player); // the chest replaces the dialog it was opened from
         plugin.anim().cancel(player, Channel.DIALOG); // an animating queue menu must not re-open over the editor
         String[] parts = KitManager.fingerprint(kit);
         boolean[] filled = KitLayout.filled(parts);

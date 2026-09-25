@@ -60,8 +60,8 @@ public final class ClickRouter implements Listener {
         if (!(event.getCommonConnection() instanceof PlayerGameConnection connection)) return;
         Player player = connection.getPlayer();
         String action = event.getIdentifier().value();
-        // closing is harmless to repeat and must never be dropped (an animating menu would open again)
-        if (!action.equals("queue/close")) {
+        // closing (also what Escape sends) is harmless to repeat and must never be dropped
+        if (!isClose(action)) {
             long now = System.currentTimeMillis();
             Long last = lastClick.get(player.getUniqueId());
             if (last != null && now - last < 150) return; // double-click / spam guard
@@ -70,14 +70,29 @@ public final class ClickRouter implements Listener {
         }
         DialogResponseView view = event.getDialogResponseView();
         Map<String, String> data = parse(event.getTag());
+        // dialogs stay on screen after a click (after-action NONE) until the next one replaces them; a click that
+        // shows none (started a match, sent a request, failed with a chat message, …) closes its dialog here
+        OpenDialogs open = plugin.openDialogs();
+        long serial = open.serial(player);
         try {
             handle(player, action, data, view);
         } catch (RuntimeException e) {
             plugin.getLogger().warning("Click '" + action + "' from " + player.getName() + " failed: " + e);
+        } finally {
+            open.afterClick(player, serial);
         }
     }
 
+    /** The close clicks: every Close / exit button, so also Escape (queue/close and party/close from before). */
+    static boolean isClose(String action) {
+        return action.equals(OpenDialogs.CLOSE) || action.equals("queue/close") || action.equals("party/close");
+    }
+
     private void handle(Player player, String action, Map<String, String> data, @Nullable DialogResponseView view) {
+        if (isClose(action)) {
+            plugin.openDialogs().close(player);
+            return;
+        }
         // queue/* clicks are handled by QueueDialog (registered prefix "queue")
         switch (action) {
             case "profile/view" -> plugin.commands().openProfile(player, data.getOrDefault("name", player.getName()), false);
@@ -86,7 +101,10 @@ public final class ClickRouter implements Listener {
                 if (!region.isEmpty() && !plugin.settings().regions.contains(region)) region = "";
                 plugin.dialogs().leaderboard(player, data.getOrDefault("cat", "overall"), region.isEmpty() ? null : region);
             }
-            case "settings/save" -> saveSettings(player, view);
+            case "settings/save" -> {
+                saveSettings(player, view);
+                plugin.openDialogs().close(player); // the result is a chat message
+            }
             case "spectate/search" -> {
                 String query = view == null ? "" : java.util.Objects.requireNonNullElse(view.getText("search"), "");
                 plugin.dialogs().spectate(player, query.length() > 32 ? query.substring(0, 32) : query);
@@ -103,6 +121,7 @@ public final class ClickRouter implements Listener {
                     plugin.messages().send(player, "spectate.ended");
                     return;
                 }
+                plugin.openDialogs().close(player);
                 SpectateService.Result r = plugin.spectate().spectate(player, match, null);
                 if (r != SpectateService.Result.OK) plugin.messages().send(player, "spectate.result." + r.name().toLowerCase(Locale.ROOT));
             }

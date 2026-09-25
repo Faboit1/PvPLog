@@ -168,7 +168,7 @@ public final class MatchService implements Runnable {
             plugin.anim().cancel(player, Channel.TITLE);
             plugin.anim().cancel(player, Channel.ACTION_BAR);
             plugin.anim().cancel(player, Channel.SOUND);
-            player.closeDialog();
+            plugin.openDialogs().close(player);
             player.setInvulnerable(true);
             player.getInventory().clear();
             player.setLevel(0); // the hub XP bar (matches never show it)

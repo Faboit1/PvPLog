@@ -37,13 +37,17 @@ import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.ui.Icons;
 import top.cheesesmp.duelcore.ui.dialog.DialogService;
+import top.cheesesmp.duelcore.ui.dialog.Fingerprint;
+import top.cheesesmp.duelcore.ui.dialog.OpenDialogs;
 
 /**
  * The party menus. Every button and clickable line is a {@code duelcore:party/<action>} custom click with a flat SNBT
  * payload, routed here through the "party" prefix of the click router; payloads are untrusted and every action is
  * checked again by {@link PartyService}. The dialogs stay open after a click (after-action "none") until the server
  * shows the next one, so buttons that can't be used (struck through, the reason as tooltip) simply do nothing, and
- * Close is a click as well. Errors are shown as a line at the top of the re-opened dialog.
+ * Close is a click as well ({@code duelcore:dialog/close}). Errors are shown as a line at the top of the re-opened
+ * dialog. The party menu and a member's dialog are refreshed while open (members online, offline or in a match); the
+ * ones with a text box never are.
  */
 public final class PartyDialogs {
 
@@ -100,7 +104,11 @@ public final class PartyDialogs {
     }
 
     private ActionButton close() {
-        return button(msg().get("party.dialog.close"), null, 120, "party/close", Map.of());
+        return button(msg().get("party.dialog.close"), null, 120, OpenDialogs.CLOSE, Map.of());
+    }
+
+    private void show(Player player, OpenDialogs.Kind kind, Dialog dialog) {
+        plugin.openDialogs().show(player, kind, dialog);
     }
 
     private ActionButton back() {
@@ -219,7 +227,7 @@ public final class PartyDialogs {
         List<ActionButton> buttons = List.of(
             button(msg().get("party.dialog.create"), msg().get("party.dialog.create-tooltip"), w, "party/create", Map.of()),
             button(msg().get("party.dialog.join"), msg().get("party.dialog.join-tooltip"), w, "party/join-menu", Map.of()));
-        player.showDialog(dialog(msg().get("party.dialog.title"), body, inputs,
+        show(player, OpenDialogs.Kind.PARTY_NONE, dialog(msg().get("party.dialog.title"), body, inputs,
             DialogType.multiAction(buttons).columns(2).exitAction(close()).build()));
     }
 
@@ -230,7 +238,7 @@ public final class PartyDialogs {
             DialogInput.text("password", msg().get("party.dialog.password-optional")).width(width)
                 .maxLength(PartyPasswords.MAX_LENGTH).build());
         int w = plugin.gui().partyButtonWidth * 3 / 2;
-        player.showDialog(dialog(msg().get("party.dialog.join-title"), body(notice, msg().get("party.dialog.join-body")), inputs,
+        show(player, OpenDialogs.Kind.PARTY_JOIN, dialog(msg().get("party.dialog.join-title"), body(notice, msg().get("party.dialog.join-body")), inputs,
             DialogType.confirmation(button(msg().get("party.dialog.join-confirm"), null, w, "party/join", Map.of()),
                 button(msg().get("party.dialog.back"), null, w, "party/menu", Map.of()))));
     }
@@ -238,12 +246,20 @@ public final class PartyDialogs {
     // ------------------------------------------------------------------ party menu
 
     public void openMenu(Player player, int page, @Nullable Component notice) {
-        UUID uuid = player.getUniqueId();
-        Party party = parties.party(uuid);
-        if (party == null) {
+        OpenDialogs.Rendered menu = buildMenu(player, page, notice);
+        if (menu == null) {
             openNone(player, notice);
             return;
         }
+        // refreshed with the same page and notice while open; left alone once the player is no longer in a party
+        plugin.openDialogs().show(player, OpenDialogs.Kind.PARTY_MENU, menu, p -> buildMenu(p, page, notice));
+    }
+
+    /** The party menu, or null when the player isn't in a party. */
+    private OpenDialogs.@Nullable Rendered buildMenu(Player player, int page, @Nullable Component notice) {
+        UUID uuid = player.getUniqueId();
+        Party party = parties.party(uuid);
+        if (party == null) return null;
         GuiConfig gui = plugin.gui();
         boolean leader = party.isLeader(uuid);
         List<Party.Member> members = party.leaderFirst();
@@ -314,8 +330,10 @@ public final class PartyDialogs {
         buttons.add(leader
             ? button(msg().get("party.dialog.disband"), msg().get("party.dialog.disband-tooltip"), w, "party/disband", Map.of())
             : button(msg().get("party.dialog.leave"), msg().get("party.dialog.leave-tooltip"), w, "party/leave", Map.of()));
-        player.showDialog(dialog(msg().get("party.dialog.title"), body, List.of(),
-            DialogType.multiAction(buttons).columns(3).exitAction(close()).build()));
+        Component title = msg().get("party.dialog.title");
+        return new OpenDialogs.Rendered(dialog(title, body, List.of(),
+            DialogType.multiAction(buttons).columns(3).exitAction(close()).build()),
+            Fingerprint.of(title, notice, lines, incoming, buttons));
     }
 
     private ActionButton modeButton(Party party, Player player, Mode mode, int width) {
@@ -335,11 +353,20 @@ public final class PartyDialogs {
     }
 
     public void openMember(Player viewer, @Nullable UUID target) {
-        Party party = parties.party(viewer.getUniqueId());
-        Party.Member member = party == null || target == null ? null : party.member(target);
-        if (party == null || member == null || !party.isLeader(viewer.getUniqueId()) || target.equals(viewer.getUniqueId())) {
+        OpenDialogs.Rendered shown = target == null ? null : buildMember(viewer, target);
+        if (shown == null) {
             open(viewer);
             return;
+        }
+        plugin.openDialogs().show(viewer, OpenDialogs.Kind.PARTY_MEMBER, shown, p -> buildMember(p, target));
+    }
+
+    /** A member's dialog for the leader, or null when the viewer isn't (any more) their party's leader. */
+    private OpenDialogs.@Nullable Rendered buildMember(Player viewer, UUID target) {
+        Party party = parties.party(viewer.getUniqueId());
+        Party.Member member = party == null ? null : party.member(target);
+        if (party == null || member == null || !party.isLeader(viewer.getUniqueId()) || target.equals(viewer.getUniqueId())) {
+            return null;
         }
         Component info = msg().get("party.dialog.member-body", Messages.comp("head", head(member)),
             Messages.text("player", member.name()), Messages.comp("status", status(member.uuid())),
@@ -351,8 +378,9 @@ public final class PartyDialogs {
             PartyService.online(member.uuid()) ? button(promote, msg().get("party.dialog.promote-tooltip"), w, "party/promote", data)
                 : disabled(promote, "party.dialog.why-offline", w),
             button(msg().get("party.dialog.kick"), msg().get("party.dialog.kick-tooltip"), w, "party/kick", data));
-        viewer.showDialog(dialog(msg().get("party.dialog.member-title", Messages.text("player", member.name())),
-            body(null, info), List.of(), DialogType.multiAction(buttons).columns(2).exitAction(back()).build()));
+        Component title = msg().get("party.dialog.member-title", Messages.text("player", member.name()));
+        return new OpenDialogs.Rendered(dialog(title, body(null, info), List.of(),
+            DialogType.multiAction(buttons).columns(2).exitAction(back()).build()), Fingerprint.of(title, info, buttons));
     }
 
     private static String ago(long at) {
@@ -394,7 +422,7 @@ public final class PartyDialogs {
         Component intro = msg().get(candidates.isEmpty() ? "party.dialog.invite-none" : "party.dialog.invite-body");
         List<DialogInput> inputs = List.of(DialogInput.text("name", msg().get("party.dialog.invite-input"))
             .width(Math.min(gui.partyWidth, 300)).maxLength(16).build());
-        player.showDialog(dialog(msg().get("party.dialog.invite-title"), body(notice, intro), inputs,
+        show(player, OpenDialogs.Kind.PARTY_INVITE, dialog(msg().get("party.dialog.invite-title"), body(notice, intro), inputs,
             DialogType.multiAction(buttons).columns(2).exitAction(back()).build()));
     }
 
@@ -417,7 +445,7 @@ public final class PartyDialogs {
         Component info = msg().get("party.dialog.privacy-body", Messages.comp("state",
             msg().get(party.hasPassword() ? "party.dialog.password-state-set" : "party.dialog.password-state-none")));
         int w = plugin.gui().partyButtonWidth * 3 / 2;
-        player.showDialog(dialog(msg().get("party.dialog.privacy-title"), body(notice, info), inputs,
+        show(player, OpenDialogs.Kind.PARTY_PRIVACY, dialog(msg().get("party.dialog.privacy-title"), body(notice, info), inputs,
             DialogType.confirmation(button(msg().get("party.dialog.save"), null, w, "party/privacy-save", Map.of()),
                 button(msg().get("party.dialog.back"), null, w, "party/menu", Map.of()))));
     }
@@ -446,7 +474,7 @@ public final class PartyDialogs {
         Component info = msg().get("party.dialog.kit-body-" + mode.id(), Messages.num("online", parties.onlineCount(party)),
             Messages.text("leader", targetParty == null ? "" : leaderName(targetParty)), Messages.num("seconds", parties.inviteSeconds()));
         Component title = msg().get("party.dialog.kit-title", Messages.comp("mode", msg().get("party.dialog.mode-" + mode.id())));
-        player.showDialog(dialog(title, body(null, info), List.of(), buttons.isEmpty() ? DialogType.notice(back())
+        show(player, OpenDialogs.Kind.PARTY_KITS, dialog(title, body(null, info), List.of(), buttons.isEmpty() ? DialogType.notice(back())
             : DialogType.multiAction(buttons).columns(gui.kitColumns).exitAction(back()).build()));
     }
 
@@ -469,10 +497,10 @@ public final class PartyDialogs {
         }
         Component title = msg().get("party.dialog.pvp-title");
         if (buttons.isEmpty()) {
-            player.showDialog(dialog(title, body(notice, msg().get("party.dialog.pvp-none")), List.of(), DialogType.notice(back())));
+            show(player, OpenDialogs.Kind.PARTY_PVP, dialog(title, body(notice, msg().get("party.dialog.pvp-none")), List.of(), DialogType.notice(back())));
             return;
         }
-        player.showDialog(dialog(title, body(notice, msg().get("party.dialog.pvp-body")), List.of(),
+        show(player, OpenDialogs.Kind.PARTY_PVP, dialog(title, body(notice, msg().get("party.dialog.pvp-body")), List.of(),
             DialogType.multiAction(buttons).columns(2).exitAction(back()).build()));
     }
 
@@ -489,13 +517,13 @@ public final class PartyDialogs {
         // Escape / Close only closes it (the chat message can still accept); Deny tells the other leader
         List<ActionButton> buttons = List.of(button(msg().get("party.dialog.accept"), null, w, "party/duel-accept", data),
             button(msg().get("party.dialog.deny"), null, w, "party/duel-deny", data));
-        leader.showDialog(dialog(msg().get("party.dialog.challenge-title"), body(null, info), List.of(),
+        show(leader, OpenDialogs.Kind.PARTY_CHALLENGE, dialog(msg().get("party.dialog.challenge-title"), body(null, info), List.of(),
             DialogType.multiAction(buttons).columns(2).exitAction(close()).build()));
     }
 
     public void openDisband(Player player) {
         int w = plugin.gui().partyButtonWidth * 3 / 2;
-        player.showDialog(dialog(msg().get("party.dialog.disband-title"), body(null, msg().get("party.dialog.disband-body")),
+        show(player, OpenDialogs.Kind.PARTY_DISBAND, dialog(msg().get("party.dialog.disband-title"), body(null, msg().get("party.dialog.disband-body")),
             List.of(), DialogType.confirmation(
                 button(msg().get("party.dialog.disband-confirm"), null, w, "party/disband-confirm", Map.of()),
                 button(msg().get("party.dialog.back"), null, w, "party/menu", Map.of()))));
@@ -511,11 +539,12 @@ public final class PartyDialogs {
         }
         boolean fromChat = "chat".equals(data.get("from"));
         switch (action) {
-            case "party/close" -> player.closeDialog();
+            case "party/close" -> plugin.openDialogs().close(player); // (ClickRouter closes it first)
             case "party/menu" -> open(player);
             case "party/page" -> openMenu(player, number(data.get("page")), null);
             case "party/create" -> {
                 String password = input(view, "password");
+                plugin.openDialogs().awaitNext(player); // the dialog stays until the party is saved
                 parties.create(player, password.isEmpty() ? null : password).thenAccept(o -> {
                     if (!player.isOnline()) return;
                     if (o.ok()) openMenu(player, 0, null);
@@ -615,7 +644,7 @@ public final class PartyDialogs {
                     openMenu(player, 0, error(o));
                 } else {
                     feedback(player, o);
-                    if (!fromChat) player.closeDialog();
+                    if (!fromChat) plugin.openDialogs().close(player);
                 }
             }
             case "party/duel-deny" -> {
@@ -624,7 +653,7 @@ public final class PartyDialogs {
                     openMenu(player, 0, o.ok() ? null : error(o));
                 } else {
                     if (!o.ok()) feedback(player, o);
-                    if (!fromChat) player.closeDialog();
+                    if (!fromChat) plugin.openDialogs().close(player);
                 }
             }
             default -> {
@@ -633,6 +662,7 @@ public final class PartyDialogs {
     }
 
     private void afterJoin(Player player, String leader, CompletableFuture<Outcome> result) {
+        if (!result.isDone()) plugin.openDialogs().awaitNext(player); // (a password is checked off the main thread)
         result.thenAccept(o -> {
             if (!player.isOnline()) return;
             if (o.ok()) openMenu(player, 0, null);
@@ -659,6 +689,7 @@ public final class PartyDialogs {
         CompletableFuture<Outcome> change = !password.isEmpty() ? parties.setPassword(player, password)
             : Boolean.TRUE.equals(remove) ? parties.setPassword(player, null)
             : CompletableFuture.completedFuture(Outcome.OK);
+        if (!change.isDone()) plugin.openDialogs().awaitNext(player);
         change.thenAccept(o -> {
             if (!player.isOnline()) return;
             if (o.ok()) openMenu(player, 0, null);

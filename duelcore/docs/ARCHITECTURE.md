@@ -35,8 +35,8 @@ top.cheesesmp.duelcore
 ├── rating/                   RatingSystem, EloRating, Glicko2Rating, Tier, TierLadder, TierService, SeasonService
 ├── hub/                      HubService (send-to-hub, state reset), HubItems, HubListener (protection)
 ├── ui/                       Dialogs (Queue/Profile/Leaderboard/Settings/Spectate/Results/DuelPicker),
-│                             ClickRouter (custom click keys), SidebarService, TagService (tab/chat/nametag),
-│                             TotemPop, Sounds, Icons (sprite helpers)
+│                             ClickRouter (custom click keys), OpenDialogs (open dialog, live refresh),
+│                             SidebarService, TagService (tab/chat/nametag), TotemPop, Sounds, Icons (sprite helpers)
 ├── leaderboard/              LeaderboardService (cached pages, async refresh, rank lookups)
 ├── command/                  Brigadier tree registered in LifecycleEvents.COMMANDS
 ├── hook/                     PlaceholderHook (loaded only when PlaceholderAPI exists)
@@ -135,6 +135,21 @@ A server shutdown during a match cancels it without any rating change. `/duelcor
 
 * **Hub hotbar** (locked): Queue · Leaderboard · Profile · Settings · Spectate. While you're queued, the Queue item becomes "Leave queue".
 * **Dialogs** use fixed custom-click keys (`duelcore:queue`, …) handled by one `PlayerCustomClickEvent` router. There are no per-click callbacks to leak, and test bots can click them with the `custom_click_action` packet.
+* **Dialog flow** (`ui/dialog/OpenDialogs`, `plugin.openDialogs()`; pure rules in `DialogRefresh` and `Fingerprint`):
+  every dialog uses after-action NONE, so a click leaves it on screen until the server's next `show_dialog` replaces
+  it (no close-then-reopen). Every dialog is shown through `OpenDialogs.show(player, kind, …)`, which records the
+  open kind and, for dialogs whose content changes, a renderer that captures what it needs (queue tab, friends
+  page/filter, party page, spectate query, …). `ClickRouter` compares the player's dialog serial before and after a
+  click: a click that showed no dialog closes it (`clear_dialog`), unless it called `awaitNext` because its dialog is
+  loaded first (closed after 5 s, or at once through `abandon`, if that fails). Every close/exit button sends
+  `duelcore:dialog/close`; the client runs a dialog's exit action on Escape (notice: its button, multi-action: the exit
+  action, confirmation: the no button, with after-action CLOSE), so Escape is seen too. The open dialog is also
+  forgotten on an inventory opening, quit, world change, match start, reload and disable (which closes them all), and
+  on client signs that no screen is open (a movement key, an item used, a command) once the dialog had time to arrive
+  (1 tick + ping). A 1-tick timer re-renders refreshable dialogs every `dialogs.refresh.interval-ticks` and re-sends
+  them only when their fingerprint (components, buttons, item parameters) changed, never while a click waits or a
+  `DIALOG`-channel animation (the queue menu's progress fill) shows frames. Dialogs with text inputs are never
+  refreshed; the spectate list only without a search query.
 * **Sidebar** uses a blank number format and per-line custom names. The hub shows name, tier and overall Elo, queued and live counts. In a match it shows score, round, timer and ping.
 * **Queue music**: while searching, `QueueMusic` plays a random music disc to the player only (record source,
   emitted from the player, `Setting.QUEUE_MUSIC`). The next track starts from the configured track length; the music

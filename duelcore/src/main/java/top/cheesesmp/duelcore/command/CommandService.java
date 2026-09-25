@@ -128,7 +128,7 @@ public final class CommandService {
         QueueService.JoinResult r = plugin.queue().join(player, kit, mode);
         switch (r) {
             case OK, SWITCHED -> {
-                player.closeDialog();
+                plugin.openDialogs().close(player);
                 plugin.messages().send(player, r == QueueService.JoinResult.OK ? "queue.joined" : "queue.switched",
                     Messages.comp("kit", kit.displayName()), Messages.comp("kit_icon", kit.sprite()),
                     Messages.text("mode", plugin.messages().raw("mode." + mode.id())));
@@ -143,10 +143,12 @@ public final class CommandService {
             plugin.messages().send(viewer, "command.no-permission");
             return;
         }
+        plugin.openDialogs().awaitNext(viewer); // a dialog it was opened from stays until the profile is loaded
         if (legacy) {
             plugin.profiles().previousSeason().thenAccept(season -> Bukkit.getScheduler().runTask(plugin, () -> {
                 if (season == null) {
                     plugin.messages().send(viewer, "profile.no-legacy");
+                    plugin.openDialogs().abandon(viewer);
                     return;
                 }
                 lookupAndShow(viewer, name, season.id(), true);
@@ -161,6 +163,7 @@ public final class CommandService {
             if (!viewer.isOnline()) return;
             if (result.isEmpty()) {
                 plugin.messages().send(viewer, "profile.not-found", Messages.text("player", name));
+                plugin.openDialogs().abandon(viewer);
                 return;
             }
             plugin.dialogs().profile(viewer, result.get(), legacy);
@@ -172,7 +175,7 @@ public final class CommandService {
         if (r != DuelRequestService.Result.SENT) {
             plugin.messages().send(from, "duel.result." + r.name().toLowerCase(Locale.ROOT), Messages.text("player", to.getName()));
         }
-        from.closeDialog();
+        plugin.openDialogs().close(from);
     }
 
     public void acceptDuel(Player player, UUID from) {

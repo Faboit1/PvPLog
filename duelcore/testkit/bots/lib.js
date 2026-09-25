@@ -101,15 +101,39 @@ function createBot (name, opts = {}) {
     bot.dc.titles.push(t)
     log(name, 'title', { type, text: t })
   })
+  // the dialog flow in arrival order: { type: 'show', index } (into bot.dc.dialogs) or { type: 'clear' }
+  bot.dc.flow = []
   bot._client.on('show_dialog', packet => {
     try {
       const raw = packet.dialog && (packet.dialog.data || packet.dialog.value || packet.dialog)
       const d = raw && raw.type === 'compound' ? nbt.simplify(raw) : raw
       bot.dc.dialogs.push(d)
+      bot.dc.flow.push({ type: 'show', index: bot.dc.dialogs.length - 1, at: Date.now() })
       log(name, 'dialog', { title: plain(d && d.title), buttons: buttons(d).map(b => b.label) })
     } catch (e) { log(name, 'dialog-parse-error', e.message) }
   })
+  bot._client.on('clear_dialog', () => {
+    bot.dc.flow.push({ type: 'clear', at: Date.now() })
+    log(name, 'clear-dialog')
+  })
   return bot
+}
+
+/** Waits for a clear_dialog packet after flow position `from` (bot.dc.flow.length before the action). */
+async function waitClear (bot, timeoutMs = 5000, from = bot.dc.flow.length) {
+  return waitFor(() => bot.dc.flow.slice(from).find(e => e.type === 'clear'), timeoutMs, 'clear_dialog')
+}
+
+/**
+ * Waits for the next show_dialog after flow position `from` whose title matches, and checks that no
+ * clear_dialog came before it (the new dialog replaced the open one). Returns the dialog.
+ */
+async function waitReplaced (bot, titleRe, timeoutMs = 5000, from = bot.dc.flow.length) {
+  const ev = await waitFor(() => bot.dc.flow.slice(from).find(e => e.type === 'show' && titleRe.test(plain(bot.dc.dialogs[e.index].title))),
+    timeoutMs, 'dialog ' + titleRe)
+  const before = bot.dc.flow.slice(from, bot.dc.flow.indexOf(ev))
+  if (before.some(e => e.type === 'clear')) throw new Error('clear_dialog before the next dialog ' + titleRe + ' (close-then-reopen)')
+  return bot.dc.dialogs[ev.index]
 }
 
 /** All buttons of a dialog with their actions, as { label, id, additions }. */
@@ -383,4 +407,4 @@ function fighter (bot, opts = {}) {
   return { stop: () => { running = false } }
 }
 
-module.exports = { openFromHotbar, mark, createBot, log, sleep, plain, buttons, bodyClicks, dialogText, queueViaMenu, click, waitFor, waitDialog, waitChat, waitTitle, useHotbar, heldName, fighter, nbt }
+module.exports = { waitClear, waitReplaced, openFromHotbar, mark, createBot, log, sleep, plain, buttons, bodyClicks, dialogText, queueViaMenu, click, waitFor, waitDialog, waitChat, waitTitle, useHotbar, heldName, fighter, nbt }

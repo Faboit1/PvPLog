@@ -17,6 +17,7 @@ import top.cheesesmp.duelcore.config.Messages;
 import top.cheesesmp.duelcore.kit.Kit;
 import top.cheesesmp.duelcore.ui.Icons;
 import top.cheesesmp.duelcore.ui.dialog.DialogService;
+import top.cheesesmp.duelcore.ui.dialog.OpenDialogs;
 
 /**
  * The kit picker: every enabled kit, grouped by the queue menu's categories (with its tab icons and names), each
@@ -42,9 +43,13 @@ public final class KitPicker {
         }
         KitLayouts layouts = editor.layouts();
         if (!layouts.loaded(player.getUniqueId())) {
+            plugin.openDialogs().awaitNext(player); // an open dialog stays until the picker is loaded
             layouts.load(player).thenRun(() -> {
                 if (player.isOnline() && layouts.loaded(player.getUniqueId())) show(player);
-                else if (player.isOnline()) plugin.messages().send(player, "kit-editor.not-ready");
+                else if (player.isOnline()) {
+                    plugin.messages().send(player, "kit-editor.not-ready");
+                    plugin.openDialogs().abandon(player);
+                }
             });
             return;
         }
@@ -54,7 +59,10 @@ public final class KitPicker {
     private void show(Player player) {
         // a match was found while the layouts loaded; or the editor is open (a dialog would hide it client-side
         // while the server still has it open)
-        if (editor.refusal(player) != null || editor.editing(player.getUniqueId())) return;
+        if (editor.refusal(player) != null || editor.editing(player.getUniqueId())) {
+            plugin.openDialogs().abandon(player);
+            return;
+        }
         Messages msg = plugin.messages();
         KitEditorStyle style = plugin.gui().kitEditor;
         UUID uuid = player.getUniqueId();
@@ -76,8 +84,8 @@ public final class KitPicker {
             }
         }
         body.add(DialogBody.plainMessage(msg.get(any ? "kit-editor.picker.footer" : "kit-editor.picker.no-kits"), style.pickerWidth()));
-        player.showDialog(DialogService.dialog(msg.get("kit-editor.picker.title"), body, List.of(),
-            DialogType.notice(plugin.dialogs().close())));
+        plugin.openDialogs().show(player, OpenDialogs.Kind.KIT_PICKER, DialogService.dialog(msg.get("kit-editor.picker.title"),
+            body, List.of(), DialogType.notice(plugin.dialogs().close())));
     }
 
     private Component categoryIcon(Player player, Kit.Category category) {
@@ -94,11 +102,14 @@ public final class KitPicker {
                 Messages.comp("kit_icon", kit.sprite()), Messages.comp("kit", kit.displayName()))
             .hoverEvent(HoverEvent.showText(msg.get(custom ? "kit-editor.picker.kit-hover-custom" : "kit-editor.picker.kit-hover",
                 Messages.comp("kit", kit.displayName()), Messages.text("description", kit.description()))))
-            .clickEvent(open(kit));
+            .clickEvent(editClick(kit));
     }
 
-    /** The click of a kit: {@code duelcore:kiteditor/open {kit:"<id>"}} (kit ids are [a-z0-9_]). */
-    static ClickEvent<?> open(Kit kit) {
+    /**
+     * The click that opens a kit's editor: {@code duelcore:kiteditor/open {kit:"<id>"}} (kit ids are [a-z0-9_]). The
+     * picker's kits and the queue menu's ✎ use it.
+     */
+    public static ClickEvent<?> editClick(Kit kit) {
         return ClickEvent.custom(Key.key(DialogService.NS, "kiteditor/open"),
             BinaryTagHolder.binaryTagHolder("{kit:\"" + kit.id() + "\"}"));
     }
