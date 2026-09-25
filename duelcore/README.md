@@ -370,6 +370,14 @@ your own pairing rules. `MatchStartEvent` and `MatchEndEvent` are fired for ever
 - `/dctest run <id> <script> [args]`, `/dctest stop <id>`, `/dctest ps`. These are console only.
 - Bots log in through an offline-mode guard that only admits loopback `dcbot*` names and the names listed in
   `duelcore-test/allow.txt`.
+- `/tester on|off|status|add <player>|remove <player>|list` (`duelcore.tester`, alias `/testers`) runs that guard.
+  `off` is open testing: anyone can join. `on` goes back to testers only. The mode is saved in
+  `duelcore-test/mode.txt`. Offline mode can't verify names, so every name is locked to the IP it first joins from,
+  in both modes. In open mode, joiners are saved as `guest` in `allow.txt`, and those guests are refused again once
+  the guard is back `on`. An operator name can only join open testing from an IP it is already locked to. To lock it,
+  join once while the guard is `on`.
+  DuelCore's own `/tester` (tester mode) uses the same label. When it takes `/tester`, use `/testers` or
+  `/duelcoretestkit:tester` for the guard. The test kit logs a warning at startup when this happens.
 
 Scripts:
 
@@ -381,6 +389,7 @@ Scripts:
 | `specsearch.js` | Spectate list sorted by Elo then name, search by name and kit, no-results text, spectating a result |
 | `tagcheck.js [kit] [icon]` | Tab header/footer, slur blocked, swearing masked, clean text untouched, tab tag switches to the match kit's icon during a match and back after, kit loadout |
 | `ping.js` | Server list MOTD and hover |
+| `guard.js [testers\|open]` | Login guard: unknown names, bots, IP locks and (open) guests and unlocked operator names (setup in the script header) |
 | `party.js [kit]` | Party create/invite/accept, leader and member menus, party chat (`@`, `/pc`, toggle) only reaching members and passing the chat filter, a 3-bot Party FFA, leader succession, persistence across a rejoin, disband |
 
 Never install the test kit on a production server.

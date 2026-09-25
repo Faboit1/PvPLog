@@ -8,8 +8,9 @@ commands:
     description: Run or stop bot scripts
     permission: duelcore.testkit
   tester:
-    description: Let a player join while the server is in testing mode
-    usage: /tester add <player> | remove <player> | list
+    description: "Offline-mode join guard: on = testers only, off = open testing (anyone, IP-locked on first use)"
+    usage: /tester on | off | status | add <player> | remove <player> | list
+    aliases: [testers]
     permission: duelcore.tester
 permissions:
   duelcore.tester:
