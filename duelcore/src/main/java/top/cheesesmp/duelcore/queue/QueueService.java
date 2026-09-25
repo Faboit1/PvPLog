@@ -27,7 +27,6 @@ import top.cheesesmp.duelcore.match.Participant;
 import top.cheesesmp.duelcore.profile.KitStats;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.Setting;
-import top.cheesesmp.duelcore.ui.anim.Channel;
 
 /**
  * Queues per kit and the matchmaking tick. A player can search in several kit queues at once
@@ -50,6 +49,7 @@ public final class QueueService implements Listener, Runnable {
     private final Map<UUID, List<Bucket>> chosen = new HashMap<>();
     private final QueuePrefs prefs;
     private final RematchLimiter rematches;
+    private final SearchingFeedback searching;
     private Matchmaker matchmaker;
     private MatchPolicy customPolicy;
     private long pairingsMade;
@@ -59,7 +59,10 @@ public final class QueueService implements Listener, Runnable {
         this.plugin = plugin;
         this.rematches = new RematchLimiter(plugin.settings().mmMaxRankedRematchesPerDay);
         this.prefs = new QueuePrefs(plugin);
+        this.searching = new SearchingFeedback(plugin);
         reload();
+        // the searching action bar and boss bar (Bukkit cancels the timer on disable, the boss bars end with plugin.anim())
+        plugin.getServer().getScheduler().runTaskTimer(plugin, searching, 20L, 2L);
     }
 
     /** Rebuilds matchmaker settings from config. */
@@ -85,6 +88,11 @@ public final class QueueService implements Listener, Runnable {
 
     public RematchLimiter rematches() {
         return rematches;
+    }
+
+    /** The searching action bar and boss bar. */
+    public SearchingFeedback searching() {
+        return searching;
     }
 
     /** Favourite kits and the last queue menu tab of each player. */
@@ -236,9 +244,11 @@ public final class QueueService implements Listener, Runnable {
         return true;
     }
 
-    /** No longer searching: the queue music stops right away (not at the next music tick). */
+    /** No longer searching: the queue music, the boss bar and the searching bar stop right away. */
     private void silenceIfIdle(UUID uuid) {
-        if (!isQueued(uuid)) plugin.queueMusic().stop(uuid);
+        if (isQueued(uuid)) return;
+        plugin.queueMusic().stop(uuid);
+        searching.stop(uuid);
     }
 
     /** Forgets the queues a player chose (they left their match on purpose), so Keep Queuing won't re-join them. */
@@ -386,15 +396,7 @@ public final class QueueService implements Listener, Runnable {
                 start(kit, e.getKey().mode(), pair, now);
             }
         }
-        if (plugin.settings().queueSearchingActionBar && tickCounter % 2 == 0) {
-            for (Map.Entry<UUID, List<QueueEntry>> e : byPlayer.entrySet()) {
-                if (e.getValue().isEmpty()) continue;
-                Player p = Bukkit.getPlayer(e.getKey());
-                if (p == null || plugin.hints().recent(p.getUniqueId())) continue; // a hotbar hint is showing
-                if (plugin.anim().busy(p, Channel.ACTION_BAR)) continue; // e.g. the post-match progress count
-                plugin.messages().actionBar(p, "queue.searching", searchTags(e.getKey(), now).toArray(TagResolver[]::new));
-            }
-        }
+        // (the searching action bar and boss bar are drawn by SearchingFeedback)
     }
 
     /**
@@ -403,26 +405,25 @@ public final class QueueService implements Listener, Runnable {
      * {@code <wait>} and {@code <range>} (of the longest-waiting entry). Empty when not queued.
      */
     public List<TagResolver> searchTags(UUID uuid, long now) {
-        List<TagResolver> tags = new ArrayList<>();
+        SearchingFeedback.Search s = search(uuid, now);
+        return s == null ? new ArrayList<>() : searching.tags(s);
+    }
+
+    /** What a player searches for right now (kits, wait, rating range and how far it has widened), or null. */
+    public SearchingFeedback.@Nullable Search search(UUID uuid, long now) {
         List<QueueEntry> list = entries(uuid);
-        if (list.isEmpty()) return tags;
+        if (list.isEmpty()) return null;
         QueueEntry oldest = list.stream().min(Comparator.comparingLong(QueueEntry::joinedAt)).orElseThrow();
         List<Kit> kits = new ArrayList<>();
         for (QueueEntry q : list) {
             Kit kit = plugin.kits().get(q.kit());
             if (kit != null && !kits.contains(kit)) kits.add(kit);
         }
-        List<Component> icons = new ArrayList<>();
-        for (Kit kit : kits.subList(0, Math.min(kits.size(), 6))) icons.add(kit.sprite());
-        tags.add(Messages.comp("kit_icon", Component.join(JoinConfiguration.noSeparators(), icons)));
-        tags.add(Messages.comp("kit", kits.size() == 1 ? kits.getFirst().displayName()
-            : plugin.messages().get("queue.kit-count", Messages.num("count", kits.size()))));
-        tags.add(Messages.num("count", kits.size()));
-        tags.add(Messages.text("mode", plugin.messages().raw("mode." + oldest.mode().id())));
-        tags.add(Messages.text("wait", formatWait(oldest.waitSeconds(now))));
         double range = matchmaker.windowFor(oldest, now);
-        tags.add(Messages.text("range", Double.isInfinite(range) ? "∞" : String.valueOf((int) range)));
-        return tags;
+        MainConfig c = plugin.settings();
+        double widened = Double.isInfinite(range) || c.mmWindowMax <= c.mmWindowInitial ? 1
+            : Math.clamp((range - c.mmWindowInitial) / (c.mmWindowMax - c.mmWindowInitial), 0.0, 1.0);
+        return new SearchingFeedback.Search(kits, oldest.mode(), oldest.waitSeconds(now), range, widened);
     }
 
     private void start(Kit kit, QueueMode mode, Matchmaker.Pair pair, long now) {

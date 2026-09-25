@@ -89,6 +89,15 @@ public final class MainConfig {
     public final boolean animCelebrationParticles;
     /** Tick sounds while counting, flourishes (players' own sound setting still applies). */
     public final boolean animProgressSounds;
+    /**
+     * The queue experience: the queue menu's progress fill, the animated searching action bar, the searching boss
+     * bar, the animated "match found" title, and their sounds (ticks, flourish, whoosh).
+     */
+    public final boolean animQueueProgress;
+    public final boolean animSearchingBar;
+    public final boolean animSearchingBossBar;
+    public final boolean animMatchFound;
+    public final boolean animQueueSounds;
     public final top.cheesesmp.duelcore.ui.SoundPool matchFoundSounds;
     public final top.cheesesmp.duelcore.ui.SoundPool fightStartSounds;
     /** Sound lines (match-found-sounds, fight-start-sounds, queue music) that could not be read (reported on load and reload). */
@@ -219,6 +228,11 @@ public final class MainConfig {
         animTierDown = c.getBoolean("animations.tier-down", true);
         animCelebrationParticles = c.getBoolean("animations.celebration-particles", true);
         animProgressSounds = c.getBoolean("animations.progress-sounds", true);
+        animQueueProgress = c.getBoolean("animations.queue-progress", true);
+        animSearchingBar = c.getBoolean("animations.searching-bar", true);
+        animSearchingBossBar = c.getBoolean("animations.searching-boss-bar", true);
+        animMatchFound = c.getBoolean("animations.match-found-reveal", true);
+        animQueueSounds = c.getBoolean("animations.queue-sounds", true);
         matchFoundSounds = top.cheesesmp.duelcore.ui.SoundPool.parse(c.getStringList("animations.match-found-sounds"));
         var fightStart = top.cheesesmp.duelcore.ui.SoundPool.parse(c.getStringList("animations.fight-start-sounds"));
         for (String p : matchFoundSounds.problems()) soundProblems.add("animations.match-found-sounds: " + p);

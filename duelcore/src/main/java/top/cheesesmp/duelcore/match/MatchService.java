@@ -44,9 +44,11 @@ import top.cheesesmp.duelcore.profile.ProgressTracker;
 import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.rating.RatingSystem;
 import top.cheesesmp.duelcore.rating.Tier;
+import top.cheesesmp.duelcore.ui.MatchFoundReveal;
 import top.cheesesmp.duelcore.ui.MatchSounds;
 import top.cheesesmp.duelcore.ui.SoundPool;
 import top.cheesesmp.duelcore.ui.TotemPop;
+import top.cheesesmp.duelcore.ui.anim.Channel;
 
 /**
  * The match engine: creation, the per-tick state machine (countdown → fight → round end → …), deaths, forfeits,
@@ -62,6 +64,7 @@ public final class MatchService implements Runnable {
     private final Map<Integer, Match> matches = new LinkedHashMap<>();
     private final Map<UUID, Match> byPlayer = new HashMap<>();
     private final NamespacedKey freezeKey;
+    private final MatchFoundReveal foundReveal;
     private int nextId = 1;
     private long created;
     private long finished;
@@ -69,6 +72,12 @@ public final class MatchService implements Runnable {
     public MatchService(DuelCorePlugin plugin) {
         this.plugin = plugin;
         this.freezeKey = new NamespacedKey(plugin, "freeze");
+        this.foundReveal = new MatchFoundReveal(plugin);
+    }
+
+    /** The animated "match found" title (also played by {@code /tester play match-found}). */
+    public MatchFoundReveal foundReveal() {
+        return foundReveal;
     }
 
     // ------------------------------------------------------------------ queries
@@ -152,6 +161,7 @@ public final class MatchService implements Runnable {
             Player player = Bukkit.getPlayer(p.uuid());
             if (player == null) continue;
             if (plugin.spectate().spectating(p.uuid()) != null) plugin.spectate().leave(player, false);
+            plugin.anim().cancel(player, Channel.DIALOG); // an animating queue menu must not open again
             player.closeDialog();
             player.setInvulnerable(true);
             player.getInventory().clear();
@@ -159,17 +169,20 @@ public final class MatchService implements Runnable {
             MatchSounds.play(plugin, player, foundSounds, 1);
             Participant opp = match.opponentOf(p);
             PlayerProfile oppProfile = opp == null ? null : plugin.profiles().get(opp.uuid());
-            player.showTitle(Title.title(
-                plugin.messages().get("match.found-title"),
-                plugin.messages().get(match.ffa() ? "party.match.found-ffa" : "match.found-subtitle",
-                    Messages.text("opponent", match.teamName(1 - p.team())),
-                    Messages.comp("tier", plugin.tiers().format(opp == null ? null : opp.tierBefore())),
-                    Messages.comp("kit", kit.displayName()),
-                    Messages.comp("kit_icon", kit.sprite()),
-                    Messages.text("mode", plugin.messages().raw("mode." + (match.ranked() ? "ranked" : "unranked"))),
-                    Messages.text("region", oppProfile == null || oppProfile.region() == null ? "" : oppProfile.region()),
-                    Messages.num("players", participants.size())),
-                Title.Times.times(Duration.ofMillis(150), Duration.ofMillis(1600), Duration.ofMillis(300))));
+            Component subtitle = plugin.messages().get(match.ffa() ? "party.match.found-ffa" : "match.found-subtitle",
+                Messages.text("opponent", match.teamName(1 - p.team())),
+                Messages.comp("tier", plugin.tiers().format(opp == null ? null : opp.tierBefore())),
+                Messages.comp("kit", kit.displayName()),
+                Messages.comp("kit_icon", kit.sprite()),
+                Messages.text("mode", plugin.messages().raw("mode." + (match.ranked() ? "ranked" : "unranked"))),
+                Messages.text("region", oppProfile == null || oppProfile.region() == null ? "" : oppProfile.region()),
+                Messages.num("players", participants.size()));
+            if (plugin.settings().animMatchFound) {
+                foundReveal.play(player, match, subtitle); // MATCH FOUND sweeps in, then the opponent is typed out
+            } else {
+                player.showTitle(Title.title(plugin.messages().get("match.found-title"), subtitle,
+                    Title.Times.times(Duration.ofMillis(150), Duration.ofMillis(1600), Duration.ofMillis(300))));
+            }
             plugin.sidebar().refresh(player);
             plugin.tags().update(player); // the tag now shows this match's kit and tier
         }

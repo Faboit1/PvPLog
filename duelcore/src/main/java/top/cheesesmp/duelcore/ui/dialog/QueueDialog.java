@@ -13,6 +13,7 @@ import io.papermc.paper.registry.data.dialog.type.DialogType;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -28,14 +29,28 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.ShadowColor;
+import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.object.ObjectContents;
 import net.kyori.adventure.text.object.PlayerHeadObjectContents;
+import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerInputEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerItemHeldEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.ItemStack;
 import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
+import top.cheesesmp.duelcore.debug.TesterMode;
 import top.cheesesmp.duelcore.config.GuiConfig;
 import top.cheesesmp.duelcore.config.Messages;
 import top.cheesesmp.duelcore.kit.Kit;
@@ -43,6 +58,7 @@ import top.cheesesmp.duelcore.match.Match;
 import top.cheesesmp.duelcore.match.Participant;
 import top.cheesesmp.duelcore.profile.KitStats;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
+import top.cheesesmp.duelcore.profile.ProgressTracker.Reveal;
 import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.queue.QueueEntry;
 import top.cheesesmp.duelcore.queue.QueueMode;
@@ -50,21 +66,68 @@ import top.cheesesmp.duelcore.queue.QueuePrefs;
 import top.cheesesmp.duelcore.queue.QueueService;
 import top.cheesesmp.duelcore.rating.Tier;
 import top.cheesesmp.duelcore.ui.Icons;
+import top.cheesesmp.duelcore.ui.anim.Animation;
+import top.cheesesmp.duelcore.ui.anim.Channel;
+import top.cheesesmp.duelcore.ui.anim.Ease;
+import top.cheesesmp.duelcore.ui.anim.ProgressBar;
+import top.cheesesmp.duelcore.ui.anim.Sfx;
+import top.cheesesmp.duelcore.ui.anim.TextFx;
 
 /**
  * The queue menu: a notice dialog with a header, category tabs (Favorites / Weapons / Vanilla / Skills), the
  * "Queue All" and "Keep Queuing" toggles and one item row per kit. Clicking a kit's text joins or leaves its queue
  * and re-opens the menu with the new state. Every click is a text click event {@code duelcore:queue/<action>}
  * (routed here through the "queue" prefix of {@link ClickRouter}); payloads are re-validated.
+ *
+ * <p>After a match ({@code animations.queue-progress}): when {@code plugin.progress()} has a reveal for a kit of the
+ * opened tab, that kit's standing is animated by re-showing the menu every 2 ticks for about 1.7 s: the placement bar
+ * fills segment by segment from the old to the new value (the new segments highlighted, then settling), or the Elo
+ * counts up ("+18 Elo", the tier switching at the end), with a rising tick per step and a flourish at the end. The
+ * reveal is consumed when it starts, so it plays once. The Close button (while animating), any click, key press
+ * (movement, jump, sneak), hotbar or inventory action, command, camera turn or step stops it at once (Escape tells
+ * the server nothing, so these are the signs that the menu is gone), and so do a match, a world change, a reload and
+ * disable.
  */
 public final class QueueDialog {
 
     public static final String FAVORITES = "favorites";
 
+    /** Progress animation: ticks before the fill starts, of the fill (count) and of the settle (highlight fading). */
+    private static final int ANIM_DELAY = 6;
+    private static final int ANIM_COUNT = 20;
+    private static final int ANIM_SETTLE = 8;
+    /** Elo changes are counted in at most this many audible steps. */
+    private static final int ELO_STEPS = 8;
+    /** Ticks after the start during which walking on the ground doesn't stop the animation (the player settling). */
+    private static final int MOVE_GRACE = 6;
+    /** The end of a count that isn't a new tier: a short rising chime. */
+    private static final List<Sfx.Note> SMALL_FLOURISH = List.of(new Sfx.Note(Sfx.CHIME, 1.26f, 0.45f, 0),
+        new Sfx.Note(Sfx.CHIME, 1.59f, 0.45f, 2), new Sfx.Note(Sfx.CHIME, 2.0f, 0.45f, 4), new Sfx.Note(Sfx.AMETHYST, 1.7f, 0.8f, 5));
+
+    /**
+     * One frame of the progress animation: the reveals being animated (by kit), the eased count progress (0..1) and
+     * how far the settle is (0..1).
+     */
+    private record MenuFrame(Map<String, Reveal> reveals, double count, double settle) {
+    }
+
     private final DuelCorePlugin plugin;
+    /** Players whose menu is animating, with the server tick it started. */
+    private final Map<UUID, Integer> animating = new HashMap<>();
 
     QueueDialog(DuelCorePlugin plugin) {
         this.plugin = plugin;
+        plugin.getServer().getPluginManager().registerEvents(new Interrupts(), plugin);
+        // /tester play <name>: the queue experience (the searching bars and match found too: QueueService and
+        // MatchService are created before plugin.tester())
+        TesterMode tester = plugin.tester();
+        tester.preview("queue-placement", p -> preview(p, Sample.PLACEMENT));
+        tester.preview("queue-placed", p -> preview(p, Sample.PLACED));
+        tester.preview("queue-elo-up", p -> preview(p, Sample.ELO_UP));
+        tester.preview("queue-elo-down", p -> preview(p, Sample.ELO_DOWN));
+        tester.preview("queue-tier-up", p -> preview(p, Sample.TIER_UP));
+        tester.preview("searching", p -> plugin.queue().searching().preview(p));
+        tester.preview("match-found", p -> plugin.matches().foundReveal().preview(p));
     }
 
     private Messages msg() {
@@ -112,7 +175,26 @@ public final class QueueDialog {
         return list;
     }
 
+    /** Shows the menu; a kit of this tab with a pending progress reveal starts the progress animation. */
     private void show(Player player, String tab) {
+        stopAnimation(player);
+        UUID uuid = player.getUniqueId();
+        Map<String, Reveal> reveals = new LinkedHashMap<>();
+        if (plugin.settings().animQueueProgress && plugin.matches().match(uuid) == null) {
+            Set<String> favorites = Objects.requireNonNullElse(plugin.queue().prefs().favorites(uuid), Set.of());
+            for (Kit kit : kits(tab, favorites)) {
+                Reveal r = plugin.progress().pendingReveal(uuid, kit.id());
+                if (r == null) continue;
+                reveals.put(kit.id(), r);
+                plugin.progress().consume(uuid, kit.id()); // plays once, even when cut short
+            }
+        }
+        render(player, tab, reveals.isEmpty() ? null : new MenuFrame(reveals, 0, 0));
+        if (!reveals.isEmpty()) animate(player, tab, reveals);
+    }
+
+    /** Builds and shows the menu; {@code frame} (animation only) replaces the standing of its kits. */
+    private void render(Player player, String tab, @Nullable MenuFrame frame) {
         GuiConfig gui = plugin.gui();
         UUID uuid = player.getUniqueId();
         PlayerProfile profile = plugin.profiles().get(player);
@@ -127,8 +209,10 @@ public final class QueueDialog {
             body.add(DialogBody.plainMessage(msg().get(tab.equals(FAVORITES) ? "dialog.queue.no-favorites" : "dialog.queue.no-kits"),
                 gui.queueWidth));
         }
-        for (Kit kit : kits) body.add(kitRow(uuid, profile, kit, favorites.contains(kit.id()), tab, now));
-        ActionButton close = ActionButton.builder(msg().get("dialog.close")).width(120).build();
+        for (Kit kit : kits) body.add(kitRow(uuid, profile, kit, favorites.contains(kit.id()), tab, now, frame));
+        // while animating, Close tells the server (queue/close stops it); after Escape the first key or turn does
+        ActionButton close = frame == null ? ActionButton.builder(msg().get("dialog.close")).width(120).build()
+            : plugin.dialogs().button(msg().get("dialog.close"), null, 120, "queue/close", Map.of());
         player.showDialog(Dialog.create(f -> f.empty()
             .base(DialogBase.builder(msg().get("dialog.queue.menu-title"))
                 .canCloseWithEscape(true)
@@ -187,7 +271,8 @@ public final class QueueDialog {
         return !kits.isEmpty();
     }
 
-    private DialogBody kitRow(UUID uuid, @Nullable PlayerProfile profile, Kit kit, boolean favorite, String tab, long now) {
+    private DialogBody kitRow(UUID uuid, @Nullable PlayerProfile profile, Kit kit, boolean favorite, String tab, long now,
+                              @Nullable MenuFrame frame) {
         QueueEntry entry = plugin.queue().entry(uuid, kit.id());
         int queued = plugin.queue().size(kit.id());
         int playing = playing(kit.id());
@@ -200,7 +285,7 @@ public final class QueueDialog {
         Component description = Component.text()
             .append(first)
             .appendNewline()
-            .append(standing(profile, kit))
+            .append(standing(profile, kit, frame))
             .hoverEvent(HoverEvent.showText(msg().get("dialog.queue.kit-hover", Messages.text("description", kit.description()),
                 Messages.num("first_to", kit.firstTo()), Messages.num("queued", queued), Messages.num("playing", playing))))
             .clickEvent(action("toggle", "kit", kit.id(), "tab", tab))
@@ -212,8 +297,10 @@ public final class QueueDialog {
             .build();
     }
 
-    /** Tier + rating once placement is done, otherwise a progress bar towards it. */
-    private Component standing(@Nullable PlayerProfile profile, Kit kit) {
+    /** Tier + rating once placement is done, otherwise a progress bar towards it (animated in a {@code frame}). */
+    private Component standing(@Nullable PlayerProfile profile, Kit kit, @Nullable MenuFrame frame) {
+        Reveal reveal = frame == null ? null : frame.reveals().get(kit.id());
+        if (reveal != null) return animatedStanding(reveal, frame);
         KitStats stats = profile == null ? null : profile.stats(kit.id());
         Tier tier = plugin.tiers().kitTier(kit.id(), stats);
         int placement = plugin.tiers().placementMatches();
@@ -225,16 +312,253 @@ public final class QueueDialog {
         }
         GuiConfig gui = plugin.gui();
         int segments = gui.queueProgressSegments;
-        int done = Math.clamp(Math.round((float) segments * games / placement), 0, segments);
+        int done = doneSegments(games, placement);
         List<Component> parts = new ArrayList<>(segments);
         for (int i = 0; i < segments; i++) {
             boolean filled = i < done;
             parts.add(segment(filled ? gui.queueProgressDone : gui.queueProgressTodo,
                 msg().get(filled ? "dialog.queue.progress-done" : "dialog.queue.progress-todo")));
         }
-        return Component.join(JoinConfiguration.noSeparators(), parts)
-            .hoverEvent(HoverEvent.showText(msg().get("dialog.queue.progress-hover", Messages.num("remaining", remaining),
-                Messages.num("games", games), Messages.num("placement", placement))));
+        return Component.join(JoinConfiguration.noSeparators(), parts).hoverEvent(progressHover(games, placement));
+    }
+
+    /** Filled segments of the static placement bar after {@code games} of {@code placement} matches. */
+    private int doneSegments(int games, int placement) {
+        int segments = plugin.gui().queueProgressSegments;
+        return placement <= 0 ? segments : Math.clamp(Math.round((float) segments * games / placement), 0, segments);
+    }
+
+    private HoverEvent<Component> progressHover(int games, int placement) {
+        return HoverEvent.showText(msg().get("dialog.queue.progress-hover", Messages.num("remaining", Math.max(0, placement - games)),
+            Messages.num("games", games), Messages.num("placement", placement)));
+    }
+
+    // ------------------------------------------------------------------ progress animation
+
+    /**
+     * A kit's standing in an animation frame, from the reveal alone (so previews work too): the placement bar filling
+     * with "+N%", or the tier and Elo counting with "+N Elo"; a first tier (placed) fills the bar, then shows the tier.
+     */
+    private Component animatedStanding(Reveal r, MenuFrame f) {
+        boolean placement = r.inPlacement() || r.placedNow();
+        if (placement && !(r.placedNow() && f.count() >= 1)) {
+            int gained = (int) Math.round((r.newProgress() - r.oldProgress()) * 100);
+            Component change = msg().get("dialog.queue.change-progress", Messages.num("percent", Math.round(gained * f.count())));
+            return msg().get("dialog.queue.standing-change", Messages.comp("standing", animatedBar(r, f)), Messages.comp("change", change))
+                .hoverEvent(progressHover(r.newGames(), r.placementMatches()));
+        }
+        boolean switched = f.count() >= 1;
+        Tier tier = switched ? r.newTier() : r.oldTier();
+        Component tierText = plugin.tiers().format(tier);
+        if (switched && (r.tierUp() || r.placedNow()) && f.settle() < 1) {
+            // the new tier is swept by a shimmer while the frame settles
+            tierText = TextFx.shimmer(plugin.tiers().label(tier), plugin.progressReveal().tierColor(tier), plugin.gui().revealShimmer,
+                Ease.easeInOutSine(f.settle()), 1.6);
+        }
+        long rating = r.placedNow() ? r.newElo() : Math.round(Ease.lerp(r.oldElo(), r.newElo(), f.count()));
+        Component standing = msg().get("dialog.queue.kit-rank", Messages.comp("tier", tierText), Messages.num("rating", rating));
+        int delta = r.eloDelta();
+        long shown = Math.round(Math.abs(delta) * f.count());
+        Component change = r.placedNow() ? msg().get("dialog.queue.change-placed")
+            : msg().get(delta > 0 ? "dialog.queue.change-elo-up" : delta < 0 ? "dialog.queue.change-elo-down" : "dialog.queue.change-elo-same",
+                Messages.num("delta", shown));
+        return msg().get("dialog.queue.standing-change", Messages.comp("standing", standing), Messages.comp("change", change));
+    }
+
+    /**
+     * The placement bar between the reveal's old and new segment counts (the same rounding as the static bar, so the
+     * last frame matches it), drawn with the toolkit bar's segments: old segments as usual, the new ones and the one
+     * being filled as tinted highlight sprites in the progress-reveal bar colours, settling to the normal look.
+     */
+    private Component animatedBar(Reveal r, MenuFrame f) {
+        GuiConfig gui = plugin.gui();
+        ProgressBar look = gui.revealBar;
+        ProgressBar bar = new ProgressBar(gui.queueProgressSegments, look.filled(), look.empty(), look.filledColor(),
+            look.emptyColor(), look.headColor());
+        int from = doneSegments(r.oldGames(), r.placementMatches());
+        int to = doneSegments(r.newGames(), r.placementMatches());
+        double progress = Ease.lerp(from, to, f.count()) / bar.count();
+        List<Component> parts = new ArrayList<>(bar.count());
+        List<ProgressBar.Segment> segments = bar.segments(progress);
+        for (int i = 0; i < segments.size(); i++) {
+            ProgressBar.Segment s = segments.get(i);
+            parts.add(switch (s.kind()) {
+                case FULL -> i < from || f.settle() >= 1 ? segment(gui.queueProgressDone, msg().get("dialog.queue.progress-done"))
+                    : highlight(TextFx.lerp(bar.headColor(), bar.filledColor(), Ease.easeInOutSine(f.settle())));
+                case HEAD -> highlight(TextFx.lerp(bar.emptyColor(), bar.headColor(), 0.35 + 0.65 * s.fill()));
+                case EMPTY -> segment(gui.queueProgressTodo, msg().get("dialog.queue.progress-todo"));
+            });
+        }
+        return Component.join(JoinConfiguration.noSeparators(), parts);
+    }
+
+    /** A segment in {@code color}: the gui.yml highlight sprite tinted (with head textures), else the plain square. */
+    private Component highlight(TextColor color) {
+        GuiConfig gui = plugin.gui();
+        String spec = gui.queueProgressHighlight.trim();
+        int colon = spec.indexOf(':');
+        if (!gui.queueProgressDone.matches("[0-9a-f]{16,80}") || colon <= 0 || colon == spec.length() - 1) {
+            return TextFx.recolor(msg().get("dialog.queue.progress-done"), color);
+        }
+        return Icons.sprite(spec.substring(0, colon), spec.substring(colon + 1), "■", color).shadowColor(ShadowColor.none());
+    }
+
+    /** Re-shows the menu frame by frame on the {@link Channel#DIALOG} channel. */
+    private void animate(Player player, String tab, Map<String, Reveal> reveals) {
+        UUID uuid = player.getUniqueId();
+        GuiConfig gui = plugin.gui();
+        Reveal lead = reveals.values().iterator().next(); // the one the sounds follow
+        boolean placement = lead.inPlacement() || lead.placedNow();
+        int delta = lead.eloDelta();
+        int steps = placement ? gui.queueProgressSegments : Math.max(1, Math.min(Math.abs(delta), ELO_STEPS));
+        int from = doneSegments(lead.oldGames(), lead.placementMatches());
+        int to = doneSegments(lead.newGames(), lead.placementMatches());
+        plugin.anim().start(player, Channel.DIALOG, new Animation() {
+            int lastStep = placement ? from : 0;
+
+            @Override
+            public boolean frame(Player p, int tick) {
+                // a reload (new gui.yml), a match or an interrupt ends it; the player keeps the last frame
+                if (plugin.gui() != gui || plugin.matches().match(uuid) != null || !animating.containsKey(uuid)) return false;
+                if (tick < ANIM_DELAY) return true;
+                int t = tick - ANIM_DELAY;
+                if (t == 0) return true; // (the menu already shows this frame)
+                double e = Ease.easeOutCubic(Ease.progress(t, ANIM_COUNT));
+                double settle = t < ANIM_COUNT ? 0 : Ease.progress(t - ANIM_COUNT, ANIM_SETTLE);
+                if (plugin.settings().animQueueSounds) sounds(p, t, e);
+                render(p, tab, new MenuFrame(reveals, e, settle));
+                return t < ANIM_COUNT + ANIM_SETTLE;
+            }
+
+            /** A rising tick per new segment (or Elo step), a flourish once the count is done. */
+            private void sounds(Player p, int t, double e) {
+                int step = placement ? (int) Math.floor(Ease.lerp(from, to, e) + 1e-6) : (int) Math.floor(e * steps + 1e-9);
+                if (step > lastStep && t <= ANIM_COUNT) Sfx.play(plugin, p, Sfx.tick(step, steps, placement || delta >= 0));
+                lastStep = Math.max(lastStep, step);
+                if (t != ANIM_COUNT) return;
+                if (lead.placedNow() || lead.tierUp()) Sfx.play(plugin, p, Sfx.flourish());
+                else if (lead.tierDown()) Sfx.play(plugin, p, Sfx.demotion());
+                else if (!placement && delta < 0) Sfx.play(plugin, p, Sfx.settle(false));
+                else Sfx.play(plugin, p, SMALL_FLOURISH);
+            }
+
+            @Override
+            public void end(Player p, End reason) {
+                animating.remove(uuid);
+            }
+        });
+        if (plugin.anim().busy(player, Channel.DIALOG)) animating.put(uuid, Bukkit.getCurrentTick());
+    }
+
+    /** Stops this player's progress animation (the menu stays as it is). */
+    private void stopAnimation(Player player) {
+        if (animating.containsKey(player.getUniqueId())) plugin.anim().cancel(player, Channel.DIALOG);
+    }
+
+    /**
+     * Signs that the player has closed the menu or is doing something else: each stops the animation, so later
+     * frames don't open a closed menu again. LOWEST, so an action that opens the menu again (the Play item, /queue)
+     * finds the old animation already gone.
+     */
+    private final class Interrupts implements Listener {
+
+        @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+        public void onMove(PlayerMoveEvent event) {
+            Integer since = animating.get(event.getPlayer().getUniqueId());
+            if (since == null) return;
+            Player p = event.getPlayer();
+            // the camera can't turn while a dialog is open; flying or falling players may still drift, so only level
+            // steps of a player who isn't flying count
+            boolean walked = event.hasChangedPosition() && !p.isFlying() && event.getFrom().getY() == event.getTo().getY()
+                && Bukkit.getCurrentTick() - since > MOVE_GRACE;
+            if (event.hasChangedOrientation() || walked) {
+                stopAnimation(p);
+            }
+        }
+
+        @EventHandler(priority = EventPriority.LOWEST)
+        public void onInteract(PlayerInteractEvent event) {
+            stopAnimation(event.getPlayer());
+        }
+
+        @EventHandler(priority = EventPriority.LOWEST)
+        public void onHeld(PlayerItemHeldEvent event) {
+            stopAnimation(event.getPlayer());
+        }
+
+        @EventHandler(priority = EventPriority.LOWEST)
+        public void onDrop(PlayerDropItemEvent event) {
+            stopAnimation(event.getPlayer());
+        }
+
+        @EventHandler(priority = EventPriority.LOWEST)
+        public void onSwap(PlayerSwapHandItemsEvent event) {
+            stopAnimation(event.getPlayer());
+        }
+
+        /** Movement keys, jump, sneak or sprint changed: they do nothing while a dialog is open, so it is closed. */
+        @EventHandler(priority = EventPriority.LOWEST)
+        public void onInput(PlayerInputEvent event) {
+            stopAnimation(event.getPlayer());
+        }
+
+        @EventHandler(priority = EventPriority.LOWEST)
+        public void onCommand(PlayerCommandPreprocessEvent event) {
+            stopAnimation(event.getPlayer());
+        }
+
+        @EventHandler(priority = EventPriority.LOWEST)
+        public void onInventory(InventoryOpenEvent event) {
+            if (event.getPlayer() instanceof Player p) stopAnimation(p);
+        }
+    }
+
+    // ------------------------------------------------------------------ tester previews
+
+    private enum Sample { PLACEMENT, PLACED, ELO_UP, ELO_DOWN, TIER_UP }
+
+    /**
+     * {@code /tester play queue-...}: opens the menu on the first queueable kit's tab and animates a made-up change in
+     * it (nothing is recorded or consumed; the next open shows the real standing again).
+     */
+    private void preview(Player player, Sample sample) {
+        Kit kit = null;
+        for (Kit k : plugin.kits().enabled()) {
+            if (plugin.queue().modeFor(k) != null) {
+                kit = k;
+                break;
+            }
+        }
+        if (kit == null || plugin.matches().match(player.getUniqueId()) != null) return;
+        String tab = kit.category().id();
+        plugin.queue().prefs().tab(player.getUniqueId(), tab);
+        if (!plugin.settings().animQueueProgress) {
+            open(player, tab);
+            return;
+        }
+        int pm = plugin.tiers().placementMatches();
+        double ht3 = plugin.tiers().ladder().threshold(kit.id(), Tier.HT3);
+        Reveal r = switch (sample) {
+            case PLACEMENT -> sample(kit.id(), Math.max(0, pm - 3), Math.max(0, pm - 3) + 1, 1000, 1026);
+            case PLACED -> sample(kit.id(), Math.max(0, pm - 1), Math.max(1, pm), 1000, ht3 + 20);
+            case ELO_UP -> sample(kit.id(), pm + 4, pm + 5, ht3 + 12, ht3 + 30);
+            case ELO_DOWN -> sample(kit.id(), pm + 4, pm + 5, ht3 + 30, ht3 + 18);
+            case TIER_UP -> sample(kit.id(), pm + 4, pm + 5, ht3 - 8, ht3 + 12);
+        };
+        stopAnimation(player);
+        Map<String, Reveal> reveals = new LinkedHashMap<>();
+        reveals.put(kit.id(), r);
+        render(player, tab, new MenuFrame(reveals, 0, 0));
+        animate(player, tab, reveals);
+    }
+
+    private Reveal sample(String kit, int oldGames, int newGames, double oldRating, double newRating) {
+        KitStats before = new KitStats(oldRating, 0, 0);
+        before.games = oldGames;
+        KitStats after = new KitStats(newRating, 0, 0);
+        after.games = newGames;
+        return Reveal.of(kit, before, after, plugin.tiers().placementMatches(), plugin.tiers().kitTier(kit, before),
+            plugin.tiers().kitTier(kit, after), true);
     }
 
     /** One bar segment: a solid-colour head (textures.minecraft.net id), or the plain fallback text. */
@@ -306,6 +630,7 @@ public final class QueueDialog {
 
     /** Every {@code duelcore:queue/*} click. {@code data} is untrusted client input. */
     public void click(Player player, String action, Map<String, String> data, @Nullable DialogResponseView view) {
+        stopAnimation(player);
         String tab = data.get("tab");
         switch (action) {
             case "queue/open", "queue/tab" -> open(player, tab == null ? null : validTab(tab));
@@ -346,6 +671,9 @@ public final class QueueDialog {
                 plugin.commands().joinQueue(player, kit, mode);
             }
             case "queue/leave" -> plugin.queue().leave(player, true);
+            case "queue/close" -> {
+                // the Close button of an animating menu: the animation was stopped above
+            }
             default -> {
                 // unknown queue action: ignore
             }

@@ -303,9 +303,16 @@ setting. Texts are in `messages.yml` (`progress`, `tester`), colours and the bar
 | `tier-down` | A quiet subtitle when a tier drops |
 | `celebration-particles` | Firework bursts in front of the player (only they see them) for `tier-up` and `placed` |
 | `progress-sounds` | Count ticks, flourish and demotion notes |
+| `queue-progress` | Queue menu, after a match: the kit's bar fills from the old to the new value segment by segment (new segments highlighted, then settling) with "+20%", or its Elo counts up ("+18 Elo", the new tier swept by a shimmer). Plays once; any click, command, hotbar action, camera turn or step stops it |
+| `searching-bar` | The "searching" action bar with a spinner, pulsing dots and slowly cycling colours (gui.yml `searching`); off = the plain bar |
+| `searching-boss-bar` | A boss bar while searching ("Searching · Sword +2 · 0:12") that fills as the rating window widens, then sweeps back and forth; gone the moment the player leaves the queue or is matched |
+| `match-found-reveal` | "MATCH FOUND" brightens with a shimmer, then the opponent and their tier are typed out (the totem pop and `match-found-sounds` stay) |
+| `queue-sounds` | The queue menu's ticks and flourish, the match found whoosh and chime |
 
 **Tester mode** (`/tester on`, `duelcore.tester`): `/tester play <preview>` plays an animation on yourself
-(`placement`, `placed`, `elo-up`, `elo-down`, `tier-up`, `tier-down`, plus any a feature registers), and unranked
+(`placement`, `placed`, `elo-up`, `elo-down`, `tier-up`, `tier-down`; the queue menu's `queue-placement`, `queue-placed`,
+`queue-elo-up`, `queue-elo-down`, `queue-tier-up`; `searching` (ten seconds of both searching bars) and `match-found`;
+plus any a feature registers), and unranked
 matches, duels and party matches end with a simulated progress reveal (ratings don't change). It lasts until
 `/tester off` or a restart.
 
