@@ -1,0 +1,53 @@
+# ─────────────────────────────────────────────────────────────
+#  Tiers: HT1 > MT1 > LT1 > HT2 > MT2 > LT2 > HT3 > MT3 > LT3 > HT4 > MT4 > LT4 > HT5 > MT5 > LT5
+#  A tier is just a rating range: players are ranked by Elo, the tier is the label for where that Elo sits.
+#  The overall ranking is the overall Elo = the average rating of every kit the player finished placement in.
+#  After changing thresholds run /duelcore season recalc to rebuild the overall tiers.
+# ─────────────────────────────────────────────────────────────
+
+# Ranked games a player needs in a kit before a tier shows (until then: unranked-label).
+placement-matches: 5
+unranked-label: "???"
+
+# Minimum per-kit rating for each tier. "default" applies to every kit; add a kit id below to override.
+kit-thresholds:
+  default:
+    HT1: 2000
+    MT1: 1900
+    LT1: 1800
+    HT2: 1700
+    MT2: 1620
+    LT2: 1550
+    HT3: 1480
+    MT3: 1410
+    LT3: 1350
+    HT4: 1290
+    MT4: 1230
+    LT4: 1170
+    HT5: 1110
+    MT5: 1050
+    LT5: 0
+  # mace:
+  #   HT1: 2100
+  # "overall" overrides the thresholds used for the overall tier (from the overall Elo).
+  # overall:
+  #   HT1: 1950
+
+# How each tier is drawn (MiniMessage). <tier> is the tier name. Kept subtle on purpose.
+format:
+  HT1: "<#f2c14e><tier></#f2c14e>"
+  MT1: "<#f2c14e><tier></#f2c14e>"
+  LT1: "<#f2c14e><tier></#f2c14e>"
+  HT2: "<#d9a7ff><tier></#d9a7ff>"
+  MT2: "<#d9a7ff><tier></#d9a7ff>"
+  LT2: "<#d9a7ff><tier></#d9a7ff>"
+  HT3: "<#8ec5ff><tier></#8ec5ff>"
+  MT3: "<#8ec5ff><tier></#8ec5ff>"
+  LT3: "<#8ec5ff><tier></#8ec5ff>"
+  HT4: "<#9ee6b8><tier></#9ee6b8>"
+  MT4: "<#9ee6b8><tier></#9ee6b8>"
+  LT4: "<#9ee6b8><tier></#9ee6b8>"
+  HT5: "<#c9ccd1><tier></#c9ccd1>"
+  MT5: "<#c9ccd1><tier></#c9ccd1>"
+  LT5: "<#c9ccd1><tier></#c9ccd1>"
+  unranked: "<#6b7078><tier></#6b7078>"

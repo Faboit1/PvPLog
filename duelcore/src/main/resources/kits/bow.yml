@@ -1,0 +1,34 @@
+# Bow: the MCPVP bow kit. Enchanted iron armor, a Power V + Punch bow and 64 arrows (no Infinity, so every shot
+# counts). Nothing else: no melee, no food, no regeneration. Aim wins.
+display-name: "Bow"
+description: "Power V bow, 64 arrows and iron armor. Nothing else: aim wins."
+icon: bow
+category: weapons
+order: 14
+enabled: true
+ranked: true
+first-to: 5
+round-time-limit: 180
+arena-tags: [terrain]
+rules:
+  natural-regen: false
+  hunger: false
+  fall-damage: true
+  build: false
+  break: all
+  ender-pearls: false
+  totems: false
+  crystals: false
+  anchors: false
+  cobwebs: false
+  item-drops: false
+loadout:
+  armor:
+    helmet: { item: iron_helmet, enchants: { projectile_protection: 2, unbreaking: 3 } }
+    chestplate: { item: iron_chestplate, enchants: { projectile_protection: 2, unbreaking: 3 } }
+    leggings: { item: iron_leggings, enchants: { projectile_protection: 2, unbreaking: 3 } }
+    boots: { item: iron_boots, enchants: { projectile_protection: 2, feather_falling: 2, unbreaking: 3 } }
+  items:
+    0: { item: bow, enchants: { power: 5, punch: 1, unbreaking: 3 } }
+    1: { item: arrow, amount: 64 }
+effects: []

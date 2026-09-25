@@ -1,0 +1,359 @@
+# ─────────────────────────────────────────────────────────────
+#  DuelCore — visuals: hub hotbar, sidebar, tier tags and dialog layout.
+#  Colours come from the theme in messages.yml: <accent> <text> <muted> <good> <bad>.
+#  Sprites: <sprite:items:item/mace>, <sprite:gui:hud/heart/full>, <sprite:blocks:block/obsidian>
+# ─────────────────────────────────────────────────────────────
+
+# Hub hotbar. Items can't be moved or dropped. "player_head" shows the player's own skin.
+# action-bar: hint shown in the action bar while the item is held ("" = none); switching items shows the new
+# item's hint and switching to an empty slot clears it. While queued, the queue's "searching" bar has priority.
+# enabled: false removes an item from the hotbar (deleted entries come back on the next load, this doesn't).
+hotbar:
+  # Parties (/party): the party menu, or the create / join screen when not in a party.
+  party:
+    slot: 1
+    item: cake
+    name: "<text>Party</text>"
+    lore:
+      - "<muted>Invite players, party chat,"
+      - "<muted>party duels, FFA and party vs party"
+    action-bar: "<accent>Right click</accent> <text>for your party</text> <muted>— invite, party chat, party duels and FFA</muted>"
+  queue:
+    slot: 0
+    item: netherite_sword
+    name: "<text>Play</text>"
+    lore:
+      - "<muted>Pick a kit and find a match"
+    action-bar: "<accent>Right click</accent> <text>to play</text> <muted>— pick a kit and queue</muted>"
+  leave-queue:
+    slot: 0
+    item: gray_dye
+    name: "<bad>Leave queue</bad>"
+    lore:
+      - "<muted>Stop searching"
+    action-bar: "<accent>Right click</accent> <text>to leave the queue</text>"
+  leaderboard:
+    slot: 2
+    item: nether_star
+    name: "<text>Leaderboards</text>"
+    lore:
+      - "<muted>Top players, overall and per kit"
+    action-bar: "<accent>Right click</accent> <text>for leaderboards</text> <muted>— top players, overall and per kit</muted>"
+  profile:
+    slot: 4
+    item: player_head
+    name: "<text>Profile</text>"
+    lore:
+      - "<muted>Your tiers, stats and history"
+    action-bar: "<accent>Right click</accent> <text>for your profile</text> <muted>— tiers, stats and history</muted>"
+  settings:
+    slot: 6
+    item: comparator
+    name: "<text>Settings</text>"
+    lore:
+      - "<muted>Region, ping, sidebar, requests"
+    action-bar: "<accent>Right click</accent> <text>for settings</text> <muted>— region, ping, sidebar, requests</muted>"
+  spectate:
+    slot: 8
+    item: ender_eye
+    name: "<text>Spectate</text>"
+    lore:
+      - "<muted>Watch a live match"
+    action-bar: "<accent>Right click</accent> <text>to spectate</text> <muted>— watch a live match</muted>"
+  friends:
+    slot: 7
+    item: name_tag
+    name: "<text>Friends</text>"
+    lore:
+      - "<muted>Who's online, follow players, duel friends"
+    action-bar: "<accent>Right click</accent> <text>for friends</text> <muted>— who's online, follow players, duel friends</muted>"
+  # The kit editor (/kit edit): pick a kit, move its items where you want them; every match uses your layout.
+  # Off by default: the ✎ next to each kit in the queue menu opens its editor.
+  kit-editor:
+    enabled: false
+    slot: 3
+    item: anvil
+    name: "<text>Kit Editor</text>"
+    lore:
+      - "<muted>Move your kit items where"
+      - "<muted>you want them, per kit"
+    action-bar: "<accent>Right click</accent> <text>to edit your kits</text> <muted>— move every item where you want it</muted>"
+  # Given to spectators instead of the hub items.
+  stop-spectating:
+    slot: 8
+    item: gray_dye
+    name: "<bad>Stop spectating</bad>"
+    lore:
+      - "<muted>Back to the hub"
+    action-bar: "<accent>Right click</accent> <text>to stop spectating</text> <muted>— back to the hub</muted>"
+
+# Server list entry. Placeholders: <online> <max> <live> (matches) <fighting> <queued> <kits>
+motd:
+  enabled: true
+  # Center each line in the server list (by character widths of the default font). Off for the logo + arrow look.
+  center: false
+  # Placeholders: <online> <max> <live> <fighting> <queued> <kits> and <tagline> (one of the taglines below, picked at
+  # random on every server-list refresh).
+  lines:
+    - "<b><gradient:#ffe45c:#ffab2e>CHEESE</gradient><#ff4545>PVP</#ff4545></b> <#4b4f57>|</#4b4f57> <gradient:#9bf6ff:#b8a4ff>Ranked Duels</gradient> <#6b7078>26.2</#6b7078>"
+    - " <#6b7078>└➤</#6b7078> <tagline>"
+  taglines:
+    - "<#ff5f5f><b>BETA</b></#ff5f5f> <#8b9099>· <#d8dbe0><live></#d8dbe0> live · <#d8dbe0><queued></#d8dbe0> queued</#8b9099>"
+    - "<#ffd84d><b>NEW</b></#ffd84d> <#d8dbe0>Parties, friends & Party FFA</#d8dbe0>"
+    - "<#7fd99a><b><kits> KITS</b></#7fd99a> <#d8dbe0>Sword, Mace, Crystal, SMP, Pot…</#d8dbe0>"
+    - "<#9bf6ff><b>TIERS</b></#9bf6ff> <#d8dbe0>Climb from LT5 to HT1</#d8dbe0>"
+    - "<#ff9df5><b>QUEUE UP</b></#ff9df5> <#d8dbe0><fighting> fighting right now</#d8dbe0>"
+  # Replaces the player list shown when hovering the player count. Empty list = the normal player list.
+  hover:
+    - "<b><gradient:#ffe45c:#ffab2e>CHEESE</gradient><#ff4545>PVP</#ff4545></b>"
+    - "<#8b9099>Fighting</#8b9099> <#d8dbe0><fighting></#d8dbe0>"
+    - "<#8b9099>In queue</#8b9099> <#d8dbe0><queued></#d8dbe0>"
+    - "<#8b9099>Live matches</#8b9099> <#d8dbe0><live></#d8dbe0>"
+
+# The queue menu (Play item, /queue). Texts are in messages.yml (dialog.queue).
+queue-menu:
+  # Width of the header rows, and of each kit's text next to its item.
+  width: 310
+  kit-width: 250
+  # While you're searching, the menu updates itself once a second (config.yml dialogs.refresh) and shows how long
+  # you've been searching as a ticking clock (0:07) on tabs with at most this many kits. Every update is a new screen
+  # on the client, which scrolls back to the top, so on longer tabs (they need scrolling on small screens or a big
+  # GUI scale) the time is shown in whole minutes (<1m, 2m) and the menu is only sent again when a minute or a count
+  # changes. 0 = always minutes, 1000 = always the clock.
+  clock-max-kits: 5
+  # Tab icons: an atlas sprite ("items:item/diamond_sword", "blocks:block/obsidian", optional #rrggbb tint)
+  # or "head" for the viewer's own head.
+  tab-icons:
+    favorites: head
+    weapons: "items:item/diamond_sword"
+    vanilla: "items:item/end_crystal"
+    skills: "items:item/dragon_breath#ff6e6e"
+  # Placement progress bar (shown until a kit's placement matches are played): number of segments and the
+  # textures.minecraft.net ids of solid-colour heads for the played / remaining part. "" = plain squares
+  # (dialog.queue.progress-done / progress-todo in messages.yml).
+  progress:
+    segments: 10
+    done: "366a5c98928fa5d4b5d5b8efb490155b4dda3956bcaa9371177814532cfc"
+    todo: "967a2f218a6e6e38f2b545f6c17733f4ef9bbb288e75402949c052189ee"
+    # While the bar animates after a match (config.yml animations.queue-progress), new segments are drawn with this
+    # "atlas:path" sprite, tinted with the progress-reveal bar colours (head-color, settling to filled-color).
+    highlight: "blocks:block/white_concrete"
+
+# The kit editor (Kit Editor hotbar item, /kit edit [kit], /kiteditor [kit]). A 6-row chest laid out like the
+# inventory: rows 1-3 the inventory, row 4 the hotbar, row 5 the armour (locked), the offhand slot and an info item,
+# row 6 the buttons. Texts are in messages.yml (kit-editor).
+kit-editor:
+  # Items of the fixed slots: the separators, the "← Offhand" label, an armour slot the kit leaves empty, the info
+  # item and the Save / Reset to default / Clear layout / Cancel buttons.
+  filler: gray_stained_glass_pane
+  offhand-label: light_blue_stained_glass_pane
+  empty-armor: black_stained_glass_pane
+  info: book
+  save: lime_concrete
+  reset: orange_concrete
+  clear: barrier
+  cancel: red_concrete
+  # The kit picker dialog: kits per line and the width of its lines.
+  picker-columns: 3
+  picker-width: 310
+  # Sounds: "<sound> [pitch] [volume] [@delay]", several played together joined with "+" ("" = none). Players' own
+  # sound setting applies. pick / place / swap: moving an item; deny: a click that does nothing.
+  sounds:
+    open: "item.armor.equip_generic 1.1 0.6"
+    pick: "ui.button.click 1.7 0.25"
+    place: "ui.button.click 1.3 0.25"
+    swap: "ui.button.click 1.5 0.25 + item.armor.equip_generic 1.4 0.3"
+    deny: "block.note_block.bass 0.7 0.35"
+    save: "block.note_block.chime 1.26 0.6 + block.note_block.chime 1.59 0.6 @2 + block.note_block.chime 2.0 0.6 @4 + block.amethyst_block.chime 1.7 0.9 @5"
+    reset: "item.book.page_turn 1.0 0.8"
+    clear: "item.book.page_turn 0.8 0.8 + block.note_block.bass 0.9 0.35 @2"
+    cancel: "ui.button.click 0.8 0.3"
+
+# The animated searching action bar (config.yml animations.searching-bar; text in messages.yml
+# queue.searching-animated).
+searching:
+  # Spinner frames, one every 4 ticks.
+  spinner: ["◐", "◓", "◑", "◒"]
+  # Colours the spinner and the word "Searching" slowly cycle through, and how long one cycle takes.
+  colors: ["#f2c14e", "#7fd99a", "#6fc3ff", "#c89bff"]
+  cycle-seconds: 6
+
+# The post-match progress action bar (config.yml animations.progress-reveal; texts in messages.yml progress).
+progress-reveal:
+  # The bar in "+20% towards your tier ▰▰▰▱▱▱▱▱▱▱": segments, glyphs and colours. The segment being filled
+  # while the bar animates is drawn in head-color.
+  bar:
+    segments: 10
+    filled: "▰"
+    empty: "▱"
+    filled-color: "#5bd46a"
+    empty-color: "#4b4f57"
+    head-color: "#d8ffd8"
+  # When the count is done the text flashes flash-color a few times, then fades to fade-color and disappears.
+  flash-color: "#ffffff"
+  fade-color: "#6b7078"
+  # The bright band sweeping over the tier in the tier-up and placed titles.
+  shimmer-color: "#ffffff"
+
+# In-match animations (config.yml animations: countdown-pop, fight-sweep, round-banner, …; texts in messages.yml
+# match.fx).
+match-fx:
+  # Countdown number colour by seconds left: 1, 2, 3 and more.
+  countdown-colors: ["#ff5a5a", "#ffd24a", "#5bd46a"]
+  # A number that pops (countdown, combo counter, score, players left) shows in this colour first.
+  pop-color: "#ffffff"
+  # "FIGHT!": gradient across the letters, left to right.
+  fight-colors: ["#ffd24a", "#ff7a3d", "#ff5a5a"]
+  # The bright band sweeping over "FIGHT!", "Victory" and the winner's name.
+  shine-color: "#ffffff"
+  # Low-health heartbeat: the action bar pulses from the first colour to the second.
+  heartbeat-colors: ["#ff3b3b", "#6a1f1f"]
+  # What the combo / kill bar fades to, and the colour "Defeat" greys towards.
+  fade-color: "#6b7078"
+  # Confetti over the match winner: the falling dust takes the colour of these blocks.
+  confetti: [RED_CONCRETE, ORANGE_CONCRETE, YELLOW_CONCRETE, LIME_CONCRETE, LIGHT_BLUE_CONCRETE, MAGENTA_CONCRETE]
+
+sidebar:
+  enabled: true
+  title: "<accent>Duels</accent>"
+  # The sweep over the title (config.yml animations.sidebar-title): the title is drawn in its first colour with a
+  # band of highlight sweeping across it (width = half the band in characters), taking sweep-ticks, then it rests
+  # for pause-ticks (20 ticks = 1 second).
+  title-shimmer:
+    highlight: "#fff4c8"
+    width: 1.6
+    sweep-ticks: 32
+    pause-ticks: 160
+  # Placeholders: <player> <tier> <elo> (overall Elo) <queued> <live> <online> <region> <ping>
+  hub:
+    - ""
+    - "<text><player></text>"
+    - "<tier> <muted>· <elo> Elo</muted>"
+    - ""
+    - "<muted>Queued</muted>  <text><queued></text>"
+    - "<muted>Live</muted>  <text><live></text>"
+    - ""
+    - "<muted>cheesesmp.top</muted>"
+  # Extra: <kit> ("3 kits" when searching several) <kit_icon> (every searched kit) <count> <mode> <wait> <range>
+  queue:
+    - ""
+    - "<text><player></text>"
+    - "<tier> <muted>· <elo> Elo</muted>"
+    - ""
+    - "<kit_icon> <text><kit></text> <muted><mode></muted>"
+    - "<muted>Searching</muted>  <text><wait></text>"
+    - "<muted>Range</muted>  <text>±<range></text>"
+    - ""
+    - "<muted>cheesesmp.top</muted>"
+  # Extra: <kit> <kit_icon> <mode> <opponent> <you_score> <opp_score> <round> <first_to> <time> <ping> <opp_ping>
+  match:
+    - ""
+    - "<kit_icon> <text><kit></text> <muted><mode></muted>"
+    - ""
+    - "<text>You</text>  <accent><you_score></accent>"
+    - "<text><opponent></text>  <accent><opp_score></accent>"
+    - "<muted>First to <first_to> · round <round></muted>"
+    - ""
+    - "<muted>Time</muted>  <text><time></text>"
+    - "<muted>Ping</muted>  <text><ping></text> <muted>/ <opp_ping></muted>"
+    - ""
+    - "<muted>cheesesmp.top</muted>"
+  # Extra: <kit> <kit_icon> <red_name> <blue_name> <red_score> <blue_score> <round> <time>
+  spectate:
+    - ""
+    - "<kit_icon> <text><kit></text> <muted>spectating</muted>"
+    - ""
+    - "<text><red_name></text>  <accent><red_score></accent>"
+    - "<text><blue_name></text>  <accent><blue_score></accent>"
+    - "<muted>Round <round></muted>"
+    - ""
+    - "<muted>Time</muted>  <text><time></text>"
+    - ""
+    - "<muted>cheesesmp.top</muted>"
+  # Party FFA (everyone for themselves). Extra: <kit> <kit_icon> <mode> <alive> <players> <kills> <time> <ping>
+  match-ffa:
+    - ""
+    - "<kit_icon> <text><kit></text> <muted>free for all</muted>"
+    - ""
+    - "<muted>Alive</muted>  <accent><alive></accent><muted>/<players></muted>"
+    - "<muted>Kills</muted>  <text><kills></text>"
+    - ""
+    - "<muted>Time</muted>  <text><time></text>"
+    - "<muted>Ping</muted>  <text><ping></text>"
+    - ""
+    - "<muted>cheesesmp.top</muted>"
+  # Spectating a party FFA. Extra: <kit> <kit_icon> <alive> <players> <time>
+  spectate-ffa:
+    - ""
+    - "<kit_icon> <text><kit></text> <muted>spectating</muted>"
+    - ""
+    - "<muted>Alive</muted>  <accent><alive></accent><muted>/<players></muted>"
+    - ""
+    - "<muted>Time</muted>  <text><time></text>"
+    - ""
+    - "<muted>cheesesmp.top</muted>"
+
+# Tier tags: the icon of a kit followed by the tier in it. In the hub the player's best kit (best tier, then highest
+# rating), during a match the match's kit with the tier they had when it started. The tab list is sorted by tier.
+# <tier> in chat/tab/nametag-prefix = the whole tag; in icon-tier: <icon> = kit sprite, <tier> = tiers.yml format.
+tags:
+  icon-tier: "<icon><tier>"
+  chat: "<tier> <text><name></text><muted>:</muted> <message>"
+  tab: "<tier> <text><name></text>"
+  # Tab name of players spectating a match (like vanilla spectators: grey, italic, listed last). <tier> works too.
+  tab-spectator: "<gray><i><name></i></gray>"
+  nametag-prefix: "<tier> "
+  # Hide the tag for players who have no ranked kit yet (instead of showing "???").
+  hide-unranked: false
+
+# Tab list header and footer, refreshed every 2 s. Empty lists = none.
+# Placeholders: <online> <live> <fighting> <queued> <ping> <tps> <spectators> (spectating any match)
+#   <watching> (spectators of the player's own match, or of the match they watch)
+tab:
+  # <logo> in the header: the text in a colour wave between two colours that shifts by step (1.0 = a full cycle) at
+  # every tab refresh (every 2 seconds; config.yml animations.tab-logo, off = a still wave).
+  logo:
+    text: "Cheese PvP"
+    colors: ["#f2c14e", "#fff1b8"]
+    bold: true
+    step: 0.12
+  header:
+    - ""
+    - "<logo>"
+    - "<#8b9099><online> online</#8b9099> <#4b4f57>·</#4b4f57> <#8b9099><live> live</#8b9099> <#4b4f57>·</#4b4f57> <#8b9099><queued> queued</#8b9099>"
+    - ""
+  footer:
+    - ""
+    - "<#8b9099>Ping</#8b9099> <#d8dbe0><ping>ms</#d8dbe0> <#4b4f57>·</#4b4f57> <#8b9099>TPS</#8b9099> <#d8dbe0><tps></#d8dbe0>"
+    - "<#8b9099><spectators> spectating</#8b9099>"
+    - "<#4b4f57>cheesesmp.top</#4b4f57>"
+    - ""
+  # Footer instead of the one above for players in a match or spectating one. Empty = the normal footer.
+  footer-match:
+    - ""
+    - "<#8b9099>Ping</#8b9099> <#d8dbe0><ping>ms</#d8dbe0> <#4b4f57>·</#4b4f57> <#8b9099>TPS</#8b9099> <#d8dbe0><tps></#d8dbe0>"
+    - "<#8b9099><watching> watching this match</#8b9099> <#4b4f57>·</#4b4f57> <#8b9099><spectators> spectating</#8b9099>"
+    - "<#4b4f57>cheesesmp.top</#4b4f57>"
+    - ""
+
+dialogs:
+  # Columns in the kit picker and leaderboard kit list.
+  kit-columns: 3
+  kit-button-width: 110
+  wide-width: 310
+  # Lines shown on the leaderboard page.
+  leaderboard-lines: 10
+  # Most live matches listed in the spectate menu (after search and sort).
+  spectate-limit: 30
+  # Recent matches on the profile page.
+  history-lines: 5
+
+# The party menu (party hub item, /party). Texts are in messages.yml (party.dialog).
+party-menu:
+  # Members listed per page of the party menu.
+  members-per-page: 8
+  # Most invitations, open parties, players to invite and parties to challenge listed at once.
+  list-limit: 24
+  # Width of the text lines and of the buttons (three per row).
+  width: 300
+  button-width: 100

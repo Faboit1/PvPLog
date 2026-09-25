@@ -1,0 +1,71 @@
+# Cart: TNT-minecart PvP. Maxed netherite (blast-protection leggings and boots), Flame/Power V bow (flame arrows set
+# the carts off), Piercing crossbow, 128 stacked TNT carts, 192 rails, planks, cobwebs, flint and steel, 2 totems,
+# 128 gapples, 48 pearls, 128 XP and 4 Strength II, 4 Speed II and 3 Fire Resistance splash potions.
+display-name: "Cart"
+description: "Rails, stacked TNT carts and a flame bow. Maxed netherite, two totems."
+icon: tnt_minecart
+category: skills
+order: 13
+enabled: true
+ranked: true
+first-to: 3
+round-time-limit: 240
+arena-tags: [terrain]
+rules:
+  natural-regen: true
+  hunger: true
+  fall-damage: true
+  build: true
+  break: all
+  allowed-blocks: [rail, oak_planks, cobweb, fire]
+  ender-pearls: true
+  pearl-cooldown: 1
+  totems: true
+  crystals: false
+  anchors: false
+  cobwebs: true
+  minecarts: true
+  item-drops: false
+loadout:
+  armor:
+    helmet: { item: netherite_helmet, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
+    chestplate: { item: netherite_chestplate, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
+    leggings: { item: netherite_leggings, enchants: { blast_protection: 4, swift_sneak: 3, unbreaking: 3, mending: 1 } }
+    boots: { item: netherite_boots, enchants: { blast_protection: 4, feather_falling: 4, depth_strider: 3, unbreaking: 3, mending: 1 } }
+  items:
+    0: { item: netherite_sword, enchants: { sharpness: 5, knockback: 1, unbreaking: 3, mending: 1 } }
+    1: { item: bow, enchants: { power: 5, flame: 1, punch: 1, infinity: 1, unbreaking: 3 } }
+    2: { item: rail, amount: 64 }
+    3: { item: "tnt_minecart[max_stack_size=64]", amount: 64 }
+    4: { item: crossbow, enchants: { piercing: 4, quick_charge: 3, unbreaking: 3 } }
+    5: { item: golden_apple, amount: 64 }
+    6: { item: ender_pearl, amount: 16 }
+    7: { item: cobweb, amount: 64 }
+    8: totem_of_undying
+    9: { item: arrow, amount: 64 }
+    10: { item: rail, amount: 64 }
+    11: { item: "tnt_minecart[max_stack_size=64]", amount: 64 }
+    12: { item: oak_planks, amount: 64 }
+    13: flint_and_steel
+    14: { item: splash_potion, potion: strong_strength }
+    15: { item: ender_pearl, amount: 16 }
+    16: { item: golden_apple, amount: 64 }
+    17: { item: experience_bottle, amount: 64 }
+    18: { item: arrow, amount: 64 }
+    19: { item: rail, amount: 64 }
+    20: { item: oak_planks, amount: 64 }
+    21: { item: cobweb, amount: 64 }
+    22: { item: splash_potion, potion: strong_strength }
+    23: { item: splash_potion, potion: strong_swiftness }
+    24: { item: ender_pearl, amount: 16 }
+    25: { item: splash_potion, potion: strong_swiftness }
+    26: { item: experience_bottle, amount: 64 }
+    27: { item: splash_potion, potion: long_fire_resistance }
+    28: { item: splash_potion, potion: long_fire_resistance }
+    29: { item: splash_potion, potion: long_fire_resistance }
+    30: { item: splash_potion, potion: strong_strength }
+    31: { item: splash_potion, potion: strong_strength }
+    32: { item: splash_potion, potion: strong_swiftness }
+    33: { item: splash_potion, potion: strong_swiftness }
+  offhand: totem_of_undying
+effects: []

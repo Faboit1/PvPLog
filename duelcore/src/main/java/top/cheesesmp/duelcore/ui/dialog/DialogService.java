@@ -1,0 +1,606 @@
+package top.cheesesmp.duelcore.ui.dialog;
+
+import io.papermc.paper.dialog.Dialog;
+import io.papermc.paper.registry.data.dialog.ActionButton;
+import io.papermc.paper.registry.data.dialog.DialogBase;
+import io.papermc.paper.registry.data.dialog.action.DialogAction;
+import io.papermc.paper.registry.data.dialog.body.DialogBody;
+import io.papermc.paper.registry.data.dialog.input.DialogInput;
+import io.papermc.paper.registry.data.dialog.input.SingleOptionDialogInput;
+import io.papermc.paper.registry.data.dialog.type.DialogType;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Comparator;
+import java.util.Locale;
+import java.util.Map;
+import net.kyori.adventure.key.Key;
+import net.kyori.adventure.nbt.api.BinaryTagHolder;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+import org.jspecify.annotations.Nullable;
+import top.cheesesmp.duelcore.DuelCorePlugin;
+import top.cheesesmp.duelcore.config.Messages;
+import top.cheesesmp.duelcore.db.dao.LeaderboardDao;
+import top.cheesesmp.duelcore.db.dao.MatchDao;
+import top.cheesesmp.duelcore.kit.Kit;
+import top.cheesesmp.duelcore.kit.editor.KitEditor;
+import top.cheesesmp.duelcore.leaderboard.LeaderboardService;
+import top.cheesesmp.duelcore.match.Match;
+import top.cheesesmp.duelcore.match.Participant;
+import top.cheesesmp.duelcore.profile.KitStats;
+import top.cheesesmp.duelcore.profile.PlayerProfile;
+import top.cheesesmp.duelcore.profile.Setting;
+import top.cheesesmp.duelcore.queue.QueueMode;
+import top.cheesesmp.duelcore.rating.Tier;
+import top.cheesesmp.duelcore.rating.TierService;
+import top.cheesesmp.duelcore.ui.Icons;
+
+/**
+ * All menus as 1.21.6+ dialogs. Buttons use fixed custom-click keys ({@code duelcore:<action>}) with a small SNBT
+ * payload, handled by {@link ClickRouter}: nothing is stored per click, and every payload is re-validated. Dialogs
+ * are shown through {@link OpenDialogs} (after-action NONE, the next dialog replaces the open one; the ones whose
+ * content changes are refreshed while open).
+ */
+public final class DialogService {
+
+    public static final String NS = "duelcore";
+
+    private final DuelCorePlugin plugin;
+    private final QueueDialog queueMenu;
+
+    public DialogService(DuelCorePlugin plugin) {
+        this.plugin = plugin;
+        this.queueMenu = new QueueDialog(plugin);
+    }
+
+    private Messages msg() {
+        return plugin.messages();
+    }
+
+    // ------------------------------------------------------------------ building blocks
+
+    static String snbt(Map<String, String> payload) {
+        StringBuilder sb = new StringBuilder("{");
+        boolean first = true;
+        for (Map.Entry<String, String> e : payload.entrySet()) {
+            if (!first) sb.append(',');
+            first = false;
+            sb.append(e.getKey()).append(":\"")
+                .append(e.getValue().replace("\\", "\\\\").replace("\"", "\\\"")).append('"');
+        }
+        return sb.append('}').toString();
+    }
+
+    public static Map<String, String> payload(String... kv) {
+        Map<String, String> map = new LinkedHashMap<>();
+        for (int i = 0; i + 1 < kv.length; i += 2) map.put(kv[i], kv[i + 1]);
+        return map;
+    }
+
+    public ActionButton button(Component label, @Nullable Component tooltip, int width, @Nullable String action,
+                                Map<String, String> payload) {
+        ActionButton.Builder b = ActionButton.builder(label).width(Math.clamp(width, 1, 1024));
+        if (tooltip != null) b.tooltip(tooltip);
+        if (action != null) {
+            b.action(DialogAction.customClick(Key.key(NS, action),
+                payload.isEmpty() ? null : BinaryTagHolder.binaryTagHolder(snbt(payload))));
+        }
+        return b.build();
+    }
+
+    /**
+     * The Close button: a {@code duelcore:dialog/close} click (after-action NONE, a button without a click would do
+     * nothing). As the exit action it is also what Escape sends.
+     */
+    public ActionButton close() {
+        return button(msg().get("dialog.close"), null, 120, OpenDialogs.CLOSE, Map.of());
+    }
+
+    private OpenDialogs open() {
+        return plugin.openDialogs();
+    }
+
+    /**
+     * A dialog that stays on screen after a click (after-action NONE) until the server shows the next one or closes
+     * it, so switching between dialogs doesn't close and re-open the screen.
+     */
+    public static Dialog dialog(Component title, List<DialogBody> body, List<DialogInput> inputs, DialogType type) {
+        return Dialog.create(f -> f.empty()
+            .base(DialogBase.builder(title)
+                .canCloseWithEscape(true)
+                .pause(false)
+                .afterAction(DialogBase.DialogAfterAction.NONE)
+                .body(body)
+                .inputs(inputs)
+                .build())
+            .type(type));
+    }
+
+    public DialogBody text(Component content) {
+        return DialogBody.plainMessage(content, plugin.gui().wideWidth);
+    }
+
+    public Component lines(List<Component> lines) {
+        return Component.join(JoinConfiguration.newlines(), lines);
+    }
+
+    // ------------------------------------------------------------------ queue
+
+    /**
+     * Opens the queue menu ({@link QueueDialog}) on the player's last tab. There is no ranked/unranked or page
+     * switch any more: {@code mode} and {@code extra} are ignored and only kept for existing callers.
+     */
+    public void queue(Player player, QueueMode mode, boolean extra) {
+        queueMenu.open(player, null);
+    }
+
+    /** The queue menu; also handles every {@code duelcore:queue/*} click. */
+    public QueueDialog queueMenu() {
+        return queueMenu;
+    }
+
+    // ------------------------------------------------------------------ profile
+
+    public void profile(Player viewer, PlayerProfile target, boolean legacy) {
+        var history = target.recent();
+        if (history == null) {
+            long ticket = open().awaitNext(viewer);
+            plugin.profiles().history(target, Math.max(1, plugin.gui().historyLines)).thenAccept(list ->
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    if (plugin.profiles().get(target.uuid()) == target) target.recent(list);
+                    open().continueAwait(viewer, ticket, () -> showProfile(viewer, target, list, legacy));
+                }));
+            return;
+        }
+        showProfile(viewer, target, history, legacy);
+    }
+
+    /** Shows a profile; it is refreshed while open (the "5m ago" of the history, the Follow button). */
+    private void showProfile(Player viewer, PlayerProfile target, List<MatchDao.HistoryEntry> history, boolean legacy) {
+        open().show(viewer, OpenDialogs.Kind.PROFILE, buildProfile(viewer, target, history, legacy),
+            p -> buildProfile(p, target, history, legacy));
+    }
+
+    private OpenDialogs.Rendered buildProfile(Player viewer, PlayerProfile target, List<MatchDao.HistoryEntry> history,
+                                              boolean legacy) {
+        List<Component> body = new ArrayList<>();
+        int wins = target.totalWins();
+        int losses = target.totalLosses();
+        int games = wins + losses;
+        body.add(msg().get("dialog.profile.header",
+            Messages.comp("head", Icons.head(target.uuid(), target.name())),
+            Messages.text("player", target.name()),
+            Messages.comp("tier", plugin.tiers().format(target.overall())),
+            Messages.text("elo", TierService.eloText(target)),
+            Messages.text("region", target.region() == null ? "—" : target.region()),
+            Messages.text("country", target.country() == null ? "—" : target.country())));
+        body.add(msg().get("dialog.profile.record", Messages.num("wins", wins), Messages.num("losses", losses),
+            Messages.text("winrate", games == 0 ? "0" : String.valueOf(Math.round(100.0 * wins / games)))));
+        if (legacy) body.add(msg().get("dialog.profile.legacy"));
+        body.add(Component.empty());
+        boolean any = false;
+        for (Kit kit : plugin.kits().enabled()) {
+            KitStats s = target.stats(kit.id());
+            if (s == null || s.games == 0 && s.tierOverride == null) continue;
+            any = true;
+            Tier tier = plugin.tiers().kitTier(kit.id(), s);
+            String key = tier == null ? "dialog.profile.kit-line-placement" : "dialog.profile.kit-line";
+            body.add(msg().get(key, Messages.comp("kit_icon", kit.sprite()), Messages.comp("kit", kit.displayName()),
+                Messages.comp("tier", plugin.tiers().format(tier)), Messages.num("rating", (int) Math.round(s.rating)),
+                Messages.num("wins", s.wins), Messages.num("losses", s.losses),
+                Messages.num("streak", s.streak), Messages.num("best_streak", s.bestStreak),
+                Messages.num("games", s.games), Messages.num("placement", plugin.tiers().placementMatches())));
+        }
+        if (!any) body.add(msg().get("dialog.profile.no-games"));
+        if (!history.isEmpty() && plugin.gui().historyLines > 0) {
+            body.add(Component.empty());
+            body.add(msg().get("dialog.profile.history-title"));
+            for (MatchDao.HistoryEntry h : history) {
+                Kit kit = plugin.kits().get(h.kitKey());
+                int delta = Math.round(h.ratingDelta());
+                body.add(msg().get(h.won() ? "dialog.profile.history-win" : "dialog.profile.history-loss",
+                    Messages.comp("kit_icon", kit == null ? Component.empty() : kit.sprite()),
+                    Messages.text("opponent", h.opponentName()),
+                    Messages.num("you", h.roundsWon()), Messages.num("opp", h.roundsLost()),
+                    Messages.text("delta", !h.ranked() ? "" : (delta >= 0 ? "+" + delta : String.valueOf(delta))),
+                    Messages.text("ago", ago(h.startedAt()))));
+            }
+        }
+        List<ActionButton> buttons = new ArrayList<>();
+        buttons.add(button(msg().get("dialog.profile.leaderboards"), null, 150, "leaderboard/view", payload("cat", "overall")));
+        buttons.add(button(msg().get("dialog.profile.recent-refresh"), null, 150, "profile/view", payload("name", target.name())));
+        ActionButton follow = plugin.friends() == null ? null : plugin.friends().dialogs().profileButton(viewer, target);
+        if (follow != null) buttons.add(follow);
+        Component title = msg().get("dialog.profile.title", Messages.text("player", target.name()));
+        Dialog d = dialog(title, List.of(text(lines(body))), List.of(),
+            DialogType.multiAction(buttons).columns(2).exitAction(close()).build());
+        return new OpenDialogs.Rendered(d, Fingerprint.of(title, body, buttons));
+    }
+
+    /**
+     * "5m", "3h", "2d": how long ago {@code at} was, for refreshed dialogs. Under a minute it is
+     * {@code dialog.under-a-minute} ("&lt;1m"), not seconds: a text that changes every second would re-send the dialog
+     * every second, and each re-send scrolls it back to the top.
+     */
+    public String ago(long at) {
+        long s = Math.max(0, (System.currentTimeMillis() - at) / 1000);
+        if (s < 60) return msg().raw("dialog.under-a-minute");
+        if (s < 3600) return (s / 60) + "m";
+        if (s < 86400) return (s / 3600) + "h";
+        return (s / 86400) + "d";
+    }
+
+    // ------------------------------------------------------------------ leaderboards
+
+    public void leaderboard(Player viewer, String category, @Nullable String region) {
+        String cat = category.toLowerCase(Locale.ROOT);
+        if (!cat.equals(LeaderboardService.OVERALL) && plugin.kits().get(cat) == null) cat = LeaderboardService.OVERALL;
+        String finalCat = cat;
+        long ticket = open().awaitNext(viewer);
+        plugin.leaderboards().get(cat, region, null).thenAccept(rows ->
+            Bukkit.getScheduler().runTask(plugin, () ->
+                open().continueAwait(viewer, ticket, () -> showLeaderboard(viewer, finalCat, region, rows))));
+    }
+
+    private void showLeaderboard(Player viewer, String category, @Nullable String region, List<LeaderboardDao.Row> rows) {
+        boolean overall = category.equals(LeaderboardService.OVERALL);
+        Kit kit = overall ? null : plugin.kits().get(category);
+        Component catName = overall ? msg().get("dialog.leaderboard.overall") : kit.displayName();
+        List<Component> body = new ArrayList<>();
+        int shown = Math.min(rows.size(), plugin.gui().leaderboardLines);
+        if (shown == 0) body.add(msg().get("dialog.leaderboard.empty"));
+        for (int i = 0; i < shown; i++) {
+            LeaderboardDao.Row r = rows.get(i);
+            Tier tier = overall ? r.tier() : (r.tier() != null ? r.tier() : plugin.tiers().ladder().kitTier(category, r.value()));
+            body.add(msg().get(overall ? "dialog.leaderboard.line-overall" : "dialog.leaderboard.line-kit",
+                Messages.num("rank", r.rank()),
+                Messages.comp("head", Icons.head(r.uuid(), r.name())),
+                Messages.text("player", r.name()),
+                Messages.comp("tier", plugin.tiers().format(tier)),
+                Messages.num("value", (int) Math.round(r.value())),
+                Messages.num("elo", (int) Math.round(r.value())),
+                Messages.num("wins", r.wins()), Messages.num("losses", r.losses()),
+                Messages.text("region", r.region() == null ? "" : r.region())));
+        }
+        PlayerProfile own = plugin.profiles().get(viewer);
+        for (LeaderboardDao.Row r : rows) {
+            if (own != null && r.uuid().equals(own.uuid()) && r.rank() > shown) {
+                body.add(Component.empty());
+                body.add(msg().get("dialog.leaderboard.you", Messages.num("rank", r.rank()),
+                    Messages.num("value", (int) Math.round(r.value())),
+                    Messages.num("elo", (int) Math.round(r.value()))));
+            }
+        }
+        List<ActionButton> buttons = new ArrayList<>();
+        int small = 34;
+        String reg = region == null ? "" : region;
+        buttons.add(button(msg().get(overall ? "dialog.leaderboard.overall-button-selected" : "dialog.leaderboard.overall-button"),
+            msg().get("dialog.leaderboard.overall"), small, "leaderboard/view", payload("cat", "overall", "region", reg)));
+        for (Kit k : plugin.kits().enabled()) {
+            boolean selected = k.id().equals(category);
+            buttons.add(button(msg().get(selected ? "dialog.leaderboard.kit-button-selected" : "dialog.leaderboard.kit-button",
+                    Messages.comp("kit_icon", k.sprite()), Messages.comp("kit", k.displayName())),
+                k.displayName(), small, "leaderboard/view", payload("cat", k.id(), "region", reg)));
+        }
+        buttons.add(button(msg().get(region == null ? "dialog.leaderboard.all-regions-selected" : "dialog.leaderboard.all-regions"),
+            msg().get("dialog.leaderboard.global"), small, "leaderboard/view", payload("cat", category, "region", "")));
+        for (String r : plugin.settings().regions) {
+            buttons.add(button(msg().get(r.equals(region) ? "dialog.leaderboard.region-selected" : "dialog.leaderboard.region",
+                Messages.text("region", r)), null, small, "leaderboard/view", payload("cat", category, "region", r)));
+        }
+        Dialog d = dialog(msg().get("dialog.leaderboard.title", Messages.comp("category", catName),
+                Messages.text("region", region == null ? msg().raw("dialog.leaderboard.global") : region)),
+            List.of(text(lines(body))), List.of(), DialogType.multiAction(buttons).columns(8).exitAction(close()).build());
+        open().show(viewer, OpenDialogs.Kind.LEADERBOARD, d);
+    }
+
+    // ------------------------------------------------------------------ settings
+
+    public void settings(Player player) {
+        PlayerProfile p = plugin.profiles().get(player);
+        if (p == null) return;
+        List<DialogInput> inputs = new ArrayList<>();
+        inputs.add(bool("duel_requests", "dialog.settings.duel-requests", p.setting(Setting.DUEL_REQUESTS)));
+        inputs.add(bool("sidebar", "dialog.settings.sidebar", p.setting(Setting.SIDEBAR)));
+        inputs.add(bool("sounds", "dialog.settings.sounds", p.setting(Setting.SOUNDS)));
+        inputs.add(bool("chat_tags", "dialog.settings.chat-tags", p.setting(Setting.CHAT_TAGS)));
+        inputs.add(bool("hide_hub", "dialog.settings.hide-hub", p.setting(Setting.HIDE_HUB_PLAYERS)));
+        inputs.add(bool("spectators", "dialog.settings.spectators", p.setting(Setting.ALLOW_SPECTATORS)));
+        inputs.add(bool("friend_alerts", "dialog.settings.friend-alerts", p.setting(Setting.FRIEND_ALERTS)));
+        inputs.add(bool("party_invites", "dialog.settings.party-invites", p.setting(Setting.PARTY_INVITES)));
+        inputs.add(bool("queue_music", "dialog.settings.queue-music", p.setting(Setting.QUEUE_MUSIC)));
+        List<SingleOptionDialogInput.OptionEntry> regions = new ArrayList<>();
+        regions.add(SingleOptionDialogInput.OptionEntry.create("none", msg().get("dialog.settings.region-none"), p.region() == null));
+        for (String r : plugin.settings().regions) {
+            regions.add(SingleOptionDialogInput.OptionEntry.create(r, Component.text(r), r.equals(p.region())));
+        }
+        inputs.add(DialogInput.singleOption("region", msg().get("dialog.settings.region"), regions).width(250).build());
+        inputs.add(DialogInput.text("country", msg().get("dialog.settings.country")).width(250)
+            .initial(p.country() == null ? "" : p.country()).maxLength(2).build());
+        inputs.add(DialogInput.numberRange("max_ping", msg().get("dialog.settings.max-ping"), 0f, 500f)
+            .step(25f).initial((float) Math.clamp(Math.round(p.maxPing() / 25.0) * 25, 0, 500)).width(250)
+            .labelFormat("%s: %s").build());
+        ActionButton save = button(msg().get("dialog.settings.save"), null, 150, "settings/save", Map.of());
+        ActionButton cancel = button(msg().get("dialog.settings.cancel"), null, 150, OpenDialogs.CLOSE, Map.of());
+        Dialog d = dialog(msg().get("dialog.settings.title"), List.of(text(msg().get("dialog.settings.body"))), inputs,
+            DialogType.confirmation(save, cancel));
+        open().show(player, OpenDialogs.Kind.SETTINGS, d);
+    }
+
+    private DialogInput bool(String key, String label, boolean value) {
+        return DialogInput.bool(key, msg().get(label)).initial(value).build();
+    }
+
+    // ------------------------------------------------------------------ spectate
+
+    /** Highest average Elo first, then by fighter names (A–Z). */
+    private static final Comparator<Match> SPECTATE_ORDER = Comparator.comparingDouble(DialogService::matchElo).reversed()
+        .thenComparing(m -> (m.teamName(0) + " " + m.teamName(1)).toLowerCase(Locale.ROOT));
+
+    public void spectate(Player player) {
+        spectate(player, "");
+    }
+
+    /**
+     * Live matches, filtered by {@code query} (a player name or kit, case-insensitive substring), highest average
+     * Elo first, then by name. Without a query it is the live list, refreshed while open; its Search button opens
+     * {@link #spectateSearch}. With one it is the list with the search box, which isn't refreshed (a re-send would
+     * clear what the player types).
+     */
+    public void spectate(Player player, String query) {
+        if (query.isBlank()) {
+            open().show(player, OpenDialogs.Kind.SPECTATE, buildSpectate(player, "", false), p -> buildSpectate(p, "", false));
+        } else {
+            open().show(player, OpenDialogs.Kind.SPECTATE, buildSpectate(player, query, true), null);
+        }
+    }
+
+    /** The live list with the search box (the live list's Search button); not refreshed. */
+    public void spectateSearch(Player player) {
+        open().show(player, OpenDialogs.Kind.SPECTATE, buildSpectate(player, "", true), null);
+    }
+
+    /** The spectate list; {@code search}: with the search box, whose Search button runs the search. */
+    private OpenDialogs.Rendered buildSpectate(Player player, String query, boolean search) {
+        String q = query.strip().toLowerCase(Locale.ROOT);
+        List<Match> live = new ArrayList<>();
+        for (Match m : plugin.matches().active()) {
+            if (m.isOver() || m.arena() == null) continue;
+            if (!spectatable(m) && !player.hasPermission("duelcore.spectate.bypass")) continue;
+            live.add(m);
+        }
+        List<Match> shown = new ArrayList<>();
+        for (Match m : live) if (q.isEmpty() || matchesQuery(m, q)) shown.add(m);
+        shown.sort(SPECTATE_ORDER);
+        Component title = msg().get("dialog.spectate.title", Messages.num("live", live.size()));
+        if (live.isEmpty()) {
+            Component none = msg().get("dialog.spectate.none");
+            return new OpenDialogs.Rendered(dialog(title, List.of(text(none)), List.of(), DialogType.notice(close())),
+                Fingerprint.of(title, none));
+        }
+        List<ActionButton> buttons = new ArrayList<>();
+        buttons.add(button(msg().get("dialog.spectate.search"), null, plugin.gui().wideWidth,
+            search ? "spectate/search" : "spectate/find", Map.of()));
+        int limit = Math.max(1, plugin.gui().spectateLimit);
+        for (Match m : shown.subList(0, Math.min(shown.size(), limit))) {
+            if (top.cheesesmp.duelcore.match.SpectateService.isFreeForAll(m)) {
+                Component label = msg().get("dialog.spectate.match-ffa", Messages.comp("kit_icon", m.kit().sprite()),
+                    Messages.num("players", m.participants().size()), Messages.num("alive", m.alive()),
+                    Messages.num("elo", (int) Math.round(matchElo(m))));
+                Component tooltip = msg().get("dialog.spectate.tooltip-ffa", Messages.comp("kit", m.kit().displayName()),
+                    Messages.text("names", ffaNames(m)), Messages.num("players", m.participants().size()),
+                    Messages.num("alive", m.alive()), Messages.num("spectators", m.spectators().size()));
+                buttons.add(button(label, tooltip, plugin.gui().wideWidth, "spectate/match", payload("id", String.valueOf(m.id()))));
+                continue;
+            }
+            Component label = msg().get("dialog.spectate.match", Messages.comp("kit_icon", m.kit().sprite()),
+                Messages.text("red", m.teamName(0)), Messages.text("blue", m.teamName(1)),
+                Messages.num("red_score", m.score(0)), Messages.num("blue_score", m.score(1)),
+                Messages.num("elo", (int) Math.round(matchElo(m))));
+            Component tooltip = msg().get("dialog.spectate.tooltip", Messages.comp("kit", m.kit().displayName()),
+                Messages.text("mode", msg().raw("mode." + (m.ranked() ? "ranked" : "unranked"))),
+                Messages.num("round", Math.max(1, m.round())), Messages.num("first_to", m.firstTo()),
+                Messages.num("spectators", m.spectators().size()), Messages.num("elo", (int) Math.round(matchElo(m))));
+            buttons.add(button(label, tooltip, plugin.gui().wideWidth, "spectate/match", payload("id", String.valueOf(m.id()))));
+        }
+        List<DialogInput> inputs = new ArrayList<>();
+        if (search) {
+            inputs.add(DialogInput.text("search", msg().get("dialog.spectate.search-label")).width(plugin.gui().wideWidth)
+                .initial(query.strip()).maxLength(32).build());
+        }
+        Component body = shown.isEmpty()
+            ? msg().get("dialog.spectate.no-results", Messages.text("query", query.strip()))
+            : msg().get("dialog.spectate.body", Messages.num("shown", Math.min(shown.size(), limit)), Messages.num("live", live.size()));
+        return new OpenDialogs.Rendered(dialog(title, List.of(text(body)), inputs,
+            DialogType.multiAction(buttons).columns(1).exitAction(close()).build()), Fingerprint.of(title, body, buttons, query.strip()),
+            !inputs.isEmpty());
+    }
+
+    /** "A, B, C +3": the fighters of a free-for-all, still standing ones first. */
+    private static String ffaNames(Match m) {
+        List<Participant> list = new ArrayList<>(m.participants());
+        list.sort(Comparator.comparing((Participant p) -> !(p.alive() && !p.left())));
+        List<String> names = new ArrayList<>();
+        for (Participant p : list.subList(0, Math.min(list.size(), 4))) names.add(p.name());
+        return String.join(", ", names) + (list.size() > 4 ? " +" + (list.size() - 4) : "");
+    }
+
+    private static boolean matchesQuery(Match m, String q) {
+        if (m.kit().id().contains(q)) return true;
+        String kitName = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+            .serialize(m.kit().displayName()).toLowerCase(Locale.ROOT);
+        if (kitName.contains(q)) return true;
+        for (Participant p : m.participants()) {
+            if (p.name().toLowerCase(Locale.ROOT).contains(q)) return true;
+        }
+        return false;
+    }
+
+    /** Average rating of the fighters when the match started. */
+    static double matchElo(Match m) {
+        double sum = 0;
+        int n = 0;
+        for (Participant p : m.participants()) {
+            sum += p.ratingBefore();
+            n++;
+        }
+        return n == 0 ? 0 : sum / n;
+    }
+
+    private boolean spectatable(Match m) {
+        for (Participant p : m.participants()) {
+            PlayerProfile profile = plugin.profiles().get(p.uuid());
+            if (profile != null && !profile.setting(Setting.ALLOW_SPECTATORS)) return false;
+        }
+        return true;
+    }
+
+    // ------------------------------------------------------------------ duel
+
+    /** Opponent picker for a bare /duel: online players who are free. */
+    public void duelPlayers(Player player) {
+        open().show(player, OpenDialogs.Kind.DUEL_PLAYERS, buildDuelPlayers(player), this::buildDuelPlayers);
+    }
+
+    /** Opponent picker; refreshed while open (players joining, leaving, starting or ending matches). */
+    private OpenDialogs.Rendered buildDuelPlayers(Player player) {
+        List<ActionButton> buttons = new ArrayList<>();
+        for (Player other : Bukkit.getOnlinePlayers()) {
+            if (other.equals(player) || plugin.matches().match(other.getUniqueId()) != null) continue;
+            PlayerProfile p = plugin.profiles().get(other);
+            if (p != null && !p.setting(Setting.DUEL_REQUESTS)) continue;
+            buttons.add(button(msg().get("dialog.duel.player-button", Messages.comp("head", Icons.head(other.getUniqueId(), other.getName())),
+                    Messages.text("player", other.getName()), Messages.comp("tier", plugin.tiers().format(p == null ? null : p.overall()))),
+                null, plugin.gui().kitButtonWidth + 40, "duel/pick", payload("target", other.getUniqueId().toString())));
+            if (buttons.size() >= 60) break;
+        }
+        Component title = msg().get("dialog.duel.players-title");
+        if (buttons.isEmpty()) {
+            Component none = msg().get("dialog.duel.no-players");
+            return new OpenDialogs.Rendered(dialog(title, List.of(text(none)), List.of(), DialogType.notice(close())),
+                Fingerprint.of(title, none));
+        }
+        Component body = msg().get("dialog.duel.players-body");
+        return new OpenDialogs.Rendered(dialog(title, List.of(text(body)), List.of(),
+            DialogType.multiAction(buttons).columns(2).exitAction(close()).build()), Fingerprint.of(title, body, buttons));
+    }
+
+    public void duelPicker(Player player, Player target) {
+        List<ActionButton> buttons = new ArrayList<>();
+        for (Kit kit : plugin.kits().enabled()) {
+            buttons.add(button(msg().get("dialog.duel.kit-button", Messages.comp("kit_icon", kit.sprite()),
+                    Messages.comp("kit", kit.displayName())), Component.text(kit.description()), plugin.gui().kitButtonWidth,
+                "duel/send", payload("target", target.getUniqueId().toString(), "kit", kit.id())));
+        }
+        open().show(player, OpenDialogs.Kind.DUEL_PICKER, dialog(msg().get("dialog.duel.title", Messages.text("player", target.getName())),
+            List.of(text(msg().get("dialog.duel.body", Messages.text("player", target.getName())))), List.of(),
+            DialogType.multiAction(buttons).columns(plugin.gui().kitColumns).exitAction(close()).build()));
+    }
+
+    // ------------------------------------------------------------------ results
+
+    /**
+     * Results screen after a match (shown once the player is back in the hub). "Play again" (queue matches only)
+     * joins the kit's menu queue, which is ranked (there is no unranked option in the menu). Hidden with Keep
+     * Queuing on, since those players are put back into their queues anyway. "Edit kit" opens the kit editor of the
+     * match's kit.
+     */
+    public void results(Player player, List<Component> lines, Component title, @Nullable Kit kit, @Nullable QueueMode mode) {
+        List<ActionButton> buttons = new ArrayList<>();
+        PlayerProfile profile = plugin.profiles().get(player);
+        boolean keepQueuing = profile != null && profile.setting(Setting.KEEP_QUEUING); // re-queued automatically
+        QueueMode again = kit == null || mode == null || mode == QueueMode.PARTY || keepQueuing ? null : plugin.queue().modeFor(kit);
+        if (again != null) {
+            buttons.add(button(msg().get("dialog.results.again", Messages.comp("kit_icon", kit.sprite()),
+                Messages.comp("kit", kit.displayName())), null, 150, "queue/join", payload("kit", kit.id(), "mode", again.id())));
+        }
+        buttons.add(button(msg().get("dialog.results.profile"), null, 150, "profile/view", payload("name", player.getName())));
+        if (kit != null && kit.enabled() && player.hasPermission(KitEditor.PERMISSION)) {
+            buttons.add(button(msg().get("dialog.results.edit-kit", Messages.comp("kit_icon", kit.sprite()),
+                    Messages.comp("kit", kit.displayName())),
+                msg().get("dialog.results.edit-kit-tooltip", Messages.comp("kit", kit.displayName())),
+                150, "kiteditor/open", payload("kit", kit.id())));
+        }
+        open().show(player, OpenDialogs.Kind.RESULTS, dialog(title, List.of(text(lines(lines))), List.of(),
+            DialogType.multiAction(buttons).columns(2).exitAction(close()).build()));
+    }
+
+    /** Generic info notice. */
+    public void notice(Player player, Component title, Component body) {
+        open().show(player, OpenDialogs.Kind.NOTICE, dialog(title, List.of(text(body)), List.of(), DialogType.notice(close())));
+    }
+
+    /**
+     * Minimal test dialogs that each add one feature, to find which part of a dialog a client (or a protocol
+     * translator such as ViaVersion) rejects. {@code /duelcore debug dialog <variant>}.
+     */
+    public static final List<String> DEBUG_VARIANTS = List.of("plain", "shadow", "sprite", "sprite-nofallback",
+        "sprite-gui", "sprite-block", "head", "head-nofallback", "button", "payload", "tooltip", "input-bool",
+        "input-text", "input-option", "input-range", "queue", "profile", "leaderboard", "settings", "spectate");
+
+    public boolean debugDialog(Player player, String variant) {
+        Component title = Component.text("DuelCore test: " + variant);
+        java.util.function.Function<Component, Dialog> noticeWith = body ->
+            dialog(title, List.of(text(body)), List.of(), DialogType.notice(close()));
+        Component plain = Component.text("Plain text. ");
+        switch (variant) {
+            case "plain" -> debug(player, noticeWith.apply(plain));
+            case "shadow" -> debug(player, noticeWith.apply(plain.append(Component.text("shadow none")
+                .shadowColor(net.kyori.adventure.text.format.ShadowColor.none()))));
+            case "sprite" -> debug(player, noticeWith.apply(plain.append(Icons.item("netherite_sword"))));
+            case "sprite-nofallback" -> debug(player, noticeWith.apply(plain.append(Component.object()
+                .contents(net.kyori.adventure.text.object.ObjectContents.sprite(Key.key("items"), Key.key("item/netherite_sword")))
+                .build())));
+            case "sprite-gui" -> debug(player, noticeWith.apply(plain.append(Icons.gui("hud/heart/full"))));
+            case "sprite-block" -> debug(player, noticeWith.apply(plain.append(Icons.parse("blocks:block/obsidian"))));
+            case "head" -> debug(player, noticeWith.apply(plain.append(Icons.head(player.getUniqueId(), player.getName()))));
+            case "head-nofallback" -> debug(player, noticeWith.apply(plain.append(Component.object()
+                .contents(net.kyori.adventure.text.object.ObjectContents.playerHead(player.getUniqueId())).build())));
+            case "button" -> debug(player, dialog(title, List.of(text(plain)), List.of(), DialogType.multiAction(List.of(
+                button(Component.text("No payload"), null, 150, "debug/none", Map.of()))).exitAction(close()).build()));
+            case "payload" -> debug(player, dialog(title, List.of(text(plain)), List.of(), DialogType.multiAction(List.of(
+                button(Component.text("With payload"), null, 150, "debug/none", payload("kit", "sword", "mode", "ranked"))))
+                .exitAction(close()).build()));
+            case "tooltip" -> debug(player, dialog(title, List.of(text(plain)), List.of(), DialogType.multiAction(List.of(
+                button(Component.text("Tooltip"), Component.text("A tooltip"), 150, "debug/none", Map.of())))
+                .exitAction(close()).build()));
+            case "input-bool" -> debug(player, dialog(title, List.of(text(plain)),
+                List.of(DialogInput.bool("b", Component.text("Bool")).initial(true).build()), DialogType.notice(close())));
+            case "input-text" -> debug(player, dialog(title, List.of(text(plain)),
+                List.of(DialogInput.text("t", Component.text("Text")).width(250).initial("x").maxLength(16).build()),
+                DialogType.notice(close())));
+            case "input-option" -> debug(player, dialog(title, List.of(text(plain)), List.of(DialogInput.singleOption("o",
+                Component.text("Option"), List.of(SingleOptionDialogInput.OptionEntry.create("a", Component.text("A"), true),
+                    SingleOptionDialogInput.OptionEntry.create("b", Component.text("B"), false))).width(250).build()),
+                DialogType.notice(close())));
+            case "input-range" -> debug(player, dialog(title, List.of(text(plain)), List.of(DialogInput.numberRange("r",
+                Component.text("Range"), 0f, 500f).step(25f).initial(100f).width(250).labelFormat("%s: %s").build()),
+                DialogType.notice(close())));
+            case "queue" -> queue(player, QueueMode.RANKED, false);
+            case "profile" -> {
+                PlayerProfile own = plugin.profiles().get(player);
+                if (own == null) return false;
+                profile(player, own, false);
+            }
+            case "leaderboard" -> leaderboard(player, "overall", null);
+            case "settings" -> settings(player);
+            case "spectate" -> spectate(player);
+            default -> {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void debug(Player player, Dialog dialog) {
+        open().show(player, OpenDialogs.Kind.DEBUG, dialog);
+    }
+
+    static TagResolver[] none() {
+        return new TagResolver[0];
+    }
+}

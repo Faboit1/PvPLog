@@ -1,0 +1,55 @@
+# Late Game: the MCPVP UHC-style diamond kit. Protection II diamond, shield, Sharpness III diamond sword, diamond axe,
+# a Power III bow, a Piercing crossbow, 8 gapples, blocks, 4 water and 2 lava buckets, cobwebs, a diamond pickaxe
+# and an Efficiency shovel. No pearls, totems or potions: buckets, webs and blocks decide it. (MCPVP's sword is
+# unenchanted; against enchanted diamond that barely scratches, so it gets Sharpness III.)
+display-name: "Late Game"
+description: "UHC-style diamond: shield, bow, crossbow, buckets, cobwebs and blocks."
+icon: diamond_chestplate
+category: vanilla
+order: 8
+enabled: true
+ranked: true
+first-to: 3
+round-time-limit: 300
+arena-tags: [terrain]
+rules:
+  natural-regen: true
+  hunger: true
+  fall-damage: true
+  build: true
+  break: all
+  allowed-blocks: [oak_planks, cobblestone, cobweb, water, lava]
+  ender-pearls: false
+  totems: false
+  crystals: false
+  anchors: false
+  cobwebs: true
+  buckets: true
+  item-drops: false
+loadout:
+  armor:
+    helmet: { item: diamond_helmet, enchants: { protection: 2, unbreaking: 3 } }
+    chestplate: { item: diamond_chestplate, enchants: { protection: 2, unbreaking: 3 } }
+    leggings: { item: diamond_leggings, enchants: { protection: 2, unbreaking: 3 } }
+    boots: { item: diamond_boots, enchants: { protection: 2, unbreaking: 3 } }
+  items:
+    0: { item: diamond_sword, enchants: { sharpness: 3, unbreaking: 3 } }
+    1: diamond_axe
+    2: { item: golden_apple, amount: 8 }
+    3: { item: bow, enchants: { power: 3, unbreaking: 3 } }
+    4: { item: oak_planks, amount: 64 }
+    5: water_bucket
+    6: lava_bucket
+    7: { item: crossbow, enchants: { piercing: 1, unbreaking: 3 } }
+    8: { item: cobweb, amount: 8 }
+    9: { item: cooked_beef, amount: 16 }
+    10: diamond_pickaxe
+    11: { item: diamond_shovel, enchants: { efficiency: 3, unbreaking: 3 } }
+    12: water_bucket
+    13: water_bucket
+    14: water_bucket
+    17: { item: arrow, amount: 16 }
+    22: lava_bucket
+    26: { item: cobblestone, amount: 64 }
+  offhand: { item: shield, enchants: { unbreaking: 3 } }
+effects: []

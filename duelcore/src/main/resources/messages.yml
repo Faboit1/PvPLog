@@ -1,0 +1,802 @@
+# ─────────────────────────────────────────────────────────────
+#  DuelCore — messages (MiniMessage: https://docs.papermc.io/adventure/minimessage/format)
+#  No global prefix. Colours come from the theme below and are used as tags: <accent>…</accent>
+#  Set a message to "" to disable it.
+#  Sprites: <sprite:items:item/mace>  <sprite:gui:hud/heart/full>   Heads: <head:Notch>
+# ─────────────────────────────────────────────────────────────
+theme:
+  accent: "#f2c14e"
+  text: "#e6e6e6"
+  muted: "#8b9099"
+  good: "#7fd99a"
+  bad: "#ff7a7a"
+
+mode:
+  ranked: "ranked"
+  unranked: "unranked"
+  party: "2v2"
+
+hub:
+  join-message: ""
+  quit-message: ""
+  welcome: "<muted>Welcome, <text><player></text>. Right-click <text>Play</text> to find a match.</muted>"
+  # Title on joining (config.yml animations.join-title).
+  join-title: "<#f2c14e>Cheese</#f2c14e> <#f7e3a1>PvP</#f7e3a1>"
+  join-subtitle: "<muted>Ranked duels</muted>"
+  # The typed welcome title instead (config.yml animations.join-welcome). <player>; in welcome-subtitle also <tier>
+  # (icon + tier of the best kit), <overall> (overall tier) and <elo> (overall Elo).
+  welcome-back-title: "<text>Welcome back,</text> <accent><player></accent>"
+  welcome-first-title: "<text>Welcome to</text> <#f2c14e>Cheese</#f2c14e> <#f7e3a1>PvP</#f7e3a1>"
+  welcome-subtitle: "<tier> <muted>· <elo> Elo</muted>"
+  # First join, or nothing ranked yet.
+  welcome-subtitle-unranked: "<muted>Right-click</muted> <text>Play</text> <muted>to find a match</muted>"
+  # Short action bar pops next to the friend and party chat alerts (config.yml animations.alert-pops). "" = none.
+  alerts:
+    friend-online: "<good>●</good> <text><player></text> <muted>is online</muted>"
+    followed-you: "<accent>+</accent> <text><player></text> <muted>followed you</muted>"
+    now-friends: "<good>♥</good> <muted>You and</muted> <text><player></text> <muted>are friends</muted>"
+    party-invite: "<accent>✉</accent> <text><player></text> <muted>invited you to their party</muted>"
+    party-joined: "<good>+</good> <text><player></text> <muted>joined the party</muted>"
+    you-joined: "<good>✔</good> <muted>You joined</muted> <text><leader></text><muted>'s party</muted>"
+
+command:
+  no-permission: "<bad>You can't do that."
+  unknown-kit: "<bad>Unknown kit <text><kit></text>."
+
+queue:
+  joined: "<muted>Searching</muted> <kit_icon> <text><kit></text> <muted>· <mode></muted>"
+  switched: "<muted>Switched to</muted> <kit_icon> <text><kit></text> <muted>· <mode></muted>"
+  left: "<muted>Left the queue.</muted>"
+  not-queued: "<muted>You're not in a queue.</muted>"
+  # Action bar while queued. <kit> is "<count> kits" (kit-count) when searching several; <kit_icon> shows them all.
+  searching: "<kit_icon> <text><kit></text> <muted>· <wait> · ±<range></muted>"
+  kit-count: "<count> kits"
+  # The animated action bar (config.yml animations.searching-bar). Extra tags: <spinner>, and <searching> (the word
+  # below with pulsing dots); both slowly change colour (gui.yml searching).
+  searching-animated: "<spinner> <searching> <kit_icon> <text><kit></text> <muted>· <wait> · ±<range></muted>"
+  searching-word: "Searching"
+  # Keep Queuing re-joined the kits a player searched for before their match.
+  requeued: "<muted>Searching again:</muted> <kit_icon>"
+  result:
+    ok: ""
+    switched: ""
+    already: "<muted>You're already searching for <text><kit></text>.</muted>"
+    in_match: "<bad>Finish your match first."
+    spectating: "<bad>Stop spectating first."
+    kit_disabled: "<bad>That kit is disabled right now."
+    mode_disabled: "<bad>That queue is closed right now."
+    not_loaded: "<muted>Your profile is still loading, try again in a second.</muted>"
+    party: "<bad>Use /party queue while you're in a party."
+
+match:
+  found-title: "<accent>Match found</accent>"
+  found-subtitle: "<kit_icon> <text><opponent></text> <muted>· <tier> · <mode></muted>"
+  # Animated "match found" (config.yml animations.match-found-reveal): this sweeps in with a shimmer in its first
+  # colour, then found-subtitle is typed out.
+  found-reveal: "<accent>MATCH FOUND</accent>"
+  countdown: "<text><seconds></text>"
+  countdown-sub: "<muted>Round <round> · first to <first_to></muted>"
+  fight: "<accent>Fight</accent>"
+  death: "<muted><text><victim></text> died.</muted>"
+  death-by: "<muted><text><victim></text> was killed by <text><killer></text><hearts></muted>"
+  hearts: "<muted> · <bad><hp>❤</bad></muted>"
+  timeout: "<muted>Time's up. The healthier side takes the round.</muted>"
+  round-won: "<good>Round won</good> <muted>· <you>–<opp></muted>"
+  round-lost: "<bad>Round lost</bad> <muted>· <you>–<opp></muted>"
+  round-draw: "<muted>Round drawn · <you>–<opp></muted>"
+  round-spectator: "<muted>Round <round> → <text><winner></text> · <you>–<opp></muted>"
+  out-of-bounds: "<bad>Stay inside the arena.</bad>"
+  opponent-quit: "<muted><text><player></text> left the match and forfeits.</muted>"
+  opponent-forfeit: "<muted><text><player></text> forfeited.</muted>"
+  # A ranked opponent's connection dropped and one of their disconnect saves voided the match.
+  opponent-connection-lost: "<muted><text><player></text> lost connection. No result, no Elo change.</muted>"
+  # Told on the next join after a saved drop. <left> of <per_day> saves are left today.
+  connection-saved: "<muted>Your connection dropped in a ranked match: no Elo lost.</muted> <text><left></text><muted>/<per_day> disconnect saves left today.</muted>"
+  forfeit-confirm: "<muted>Type <text>/leave</text> again within 5 seconds to forfeit. It counts as a loss.</muted>"
+  forfeited: "<muted>You forfeited the match.</muted>"
+  command-blocked: "<muted>You can't use that command during a match.</muted>"
+  cancelled: "<muted>The match was cancelled. Nothing was rated.</muted>"
+  no-arena: "<bad>No arena was free for your match. Nothing was rated, you can queue again."
+  # In-match animations (config.yml animations; colours in gui.yml match-fx).
+  fx:
+    # Plain text: the colours are the gradient in gui.yml match-fx.fight-colors.
+    fight: "FIGHT!"
+    # Round banner title and score; <you>/<opp> pop when they change (spectators: team 1 / team 2).
+    round-won: "<good><b>ROUND WON</b></good>"
+    round-lost: "<bad><b>ROUND LOST</b></bad>"
+    round-draw: "<muted><b>ROUND DRAWN</b></muted>"
+    round-spectator: "<text><winner></text> <muted>takes round <round></muted>"
+    round-score: "<text><you></text> <muted>—</muted> <text><opp></text>"
+    # Countdown subtitle when <team> is one round from winning, or when every side is.
+    match-point: "<bad>Match point</bad> <muted>· <text><team></text></muted>"
+    final-round: "<bad>Final round</bad> <muted>· round <round></muted>"
+    combo: "<accent><count></accent> <muted>hit combo</muted>"
+    kill: "<good>+1</good> <text>kill</text><combo>"
+    kill-combo: " <muted>·</muted> <accent><count></accent> <muted>hit combo</muted>"
+    # Low health; <hp> is in hearts. The colour pulses (gui.yml match-fx.heartbeat-colors).
+    heartbeat: "❤ <hp>"
+    players-left: "<text><count></text> <muted>players left</muted>"
+    # Spectators at the end of a match. <first>/<second>: the two teams' scores.
+    spectator-winner: "<accent><winner></accent>"
+    spectator-winner-sub: "<muted>wins · <first>–<second></muted>"
+    spectator-winner-sub-ffa: "<muted>wins the Party FFA</muted>"
+    spectator-draw: "<muted>Draw</muted>"
+    spectator-draw-sub: "<muted><first>–<second></muted>"
+
+results:
+  title-victory: "<good>Victory</good>"
+  title-defeat: "<bad>Defeat</bad>"
+  title-draw: "<muted>Draw</muted>"
+  word-victory: "<good>Victory</good>"
+  word-defeat: "<bad>Defeat</bad>"
+  word-draw: "<muted>Draw</muted>"
+  subtitle: "<text><you>–<opp></text> <muted>vs <opponent></muted>"
+  chat: "<kit_icon> <outcome> <text><you_score>–<opp_score></text> <muted>vs <opponent></muted>"
+  chat-rating: "<muted>Rating <text><after></text> (<delta>) · <tier></muted>"
+  header: "<kit_icon> <text><kit></text> <muted>· <mode></muted>"
+  score: "<text><you></text> <accent><you_score> – <opp_score></accent> <text><opponent></text>"
+  forfeit: "<muted>Ended by forfeit.</muted>"
+  connection-lost: "<muted>A connection dropped: no result, no Elo change.</muted>"
+  stat-hits: "<muted>Hits</muted>  <text><you></text> <muted>· <opp></muted>"
+  stat-damage: "<muted>Damage</muted>  <text><you>❤</text> <muted>· <opp>❤</muted>"
+  stat-combo: "<muted>Best combo</muted>  <text><you></text> <muted>· <opp></muted>"
+  stat-rounds: "<muted>Rounds</muted>  <rounds>"
+  round-win: "<good>W</good>"
+  round-loss: "<bad>L</bad>"
+  round-draw: "<muted>D</muted>"
+  rating-up: "<muted>Rating</muted>  <text><before> → <after></text> <good><delta></good>"
+  rating-down: "<muted>Rating</muted>  <text><before> → <after></text> <bad><delta></bad>"
+  tier: "<muted>Tier</muted>  <before> <muted>→</muted> <after>"
+  spectator: "<muted>Match over · <text><winner></text> wins <red_score>–<blue_score> · <kit></muted>"
+  nobody: "nobody"
+
+duel:
+  received: "<kit_icon> <text><player></text> <muted>challenged you to</muted> <text><kit></text>  <accept> <deny>"
+  accept-button: "<good>Accept</good>"
+  deny-button: "<muted>Decline</muted>"
+  sent: "<muted>Challenge sent to <text><player></text> · <kit_icon> <kit>. It expires in 60s.</muted>"
+  denied: "<muted><text><player></text> declined your challenge.</muted>"
+  expired: "<muted>Your challenge expired.</muted>"
+  result:
+    sent: ""
+    accepted: ""
+    self: "<bad>You can't duel yourself."
+    offline: "<bad>That player isn't online."
+    disabled_by_target: "<muted><text><player></text> isn't accepting challenges.</muted>"
+    busy: "<bad>Finish your match first."
+    target_busy: "<muted><text><player></text> is in a match.</muted>"
+    already_sent: "<muted>You already challenged <text><player></text>.</muted>"
+    no_request: "<muted>No open challenge.</muted>"
+
+spectate:
+  started: "<muted>Spectating <text><red></text> vs <text><blue></text> · <kit>. Use the dye or /leave to stop.</muted>"
+  # Party FFA (one team per player): <players> fighters, <alive> still standing this round.
+  started-ffa: "<muted>Spectating a <text>Party FFA</text> · <players> players · <alive> alive · <kit>. Use the dye or /leave to stop.</muted>"
+  ended: "<muted>That match already ended.</muted>"
+  not-spectating: "<muted>You're not spectating.</muted>"
+  result:
+    ok: ""
+    not_in_match: "<muted><text><player></text> isn't in a match.</muted>"
+    self: "<bad>You can't spectate yourself."
+    busy: "<bad>Finish your match first."
+    disallowed: "<muted><text><player></text> doesn't allow spectators.</muted>"
+    no_arena: "<muted>That match is still starting, try again in a second.</muted>"
+
+settings:
+  saved: "<muted>Settings saved · region <text><region></text> · max ping <text><max_ping></text></muted>"
+
+chat:
+  blocked: "<bad>Your message was blocked: it contains a slur or harassment.</bad>"
+  blocked-staff: "<muted>[filter]</muted> <text><player></text> <muted>tried to say</muted> <text><message></text> <muted>(<term>)</muted>"
+
+friends:
+  # Chat. <player> is the other player's name.
+  loading: "<muted>Your friends list is still loading, try again in a second.</muted>"
+  error: "<bad>That didn't work, please try again."
+  not-found: "<muted>No player called <text><player></text> has played here.</muted>"
+  self: "<bad>You can't follow yourself."
+  already-following: "<muted>You already follow <text><player></text>.</muted>"
+  not-following: "<muted>You don't follow <text><player></text>.</muted>"
+  limit: "<bad>You can follow at most <max> players. Unfollow someone first."
+  followed: "<muted>You now follow <text><player></text>. If they follow you back, you're friends.</muted>"
+  unfollowed: "<muted>You unfollowed <text><player></text>.</muted>"
+  now-friends: "<good>You and <text><player></text> are now friends.</good>"
+  # Sent to the followed player (Settings → Friend alerts). <follow_back> is the button below.
+  followed-you: "<text><player></text> <muted>followed you.</muted> <follow_back>"
+  follow-back-button: "<good>[Follow back]</good>"
+  follow-back-hover: "<muted>Follow <text><player></text> back to become friends</muted>"
+  online: "<good>●</good> <muted>Your friend <text><player></text> is online.</muted>"
+  offline: "<muted>● Your friend <text><player></text> went offline.</muted>"
+  # On join, when friends are online. <names> = up to 8 names.
+  online-summary: "<muted>Friends online (<text><count></text>): <text><names></text></muted>"
+  not-free: "<muted><text><player></text> can't duel right now.</muted>"
+  list-header: "<accent>Friends</accent> <muted>· <text><online></text> online · <total> friends · <following> following · <followers> followers</muted>"
+  list-empty: "<muted>No friends yet. Follow someone with <text>/follow <name></text>; when they follow back you're friends.</muted>"
+  list-online: "<good>●</good> <text><player></text><status>"
+  list-offline: "<muted>● <player></muted>"
+  list-in-match: " <muted>· in a match</muted>"
+  dialog:
+    title: "Friends"
+    # <filter> is one of the filter names below; <shown> = people matching the filter.
+    body: "<muted>Page <text><page>/<pages></text> | <text><filter></text> | <text><shown></text> shown</muted>"
+    empty-all: "<muted>Nobody yet. Use Add Friends to follow players; when they follow back you're friends.</muted>"
+    empty-friends: "<muted>No friends yet. Friends are players who follow you back.</muted>"
+    empty-following: "<muted>You don't follow anyone yet.</muted>"
+    empty-followers: "<muted>Nobody follows you yet.</muted>"
+    prev: "<muted>\\<</muted>"
+    prev-tooltip: "<muted>Previous page</muted>"
+    next: "<muted>></muted>"
+    next-tooltip: "<muted>Next page</muted>"
+    add: "<good>Add Friends</good>"
+    add-tooltip: "<muted>Search online players</muted>"
+    refresh: "<#66f7ff>Refresh</#66f7ff>"
+    refresh-tooltip: "<muted>Reload friendships</muted>"
+    filter: "<#66f7ff>Filter: <filter></#66f7ff>"
+    filter-tooltip: "<muted>All | Friends | Following | Followers</muted>"
+    filter-all: "All"
+    filter-friends: "Friends"
+    filter-following: "Following"
+    filter-followers: "Followers"
+    # One button per person. <head> <player>; <suffix> = add-back for followers you don't follow back.
+    person-online: "<good>●</good> <head> <text><player></text><suffix>"
+    person-in-match: "<accent>⚔</accent> <head> <text><player></text><suffix>"
+    person-offline: "<muted>●</muted> <head> <muted><player></muted><suffix>"
+    add-back: " <muted>·</muted> <good>Add Back</good>"
+    # Tooltips. <status> = one of the status lines below.
+    tooltip-mutual: "<muted>Mutual friends | Open profile</muted><newline><status>"
+    tooltip-following: "<muted>Following | Open profile</muted><newline><status>"
+    tooltip-follower: "<good>Follows you | Add Back</good><newline><status>"
+    status-online: "<good>Online</good>"
+    status-in-match: "<accent>In a match</accent> <muted>· <kit></muted>"
+    status-offline: "<muted>Offline</muted>"
+  person:
+    title: "<player>"
+    header: "<head> <text><player></text>  <status>"
+    mutual: "<muted>Friends · you follow each other</muted>"
+    following: "<muted>You follow <player>. They don't follow you back yet.</muted>"
+    follower: "<muted><player> follows you. Follow back to become friends.</muted>"
+    since: "<muted>Following for <text><ago></text></muted>"
+    profile: "<text>Open profile</text>"
+    follow-back: "<good>Follow back</good>"
+    unfollow: "<bad>Unfollow</bad>"
+    duel: "<text>Duel</text>"
+    spectate: "<text>Spectate</text>"
+    back: "<muted>Back</muted>"
+  add:
+    title: "Add Friends"
+    body: "<muted>Online players you don't follow yet. Showing <text><shown></text> of <text><total></text>.</muted>"
+    no-results: "<muted>No online player matches <text><query></text>. Use Follow to add an offline player by exact name.</muted>"
+    none: "<muted>Nobody else is online that you don't follow already.</muted>"
+    search-label: "Search players"
+    search: "<text>Search</text>"
+    back: "<muted>Back</muted>"
+    player: "<head> <text><player></text>"
+    player-tooltip: "<muted>Follow <text><player></text></muted>"
+    by-name: "<good>Follow <player></good>"
+    by-name-tooltip: "<muted>Follow <text><player></text> by exact name (works offline)</muted>"
+  # Profile dialog, when viewing someone else.
+  profile:
+    follow: "<good>Follow</good>"
+    follow-back: "<good>Follow back</good>"
+    unfollow: "<muted>Unfollow</muted>"
+
+profile:
+  not-found: "<muted>No profile for <text><player></text>.</muted>"
+  no-legacy: "<muted>There is no previous season yet.</muted>"
+
+# Parties (/party, /pc, the party hub item). Layout knobs are in gui.yml (party-menu), limits in config.yml (party).
+party:
+  # Party chat: "@message", /pc <message>, or every message while Party Chat is on. <name> <message>
+  chat-format: "<accent>[Party]</accent> <text><name></text><muted>:</muted> <message>"
+  chat-on: "<muted>Party chat <good>on</good>: everything you type goes to your party. <text>/party chat</text> turns it off.</muted>"
+  chat-off: "<muted>Party chat <bad>off</bad>. Start a message with <text>@</text> or use <text>/pc</text> to talk to your party.</muted>"
+  created: "<muted>Party created. Invite players from the party menu or with <text>/party invite</text>.</muted>"
+  # To the invited player. <head> <player> (who invited) <size> <max> <seconds> <accept> <deny>
+  invite-received: "<head> <text><player></text> <muted>invited you to their party (<size>/<max>).</muted>  <accept> <deny>"
+  accept-button: "<good>[Accept]</good>"
+  deny-button: "<bad>[Deny]</bad>"
+  invite-sent: "<muted>Invited <text><player></text>. The invite expires in <seconds>s.</muted>"
+  invite-expired: "<muted>Your party invite to <text><player></text> expired.</muted>"
+  invite-denied: "<muted><text><player></text> declined your party invite.</muted>"
+  denied: "<muted>Declined.</muted>"
+  you-joined: "<muted>You joined <text><leader></text>'s party (<size>/<max>). Talk to it with <text>@message</text>.</muted>"
+  you-left: "<muted>You left the party.</muted>"
+  you-kicked: "<muted>You were removed from <text><leader></text>'s party.</muted>"
+  you-disbanded: "<muted>You disbanded the party.</muted>"
+  welcome-back: "<muted>You're in <text><leader></text>'s party · <online>/<size> online · <text>/party</text></muted>"
+  # Shown on the next join to players who were removed while offline. <leader>
+  notice-kicked: "<muted>While you were away, <text><leader></text> removed you from their party.</muted>"
+  notice-disbanded: "<muted>While you were away, <text><leader></text> disbanded your party.</muted>"
+  # Sent to the online party members. <player> (and <inviter> for invited)
+  notify:
+    joined: "<muted><text><player></text> joined the party.</muted>"
+    left: "<muted><text><player></text> left the party.</muted>"
+    kicked: "<muted><text><player></text> was removed from the party.</muted>"
+    online: "<muted><text><player></text> is online.</muted>"
+    offline: "<muted><text><player></text> went offline.</muted>"
+    leader: "<muted><text><player></text> is now the party leader.</muted>"
+    disbanded: "<muted><text><player></text> disbanded the party.</muted>"
+    invited: "<muted><text><inviter></text> invited <text><player></text> to the party.</muted>"
+    open: "<muted>The party is now <good>open</good>: anyone can join it from the party menu.</muted>"
+    private: "<muted>The party is now <accent>private</accent>: invite or password only.</muted>"
+    password-set: "<muted>The party now asks a password from players who join without an invite.</muted>"
+    password-cleared: "<muted>The party password was removed.</muted>"
+  # Party vs Party. <leader> <count> (online members) <kit> <kit_icon> <seconds> <accept> <deny>
+  challenge-received: "<kit_icon> <text><leader></text><muted>'s party (<count> online) challenges yours to</muted> <text><kit></text><muted>.</muted>  <accept> <deny>"
+  challenge-sent: "<muted>Challenged <text><leader></text>'s party to</muted> <kit_icon> <text><kit></text><muted>. They have <seconds>s to accept.</muted>"
+  challenge-expired: "<muted>Your party challenge to <text><leader></text> expired.</muted>"
+  challenge-denied: "<muted><text><leader></text> declined your party challenge.</muted>"
+  # To the whole party when a party match is over. <kit> <kit_icon> <winner> <loser> <winner_score> <loser_score>
+  result-ffa: "<kit_icon> <muted>Party FFA over ·</muted> <text><winner></text> <muted>is the last one standing.</muted>"
+  result-split: "<kit_icon> <muted>Party duel over ·</muted> <text><winner></text> <muted>won <winner_score>–<loser_score>.</muted>"
+  result-pvp: "<kit_icon> <muted>Party vs party over ·</muted> <text><winner></text><muted>'s party beat</muted> <text><loser></text><muted>'s, <winner_score>–<loser_score>.</muted>"
+  result-draw: "<kit_icon> <muted>Party match over · draw.</muted>"
+  result-cancelled: "<muted>The party match was cancelled.</muted>"
+  # /party list. <size> <max> <online> <privacy> <lock> · <star> <player> <status>
+  list-header: "<muted>Party · <text><size></text>/<max> · <online> online ·</muted> <privacy><lock>"
+  list-line: "<muted>  </muted><star><text><player></text> <muted>·</muted> <status>"
+  status:
+    online: "<good>Online</good>"
+    offline: "<muted>Offline</muted>"
+    in-match: "<accent>In match</accent>"
+  # Free-for-all (Party FFA) texts in the match and its results.
+  match:
+    found-ffa: "<kit_icon> <text>Free for all</text> <muted>· <players> players · <kit></muted>"
+    ffa-won: "<good>Last one standing</good>"
+    ffa-lost: "<muted><text><winner></text> is the last one standing</muted>"
+    # Chat line at the start of a Party Duel / Party vs Party match. <team> (your team mates) <opponents>
+    teams: "<muted>Your team:</muted> <good><team></good> <muted>· against</muted> <bad><opponents></bad>"
+    teams-solo: "<muted>You fight alone against</muted> <bad><opponents></bad>"
+  results:
+    mode-ffa: "party FFA"
+    subtitle-ffa: "<muted><text><winner></text> won · <kills> kills</muted>"
+    winner-ffa: "<muted>Winner</muted>  <text><winner></text> <muted>· <players> players</muted>"
+    stat-kills: "<muted>Kills</muted>  <text><kills></text>"
+    stat-own: "<muted>Hits</muted> <text><hits></text>  <muted>Damage</muted> <text><damage>❤</text>  <muted>Best combo</muted> <text><combo></text>"
+    chat-ffa: "<kit_icon> <outcome> <muted>FFA · <text><winner></text> won · you: <kills> kills</muted>"
+    spectator-ffa: "<muted>FFA over · <text><winner></text> is the last one standing · <kit></muted>"
+  # Why something didn't work. <player> where a player is involved.
+  result:
+    ok: ""
+    not_loaded: "<muted>Parties are still loading, try again in a second.</muted>"
+    no_profile: "<muted>Your profile is still loading, try again in a second.</muted>"
+    in_party: "<muted>You're already in a party. Leave it first with <text>/party leave</text>.</muted>"
+    not_in_party: "<muted>You're not in a party.</muted>"
+    not_leader: "<muted>Only the party leader can do that.</muted>"
+    full: "<muted>That party is full.</muted>"
+    offline: "<muted><text><player></text> isn't online.</muted>"
+    self: "<bad>You can't do that to yourself."
+    target_in_party: "<muted><text><player></text> is already in a party.</muted>"
+    already_member: "<muted><text><player></text> is already in your party.</muted>"
+    invites_disabled: "<muted><text><player></text> isn't accepting party invites.</muted>"
+    already_invited: "<muted>You already invited <text><player></text>.</muted>"
+    no_invite: "<muted>No open party invite.</muted>"
+    no_party: "<muted>Couldn't find that party. Check the leader's name.</muted>"
+    private: "<muted>That party is private. Ask the leader for an invite.</muted>"
+    needs_password: "<muted>That party needs a password.</muted>"
+    wrong_password: "<bad>Wrong password."
+    bad_password: "<bad>Passwords are 1 to 32 characters, without spaces."
+    not_member: "<muted><text><player></text> isn't in your party.</muted>"
+    leader_must_be_online: "<muted><text><player></text> has to be online to lead the party.</muted>"
+    too_few: "<muted>You need at least 2 online party members.</muted>"
+    busy: "<bad>Finish your match first."
+    member_busy: "<muted><text><player></text> is in a match.</muted>"
+    own_party: "<muted>Pick another party.</muted>"
+    already_challenged: "<muted>You already challenged that party.</muted>"
+    no_challenge: "<muted>No open party challenge.</muted>"
+    leader_offline: "<muted>That party's leader isn't online.</muted>"
+    no_opponents: "<muted>No other party has its leader online right now.</muted>"
+    slow_down: "<muted>Wait a moment before trying again.</muted>"
+    kit_disabled: "<bad>That kit is disabled right now."
+    failed: "<bad>The match could not be started, try again."
+  dialog:
+    title: "Party"
+    close: "<muted>Close</muted>"
+    back: "<muted>Back</muted>"
+    # A button that can't be used right now; the reason (why-*) is its tooltip.
+    disabled: "<st><label></st>"
+    why-leader: "<muted>Only the party leader can do this</muted>"
+    why-two: "<muted>Requires at least 2 online party members</muted>"
+    why-match: "<muted>Finish your match first</muted>"
+    why-parties: "<muted>No other party has its leader online</muted>"
+    why-full: "<muted>The party is full</muted>"
+    why-offline: "<muted>Only online members can lead the party</muted>"
+    # Not in a party
+    none: "<text>You are not currently in a party.</text>"
+    none-hint: "<muted>Create one now, join an open party, or respond to an invitation.</muted>"
+    password-input: "Optional password"
+    create: "<good>Create Party</good>"
+    create-tooltip: "<muted>You lead it. A password (optional) is asked from players who join without an invite.</muted>"
+    join: "<accent>Join Party</accent>"
+    join-tooltip: "<muted>Join by the leader's name</muted>"
+    invites-title: "<accent>Invitations</accent>"
+    invite-line: "<head> <text><leader></text><muted>'s party · <size>/<max></muted>  <accept> <deny>"
+    open-title: "<accent>Open parties</accent>"
+    open-line: "<head> <text><leader></text><muted>'s party · <size>/<max> · <online> online</muted><lock>  <join>"
+    accept-link: "<good>[Accept]</good>"
+    deny-link: "<bad>[Deny]</bad>"
+    join-link: "<accent>[Join]</accent>"
+    # Join by name
+    join-title: "Join a party"
+    join-body: "<muted>Enter the party leader's name. Add a password only when the party requires one.</muted>"
+    leader-input: "Party leader"
+    password-optional: "Password (optional)"
+    join-confirm: "<good>Join</good>"
+    leader-missing: "<muted>Enter the party leader's name.</muted>"
+    # Party menu. <size> <max> <online> <privacy> <lock>
+    header: "<text>Members</text> <accent><size></accent><muted>/<max> · <online> online ·</muted> <privacy><lock>"
+    privacy-open: "<good>Open</good>"
+    privacy-private: "<accent>Private</accent>"
+    lock: " <sprite:items:item/trial_key>"
+    # <star> <head> <player> <you> <status>
+    member: "<star><head> <text><player></text><you> <muted>·</muted> <status>"
+    leader-star: "<accent>★</accent> "
+    member-you: " <muted>(You)</muted>"
+    member-hover: "<muted>Click to manage <text><player></text></muted>"
+    page: "<muted>Page <page>/<pages></muted>"
+    challenges-title: "<accent>Challenges</accent>"
+    challenge-line: "<kit_icon> <text><leader></text><muted>'s party ·</muted> <text><kit></text>  <accept> <deny>"
+    prev: "<text>\\<</text>"
+    prev-none: "<dark_gray>\\<</dark_gray>"
+    prev-tooltip: "<muted>Previous page</muted>"
+    next: "<text>></text>"
+    next-none: "<dark_gray>></dark_gray>"
+    next-tooltip: "<muted>Next page</muted>"
+    invite: "<good>Invite Player</good>"
+    invite-tooltip: "<muted>Invite someone by name or from the online players</muted>"
+    chat-on: "<accent>Party Chat: On</accent>"
+    chat-off: "<muted>Party Chat: Off</muted>"
+    chat-tooltip: "<text>On: everything you type goes to the party.</text><newline><muted>Off: start a message with @ or use /pc.</muted>"
+    mode-ffa: "<sprite:items:item/golden_sword> <text>Party FFA</text>"
+    mode-ffa-tooltip: "<muted>Everyone for themselves, one round, last one standing wins</muted>"
+    mode-split: "<sprite:items:item/iron_sword> <text>Party Duel</text>"
+    mode-split-tooltip: "<muted>The online members in two random teams</muted>"
+    mode-pvp: "<sprite:items:item/diamond_sword> <text>Party vs Party</text>"
+    mode-pvp-tooltip: "<muted>Challenge another party</muted>"
+    privacy: "<sprite:items:item/trial_key> <text>Privacy</text>"
+    privacy-tooltip: "<muted>Open or private, and the join password</muted>"
+    disband: "<bad>Disband</bad>"
+    disband-tooltip: "<muted>Remove everyone and delete the party</muted>"
+    leave: "<bad>Leave</bad>"
+    leave-tooltip: "<muted>Leave the party</muted>"
+    # A member (leader only). <head> <player> <status> <ago>
+    member-title: "<player>"
+    member-body: "<head> <text><player></text> <muted>·</muted> <status> <muted>· joined <ago> ago</muted>"
+    promote: "<accent>Make leader</accent>"
+    promote-tooltip: "<muted>You stay in the party as a member</muted>"
+    kick: "<bad>Kick</bad>"
+    kick-tooltip: "<muted>Remove them from the party</muted>"
+    # Invite
+    invite-title: "Invite a player"
+    invite-body: "<muted>Type a name, or pick an online player who isn't in a party.</muted>"
+    invite-none: "<muted>Type a name. Nobody else online is free to invite right now.</muted>"
+    invite-input: "Player name"
+    invite-send: "<good>Send invite</good>"
+    invite-send-tooltip: "<muted>Invite the name typed above</muted>"
+    invite-refresh: "<muted>Refresh</muted>"
+    invite-player: "<head> <text><player></text>"
+    invited: "<good>Invited <player>.</good>"
+    name-missing: "<muted>Type a name first.</muted>"
+    # Privacy. <state>
+    privacy-title: "Party privacy"
+    privacy-body: "<muted>Open parties are listed in the party menu for anyone to join. A password is asked from everyone who joins without an invite, also in private parties.</muted><newline><muted>Password:</muted> <state>"
+    password-state-set: "<accent>set</accent>"
+    password-state-none: "<muted>none</muted>"
+    open-input: "Open party (listed for everyone)"
+    password-new: "New password (empty = keep)"
+    password-remove: "Remove the password"
+    save: "<good>Save</good>"
+    # Kit picker of a party match. <mode> · <online> <leader> <seconds>
+    kit-title: "<mode> <muted>· pick a kit</muted>"
+    kit-button: "<kit_icon> <text><kit></text>"
+    kit-body-ffa: "<muted>All <online> online members fight for themselves in one round. Last one standing wins. Unranked.</muted>"
+    kit-body-split: "<muted>The <online> online members are split into two random teams. Unranked.</muted>"
+    kit-body-pvp: "<muted>Your online members against <text><leader></text>'s party. They have <seconds>s to accept. Unranked.</muted>"
+    # Party vs Party. <head> <leader> <online> <size>
+    pvp-title: "Party vs Party"
+    pvp-body: "<muted>Pick a party to challenge. Only parties whose leader is online are listed.</muted>"
+    pvp-none: "<muted>No other party has its leader online right now.</muted>"
+    pvp-party: "<head> <text><leader></text> <muted>· <online>/<size> online</muted>"
+    challenge-title: "Party challenge"
+    challenge-body: "<kit_icon> <text><leader></text><muted>'s party (<count> online) challenges yours to</muted> <text><kit></text><muted>. It expires in <seconds>s. Unranked.</muted>"
+    challenge-sent: "<muted>Challenge sent. The match starts when their leader accepts.</muted>"
+    accept: "<good>Accept</good>"
+    deny: "<bad>Deny</bad>"
+    disband-title: "Disband the party?"
+    disband-body: "<muted>Everyone is removed from the party. This can't be undone.</muted>"
+    disband-confirm: "<bad>Disband</bad>"
+
+tier:
+  unknown: "<bad>Unknown tier. Use HT1, MT1, LT1 … LT5."
+  set: "<muted>Pinned <text><player></text> to <tier> in <kit>.</muted>"
+  cleared: "<muted>Cleared the tier pin of <text><player></text> in <kit>.</muted>"
+  info-header: "<text><player></text> <muted>· <tier> · <elo> Elo</muted>"
+  info-line: "<muted>  <kit>: <tier> · <rating> · <games> games <override></muted>"
+
+season:
+  info: "<muted>Season <text><id></text> · <text><name></text></muted>"
+  confirm: "<muted>This archives every rating as legacy and starts season <text><name></text>. Run the same command with <text>confirm</text> at the end.</muted>"
+  started: "<muted>Season <text><id></text> <text><name></text> started. Old ratings are kept as legacy.</muted>"
+  broadcast: "<accent>New season</accent> <text><name></text> <muted>· ratings reset, good luck.</muted>"
+  recalculated: "<muted>Rebuilt standings for <text><players></text> players.</muted>"
+  failed: "<bad>Failed: <reason>"
+
+admin:
+  help: |-
+    <accent>DuelCore</accent> <muted><version></muted>
+    <muted>/duelcore reload · sethub · debug [gc] · forceend <player></muted>
+    <muted>/duelcore arena world|create|pos1|pos2|setspawn1|setspawn2|tags|buildheight|displayname|save|cancel|edit|import|list|delete</muted>
+    <muted>/duelcore kit list|give|save · season info|reset|recalc</muted>
+    <muted>/duelcore player <name> setrating|setgames|setregion|setcountry</muted>
+  reloaded: "<muted>Reloaded · <text><kits></text> kits · <text><arenas></text> arenas · <text><problems></text> problems</muted>"
+  hub-set: "<muted>Hub spawn set here.</muted>"
+  not-in-match: "<muted>That player isn't in a match.</muted>"
+  match-ended: "<muted>Match #<id> ended without a result.</muted>"
+  rating-set: "<muted>Set <text><player></text>'s <kit> rating to <text><rating></text>.</muted>"
+  games-set: "<muted>Set <text><player></text>'s games to <text><games></text>.</muted>"
+  region-set: "<muted><text><player></text> region: <text><region></text></muted>"
+  country-set: "<muted><text><player></text> country: <text><country></text></muted>"
+
+arena:
+  editor-world: "<muted>Editor world. Build freely, then /duelcore arena create <name>.</muted>"
+  bad-name: "<bad>Arena names use a-z, 0-9 and _ only."
+  created: "<muted>Editing <text><name></text>. Set pos1, pos2, setspawn1, setspawn2, then save.</muted>"
+  no-session: "<muted>Start with /duelcore arena create <name> or edit <name>.</muted>"
+  point-set: "<muted><point> set to <text><x> <y> <z></text></muted>"
+  tags-set: "<muted>Tags: <text><tags></text></muted>"
+  buildheight-set: "<muted>Build height: <text><blocks></text> blocks above the spawns.</muted>"
+  displayname-set: "<muted>Display name: <text><name></text></muted>"
+  saved: "<good>Saved arena <text><name></text>. It is used for new matches right away.</good>"
+  save-failed: "<bad>Could not save: <reason>"
+  cancelled: "<muted>Arena editing cancelled.</muted>"
+  editing: "<muted>Pasted <text><name></text> next to you. Change it, then /duelcore arena save.</muted>"
+  imported: "<muted>Imported <text><name></text>. Set setspawn1 and setspawn2, then save.</muted>"
+  unknown: "<bad>Unknown arena."
+  deleted: "<muted>Deleted arena <text><name></text>.</muted>"
+  list-line: "<muted><text><name></text> <display> · <size> · tags <text><tags></text> · <state></muted>"
+
+kit:
+  list-line: "<kit_icon> <text><kit></text> <muted><id> · first to <first_to> · <state></muted>"
+  given: "<muted>Gave you <kit>. Edit it, then /duelcore kit save <id>.</muted>"
+  saved: "<good>Saved kit <text><id></text> from your inventory.</good>"
+  save-failed: "<bad>Could not save the kit: <reason>"
+
+# The kit editor (Kit Editor hotbar item, /kit edit [kit], /kiteditor [kit]). Look and sounds: gui.yml kit-editor.
+kit-editor:
+  # Chest title (it stays the same while editing; the Save button glows while there are unsaved changes). <kit>
+  title: "Editing · <kit>"
+  item:
+    save-name: "<good>Save layout</good>"
+    save-lore:
+      - "<muted>Every match of this kit gives"
+      - "<muted>you your items like this."
+    reset-name: "<accent>Reset to default</accent>"
+    reset-lore:
+      - "<muted>Put everything back where the"
+      - "<muted>kit has it. Save to keep it."
+    clear-name: "<bad>Clear layout</bad>"
+    clear-lore:
+      - "<muted>Delete your saved layout and"
+      - "<muted>use the kit's default again."
+    clear-lore-none:
+      - "<muted>You're using the kit's default"
+      - "<muted>layout (nothing saved)."
+    cancel-name: "<bad>Cancel</bad>"
+    cancel-lore:
+      - "<muted>Close without saving."
+    offhand-name: "<text>← Offhand</text>"
+    offhand-lore:
+      - "<muted>The slot on the left is your offhand."
+    info-name: "<accent>Editing <kit></accent>"
+    info-lore:
+      - "<text>Click an item to pick it up,</text>"
+      - "<text>click a slot to put it down or swap.</text>"
+      - ""
+      - "<muted>Rows 1-3: inventory · Row 4: hotbar</muted>"
+      - "<muted>Armour always stays on.</muted>"
+      - "<muted>Save when you're done.</muted>"
+    # Appended to the (locked) armour pieces.
+    locked:
+      - "<muted>Locked: armour always stays on</muted>"
+    no-armor: "<muted>No <piece></muted>"
+    pieces:
+      helmet: "helmet"
+      chestplate: "chestplate"
+      leggings: "leggings"
+      boots: "boots"
+  # The kit picker dialog. <icon> <name> = the queue menu's tab icon and name of a category (a section header, so
+  # it looks different from the kits under it).
+  picker:
+    title: "Kit Editor"
+    header: "<accent>Pick a kit to arrange its items.</accent>"
+    category: "<muted>—</muted> <icon> <b><text><name></text></b> <muted>—</muted>"
+    kit: "<kit_icon> <text><kit></text>"
+    kit-custom: "<kit_icon> <good><kit> ✎</good>"
+    separator: "    "
+    kit-hover: "<text><description></text><newline><muted>Default layout.</muted><newline><newline><muted>Click to edit.</muted>"
+    kit-hover-custom: "<text><description></text><newline><good>✎ Your own layout</good><newline><newline><muted>Click to edit.</muted>"
+    footer: "<muted><good>✎</good> = your own layout. Every match of that kit uses it.</muted>"
+    no-kits: "<muted>No kits to edit right now.</muted>"
+  saved: "<good>✔ Saved your</good> <kit_icon> <text><kit></text> <good>layout.</good> <muted>Every match of this kit uses it.</muted>"
+  saved-default: "<good>✔</good> <muted>Using the default layout for</muted> <kit_icon> <text><kit></text><muted>.</muted>"
+  auto-saved: "<good>✔ Match found:</good> <muted>your</muted> <kit_icon> <text><kit></text> <muted>layout was saved.</muted>"
+  auto-save-failed: "<bad>Match found:</bad> <muted>your</muted> <kit_icon> <text><kit></text> <muted>layout could not be saved; the last one is used.</muted>"
+  discarded: "<muted>Closed the</muted> <text><kit></text> <muted>editor without saving.</muted>"
+  reset-done: "<accent>Default layout</accent> <muted>· Save to keep it</muted>"
+  cleared: "<muted>Cleared your</muted> <text><kit></text> <muted>layout: the default is used again.</muted>"
+  already-default: "<muted>You're already using the default</muted> <text><kit></text> <muted>layout.</muted>"
+  invalid: "<bad>Every item of the kit must be placed before saving.</bad>"
+  save-failed: "<bad>Could not save the layout right now. Try again in a moment.</bad>"
+  kit-changed: "<bad>The</bad> <text><kit></text> <bad>kit was changed while you edited it; open the editor again.</bad>"
+  # Told once when an admin changed a kit's items and a saved layout no longer fits.
+  layout-reset: "<accent>⚠</accent> <muted>The</muted> <kit_icon> <text><kit></text> <muted>kit changed, so your layout was reset to the default. Edit it again with</muted> <text>/kit edit</text><muted>.</muted>"
+  in-match: "<bad>You can't edit kits during a match.</bad>"
+  spectating: "<bad>Stop spectating to edit your kits.</bad>"
+  not-in-hub: "<bad>Kits can only be edited in the hub.</bad>"
+  not-ready: "<muted>Your kit layouts are still loading. Try again in a moment.</muted>"
+  # A match started before the player's layouts were loaded (just joined, slow database): the whole match uses the
+  # kit's default layout.
+  layout-not-loaded: "<accent>⚠</accent> <muted>Your kit layouts haven't loaded yet, so this</muted> <kit_icon> <text><kit></text> <muted>match uses the default layout.</muted>"
+
+dialog:
+  close: "<muted>Close</muted>"
+  # "How long ago" under a minute in menus that update themselves (profile history, a friend's or party member's
+  # page; otherwise "5m", "3h", "2d"), and the queue wait on long tabs. Plain text. Not seconds: a menu that changes
+  # every second is sent again every second, which scrolls it back to the top.
+  under-a-minute: "<1m"
+  # The queue menu (Play item, /queue). Layout knobs are in gui.yml (queue-menu).
+  queue:
+    menu-title: "Queue"
+    header: "<accent>Click a kit to join or leave its queue.</accent>"
+    # <selected> = kits you're searching in
+    header-hover: "<text>You can queue for several kits at once!</text><newline><muted><selected> selected.</muted>"
+    header-hover-single: "<text>Joining a kit leaves your other queue.</text><newline><muted><selected> selected.</muted>"
+    tab: "<icon> <muted><name></muted>"
+    tab-selected: "<icon> <accent><u><name></u></accent>"
+    tab-separator: "  <dark_gray>-</dark_gray>  "
+    tabs:
+      favorites: "Favorites"
+      weapons: "Weapons"
+      vanilla: "Vanilla"
+      skills: "Skills"
+    tab-hover:
+      favorites: "<text>Your favorite kits.</text><newline><muted>Click ☆ next to a kit to add it here.</muted>"
+      weapons: "<text>Simple kits to test one skill, no building or breaking.</text>"
+      vanilla: "<text>Survival gear on natural maps: building, breaking and every item are on.</text>"
+      skills: "<text>Potion kits: healing, timing and managing your resources.</text>"
+    toggle-on: "<good>☑ <label></good>"
+    toggle-off: "<muted>☐ <label></muted>"
+    toggle-separator: "    "
+    queue-all: "Queue All"
+    queue-all-hover: "<text>Join every kit in this tab.</text><newline><muted>Click again to leave them.</muted>"
+    keep-queuing: "Keep Queuing"
+    keep-queuing-hover: "<text>After a match, search again in the same kits.</text>"
+    no-favorites: "<muted>No favorites yet. Click ☆ next to a kit to add it here.</muted>"
+    no-kits: "<muted>No kits here right now.</muted>"
+    # One row per kit. <players> = searching + playing, <wait> = time searching, <star> = the favorite toggle.
+    kit: "<text><kit></text> <muted>- <players> players</muted>  <star>"
+    kit-queued: "<good><kit></good> <muted>- Searching</muted> <good><wait></good> <muted>· <players> players</muted>  <star>"
+    kit-hover: "<text><description></text><newline><muted>First to <first_to> · <queued> searching · <playing> playing</muted><newline><newline><muted>Click to join or leave this queue.</muted>"
+    # Once placement is done: the kit tier and rating. Before: the progress bar (hover: progress-hover).
+    kit-rank: "<tier> <muted>· <rating> Elo</muted>"
+    progress-hover: "<text>Play <remaining> more matches to get a tier.</text><newline><muted><games>/<placement> placement matches played</muted>"
+    # After a match the menu animates what changed (config.yml animations.queue-progress): <standing> is the bar or
+    # the tier and Elo, <change> one of the texts below, counting up.
+    standing-change: "<standing>  <change>"
+    change-progress: "<good>+<percent>%</good>"
+    change-elo-up: "<good>+<delta> Elo</good>"
+    change-elo-down: "<bad>−<delta> Elo</bad>"
+    change-elo-same: "<muted>±0 Elo</muted>"
+    change-placed: "<good>Placed!</good>"
+    progress-done: "<#5bd46a>■</#5bd46a>"
+    progress-todo: "<#26282c>■</#26282c>"
+    # After each kit row (kit editor permission): opens the kit's editor. <kit> in the hover.
+    edit: " <muted>✎</muted>"
+    edit-hover: "<text>Edit your layout for <kit></text>"
+    star-on: "<accent>★</accent>"
+    star-off: "<muted>☆</muted>"
+    star-hover: "<muted>Add to favorites</muted>"
+    unstar-hover: "<muted>Remove from favorites</muted>"
+    # Name and lore of the kit item on the left.
+    item-name: "<text><kit></text>"
+    item-name-queued: "<good><kit></good>"
+    item-lore: "<muted><queued> searching · <playing> playing</muted>"
+  profile:
+    title: "<player>"
+    header: "<head> <text><player></text>  <tier> <muted>· <elo> Elo · <region> <country></muted>"
+    record: "<muted><text><wins></text> wins · <text><losses></text> losses · <text><winrate>%</text></muted>"
+    legacy: "<muted>Legacy season</muted>"
+    kit-line: "<kit_icon> <text><kit></text>  <tier> <muted>· <rating> · <wins>W <losses>L · best streak <best_streak></muted>"
+    kit-line-placement: "<kit_icon> <text><kit></text>  <tier> <muted>· placement <games>/<placement></muted>"
+    no-games: "<muted>No ranked games yet.</muted>"
+    history-title: "<muted>Recent</muted>"
+    history-win: "<good>W</good> <kit_icon> <text><you>–<opp></text> <muted>vs <opponent> <delta> · <ago></muted>"
+    history-loss: "<bad>L</bad> <kit_icon> <text><you>–<opp></text> <muted>vs <opponent> <delta> · <ago></muted>"
+    leaderboards: "<text>Leaderboards</text>"
+    recent-refresh: "<muted>Refresh</muted>"
+  leaderboard:
+    title: "<category> <muted>· <region></muted>"
+    global: "global"
+    overall: "Overall"
+    empty: "<muted>Nobody is ranked here yet.</muted>"
+    line-overall: "<muted><rank>.</muted> <head> <text><player></text>  <tier> <muted>· <elo> Elo · <wins>W</muted>"
+    line-kit: "<muted><rank>.</muted> <head> <text><player></text>  <tier> <muted>· <value> · <wins>W <losses>L</muted>"
+    you: "<muted>You · #<rank> · <value></muted>"
+    overall-button: "<sprite:items:item/nether_star>"
+    overall-button-selected: "<accent>•</accent><sprite:items:item/nether_star>"
+    kit-button: "<kit_icon>"
+    kit-button-selected: "<accent>•</accent><kit_icon>"
+    all-regions: "<muted>All</muted>"
+    all-regions-selected: "<accent>All</accent>"
+    region: "<muted><region></muted>"
+    region-selected: "<accent><region></accent>"
+  settings:
+    title: "Settings"
+    body: "<muted>Region and max ping help the matchmaker find opponents with a similar connection.</muted>"
+    duel-requests: "Allow duel requests"
+    sidebar: "Show the sidebar"
+    sounds: "Sounds"
+    chat-tags: "Show tier tags in chat"
+    hide-hub: "Hide other players in the hub"
+    spectators: "Allow spectators in my matches"
+    friend-alerts: "Friend alerts"
+    party-invites: "Party invites from anyone"
+    queue-music: "Music while searching"
+    region: "Region"
+    region-none: "Not set"
+    country: "Country (2 letters)"
+    max-ping: "Max opponent ping (0 = any)"
+    save: "<good>Save</good>"
+    cancel: "<muted>Cancel</muted>"
+  spectate:
+    title: "Live <muted>· <live></muted>"
+    body: "<muted>Pick a match to watch. You stay in your queue. Showing <shown> of <live>.</muted>"
+    none: "<muted>No matches are live right now.</muted>"
+    no-results: "<muted>No live match matches <text><query></text>.</muted>"
+    search-label: "Search player or kit"
+    search: "<text>Search</text>"
+    match: "<kit_icon> <text><red></text> <accent><red_score>–<blue_score></accent> <text><blue></text> <muted>· <elo></muted>"
+    tooltip: "<text><kit></text> <muted>· <mode> · <elo> Elo · round <round> · first to <first_to> · <spectators> watching</muted>"
+    # Party FFA: <players> fighters, <alive> still standing, <names> the first few of them.
+    match-ffa: "<kit_icon> <text>Party FFA</text> <muted>· <players> players · <alive> alive</muted>"
+    tooltip-ffa: "<text><kit></text> <muted>· <names> · <spectators> watching</muted>"
+  duel:
+    players-title: "Challenge a player"
+    players-body: "<muted>Pick an opponent, then a kit. Challenges are unranked.</muted>"
+    no-players: "<muted>Nobody is free to duel right now.</muted>"
+    player-button: "<head> <text><player></text> <tier>"
+    title: "Challenge <muted>· <player></muted>"
+    body: "<muted>Pick a kit. <text><player></text> can accept for 60 seconds. Challenges are unranked.</muted>"
+    kit-button: "<kit_icon> <text><kit></text>"
+  results:
+    again: "<kit_icon> <text>Play again</text>"
+    profile: "<muted>Profile</muted>"
+    # Opens the kit editor of the match's kit (kit editor permission).
+    edit-kit: "<kit_icon> <text>Edit kit</text>"
+    edit-kit-tooltip: "<muted>Arrange your <kit> items</muted>"
+
+# Post-match progress (config.yml animations): the hub action bar counts up, then blinks and fades out.
+progress:
+  # During placement: <percent> counts up to what this match added, <bar> fills (gui.yml progress-reveal.bar).
+  placement: "<good>+<percent>%</good> <text>towards your tier</text>  <bar>"
+  # Once placed: <delta> counts up to the change, <after> counts from <before> to the new rating.
+  elo-up: "<good>+<delta> Elo</good>  <muted><before> →</muted> <text><after></text>"
+  elo-down: "<bad>−<delta> Elo</bad>  <muted><before> →</muted> <text><after></text>"
+  elo-same: "<muted>±0 Elo  <after></muted>"
+  # Titles. <tier> is the new tier in its tiers.yml colour (shimmering in the title), <kit> the kit.
+  tier-up-title: "<tier>"
+  tier-up-subtitle: "<good>Tier up</good> <muted>· <kit></muted>"
+  placed-title: "<text>Placed:</text> <tier><text>!</text>"
+  placed-subtitle: "<muted>Your first tier in <kit></muted>"
+  # Demotion: only a subtitle. <before> and <after> are the tiers.
+  tier-down-subtitle: "<muted><kit> ·</muted> <before> <muted>→</muted> <after>"
+
+# /animtest (duelcore.animtest): animation test mode.
+animtest:
+  turned-on: "<good>Animation test mode on.</good> <muted>Unranked matches end with a simulated progress reveal. Previews: /animtest play <text><previews></text></muted>"
+  turned-off: "<muted>Animation test mode off.</muted>"
+  status-on: "<muted>Animation test mode is <good>on</good>. Previews: /animtest play <text><previews></text></muted>"
+  status-off: "<muted>Animation test mode is <text>off</text>. Turn it on with /animtest on.</muted>"
+  needs-on: "<bad>Turn animation test mode on first:</bad> <text>/animtest on</text>"
+  unknown-preview: "<bad>No preview <text><preview></text>.</bad> <muted>Try: <previews></muted>"
+  playing: "<muted>Playing <text><preview></text>.</muted>"

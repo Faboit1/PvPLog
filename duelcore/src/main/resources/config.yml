@@ -1,0 +1,345 @@
+# ─────────────────────────────────────────────────────────────
+#  DuelCore — main configuration
+#  Text lives in messages.yml, visuals in gui.yml, tiers in tiers.yml,
+#  kits in kits/*.yml and arenas in arenas/*.yml.
+#  Reload everything with /duelcore reload (running matches keep their kit).
+# ─────────────────────────────────────────────────────────────
+config-version: 4
+
+database:
+  # sqlite (default, file in the plugin folder) or mysql (MySQL 8 / MariaDB 10.5+)
+  type: sqlite
+  sqlite:
+    file: data.db
+  mysql:
+    host: localhost
+    port: 3306
+    database: duelcore
+    username: duelcore
+    password: ""
+    pool-size: 6
+    properties:
+      useSSL: "false"
+      allowPublicKeyRetrieval: "true"
+
+hub:
+  # World players spawn in. The spawn point is set in-game with /duelcore sethub.
+  world: world
+  # When no spawn is set yet, build a small platform at 0 100 0 so the server is playable immediately.
+  generate-platform-if-missing: true
+  # Fixed time of day (ticks, 6000 = noon) and clear weather in the hub world.
+  time: 6000
+  lock-weather: true
+  # Teleport back to spawn when falling below this Y.
+  void-y: 0
+  # Show other hub players (false = everyone sees only themselves in the hub).
+  show-players: true
+  # Everyone may fly in the hub (switched off when they leave for a match; spectators always fly).
+  allow-flight: true
+
+queue:
+  # Allow being in queues for several kits at once (the queue menu's "Queue All"). Being matched in one kit takes
+  # the player out of all the others. false = joining a new kit replaces the old queue.
+  allow-multiple: true
+  ranked: true
+  # Unranked queue: only used by kits with "ranked: false" (the menu has no ranked/unranked switch; with this off
+  # those kits are hidden). /duel challenges are always unranked and not affected.
+  unranked: false
+  # Send a "still searching" action bar while queued.
+  searching-action-bar: true
+  # Music while searching: a random music disc, heard only by the searching player (jukebox volume slider). When a
+  # track ends the next random one starts; it stops as soon as a match is found, the player leaves the queue or
+  # starts spectating. Players can switch it off in their settings.
+  music:
+    enabled: true
+    # 0.0-1.0
+    volume: 0.5
+    # "<sound id> <length in seconds or m:ss> [speed]". The length (of the recording) decides when the next track
+    # starts; the optional speed (0.5x-2x, it is the pitch) plays it faster/slower. Unknown sounds are skipped with a
+    # warning.
+    tracks:
+      - "music_disc.cat 185"
+      - "music_disc.blocks 345"
+      - "music_disc.chirp 185"
+      - "music_disc.mellohi 96"
+      - "music_disc.stal 150"
+      - "music_disc.strad 188"
+      - "music_disc.pigstep 148"
+      - "music_disc.otherside 195"
+      - "music_disc.creator 176"
+      - "music_disc.tears 175 2x"
+      - "music_disc.lava_chicken 134"
+    # Stop Minecraft's own background music for everyone (on join and every 10 s). Players whose Music Frequency
+    # (Options > Music & Sounds) is "Constant" still hear a few seconds of it now and then: their game starts the
+    # next song 5 s after a stop. Removing it completely needs a datapack (background_music of the hub).
+    stop-client-music: true
+
+matchmaking:
+  # How often the matchmaker runs, in ticks (20 = every second).
+  interval-ticks: 20
+  # Acceptable rating gap = initial + growth-per-second × seconds waited, capped at max.
+  # A pair is only made when the gap fits BOTH players' windows.
+  window:
+    initial: 50
+    growth-per-second: 10
+    max: 500
+  # Latency preferences (see Settings → region / max ping). Penalties are in rating points and
+  # fade to zero after relax-after-seconds so nobody waits forever.
+  region:
+    enabled: true
+    cross-region-penalty: 250
+  ping:
+    enabled: true
+    penalty-per-ms: 0.5
+    over-max-ping-penalty: 300
+  relax-after-seconds: 30
+  # Anti-boosting: at most this many ranked games between the same two players per 24 h (0 = off).
+  max-ranked-rematches-per-day: 10
+  # Log every pairing decision (gap, windows, wait) to the console.
+  log-pairings: false
+
+match:
+  # Countdown before the first round and before later rounds (players are frozen meanwhile).
+  countdown-seconds: 5
+  round-countdown-seconds: 3
+  # Pause between a round ending and the next round starting.
+  round-end-delay-ticks: 50
+  # Time on the results screen before being sent back to the hub.
+  return-delay-seconds: 4
+  # When a round hits its time limit: "health" (higher health % wins) or "draw" (nobody scores).
+  timeout-decision: health
+  # Draw rounds still count towards the round number but give no point. Hard cap on rounds per match:
+  max-rounds: 15
+  # Disconnect saves: when a player's connection drops in a ranked match (not when they leave), the match ends with
+  # no result and nobody's Elo changes, this many times per player per day (UTC); after that a drop is a forfeit.
+  # 0 = off. Behind a proxy a drop looks like a normal quit, so a quit also counts as a drop when the player sent no
+  # movement or input for disconnect-idle-seconds before it (0 = only the server's own timeout reasons).
+  disconnect-saves-per-day: 5
+  disconnect-idle-seconds: 5
+  # Commands usable during a match (everything else is blocked). Admins with duelcore.bypass.commands ignore this.
+  allowed-commands: [leave, forfeit, msg, tell, w, r, reply, profile, ping]
+  # Play the totem animation with the kit's item when a match is found (silent: animations.match-found-sounds play).
+  totem-pop: true
+  # Out of bounds: a player this many blocks below the arena floor counts as dead.
+  void-depth: 6
+
+animations:
+  # From round 2 on, both fighters are thrown back to their spawn along a real Minecraft arc (normal player gravity)
+  # instead of teleporting. They can look around but can't steer.
+  respawn-throw: true
+  # How high the top of the arc is at least, in blocks above the higher end (longer throws go a bit higher; arcs that
+  # would clip trees or hills go higher still, or become a teleport).
+  respawn-throw-height: 10
+  # Players with a ping above this (ms) are teleported to their spawn instead: their client lags too far behind the
+  # throw. 0 = always throw.
+  respawn-throw-max-ping: 350
+  # A throw the server hasn't seen the player follow after this many ticks (plus the player's ping) is ended with a
+  # teleport to the spawn (4-60).
+  respawn-throw-stall-ticks: 10
+  # Red burst and soul where a fighter dies.
+  death: true
+  # Golden spiral around the round winner.
+  round-win: true
+  # Firework bursts above the match winner.
+  match-win: true
+  # White ring at the fighters' feet when a round starts.
+  fight-start: true
+  # Title when joining the hub (text in messages.yml hub.join-title / hub.join-subtitle).
+  join-title: true
+  # With join-title on: the title types out "Welcome back, <name>" with the player's best tier and a soft chime
+  # ("Welcome to Cheese PvP" on a first join; messages.yml hub.welcome-*). Off = the static join-title above.
+  join-welcome: true
+  # A bright band sweeps over the sidebar title every few seconds (colours and timing: gui.yml sidebar.title-shimmer).
+  sidebar-title: true
+  # The tab list logo (<logo> in gui.yml tab.header) slowly shifts its colour wave with every tab refresh.
+  tab-logo: true
+  # The hub XP bar shows overall progress: the level is the overall Elo (placement games until a kit is placed),
+  # the bar the way to the next tier. Matches clear it and the hub puts it back.
+  hub-xp-bar: true
+  # After a match the XP bar fills from the old value to the new one, with soft XP orb sounds.
+  hub-xp-fill: true
+  # A sparkle ring in the tier's colour rising from the player's feet (only they see it) when a kit reaches a better tier.
+  tier-ring: true
+  # Friend online / followed / party invite / joined alerts also pop up briefly in the action bar with a small sound
+  # (the chat lines stay; only in the lobby, never during a match).
+  alert-pops: true
+  # Sounds of the hub animations above (welcome chime, XP orbs, alert pops, ring). Players' own sound setting applies.
+  hub-sounds: true
+  # Round 1 (and every round when respawn-throw is off): each fighter comes up out of a 2×2 hole at their spawn,
+  # standing on the blocks that were there, which rise slowly back into place. The countdown waits for it.
+  spawn-rise: true
+  # How deep the hole is, in blocks (1-6).
+  spawn-rise-depth: 3
+  # How long the rise takes, in ticks (10-60; 20 ticks = 1 second).
+  spawn-rise-ticks: 50
+  # After a ranked match, back in the hub: the action bar counts up what the match changed ("+20% towards your tier"
+  # with a filling bar during placement, "+18 Elo 1480 → 1498" after it, a red "−12 Elo" counting down), blinks and
+  # fades out. Texts: messages.yml progress; bar and colours: gui.yml progress-reveal.
+  progress-reveal: true
+  # How long the progress action bar takes to fade out after blinking, in seconds (0.5-10).
+  progress-fade-seconds: 3
+  # Title celebration when a kit's tier goes up: the new tier in its tiers.yml colour, typed in with a shimmer.
+  tier-up: true
+  # Celebration for the first tier in a kit when its placement matches are done ("Placed: HT3!").
+  placed: true
+  # A quiet subtitle when a kit's tier drops.
+  tier-down: true
+  # Firework bursts in front of the player (only they see them) for tier-up and placed.
+  celebration-particles: true
+  # Ticks while the progress counts, the flourish and the demotion notes. Players can also turn sounds off in
+  # their settings.
+  progress-sounds: true
+  # In-match animations (texts in messages.yml match.fx, colours in gui.yml match-fx).
+  # The start countdown is the classic one by default: plain numbers with a click each second, then "Fight".
+  # countdown-pop: the numbers pop in instead (green, yellow, red by seconds left) with a tick that rises each second.
+  countdown-pop: false
+  # fight-sweep: "FIGHT!" with a gradient sweep across the letters and a punch sound instead of the plain "Fight".
+  fight-sweep: false
+  # When a round ends and the match goes on: "ROUND WON" / "ROUND LOST" types in and the score below it pops
+  # (spectators see who took the round).
+  round-banner: true
+  # The countdown subtitle says (and with countdown-pop pulses) "Match point" when someone is one round from
+  # winning; off = it always reads "Round N · first to N" like the classic countdown.
+  match-point: false
+  # Action bar for the attacker: the hit combo counter pops on every hit from 2 hits on; "+1 kill" for a kill.
+  combo-bar: true
+  # A quiet heartbeat and a red pulse of the health in the action bar at or below heartbeat-hearts hearts; the
+  # lower, the faster.
+  heartbeat: true
+  heartbeat-hearts: 3
+  # Match won: a victory jingle and a shimmer over the "Victory" title (spectators see the winner's name).
+  victory-title: true
+  # Match lost: three quiet falling notes, the "Defeat" title greys out a little.
+  defeat-title: true
+  # Confetti raining around the match winner.
+  victory-confetti: true
+  # Party FFA: "3 players left" pops when someone is eliminated.
+  players-left: true
+  # Sounds when a match is found (instead of the totem sound) and when a round's fight starts. One line is picked at
+  # random each time. A line is one or more sounds played together, joined with "+". Each sound:
+  #   <sound id> [pitch or min-max] [volume, default 0.7] [@delay in ticks]
+  # Sound ids are vanilla ones (e.g. block.beacon.activate, minecraft: is optional). An empty list plays nothing.
+  match-found-sounds:
+    - "block.beacon.activate 1.6-1.8 0.6 + block.amethyst_block.chime 0.9-1.1 1.0 @2 + block.amethyst_block.chime 1.3-1.5 1.0 @5"
+    - "ui.toast.challenge_complete 1.6-1.9 0.35"
+    - "block.trial_spawner.about_to_spawn_item 1.2-1.4 0.8 + block.vault.open_shutter 1.3-1.5 0.6 @4"
+    - "entity.evoker.cast_spell 1.4-1.6 0.6 + block.amethyst_block.resonate 1.2-1.4 0.8 @3"
+    - "block.respawn_anchor.charge 1.3-1.5 0.6 + block.note_block.chime 1.4-1.6 0.6 @4"
+    - "block.enchantment_table.use 1.1-1.3 0.9 + block.note_block.bell 1.5-1.7 0.5 @3"
+    - "block.conduit.activate 1.6-1.8 0.5 + block.amethyst_block.chime 1.1-1.3 1.0 @3"
+  fight-start-sounds:
+    - "block.note_block.pling 1.55-1.7"
+    - "block.note_block.pling 1.5-1.6 + block.note_block.bell 1.9-2.0 0.4"
+    - "block.note_block.chime 1.4-1.6 + block.note_block.pling 1.6-1.7 0.5"
+    - "entity.experience_orb.pickup 1.2-1.4 0.5 + block.note_block.pling 1.6 0.6"
+  # Queue menu: when a kit's progress changed since the menu was last opened (a ranked match, or a simulated one in
+  # /animtest mode), its bar fills from the old to the new value ("+20%"), or its Elo counts up ("+18 Elo"). Plays
+  # once, and stops as soon as the player clicks, moves or is matched.
+  queue-progress: true
+  # Animated "searching" action bar: spinner, pulsing dots and slowly cycling colours (gui.yml searching). false =
+  # the plain bar; queue.searching-action-bar switches the bar off completely.
+  searching-bar: true
+  # "Match found": MATCH FOUND sweeps in with a shimmer, then the opponent is typed out. false = the plain title.
+  # The totem pop and match-found-sounds play either way.
+  match-found-reveal: true
+  # Sounds of the above: ticks and a flourish in the queue menu, a whoosh and a chime when a match is found.
+  # Players can also turn sounds off in their settings.
+  queue-sounds: true
+
+rating:
+  # elo or glicko2
+  system: elo
+  default: 1000
+  # Ratings never drop below this.
+  floor: 100
+  elo:
+    k-factor: 32
+    # K-factor during placement (provisional) games, see tiers.yml placement-matches.
+    provisional-k-factor: 48
+  glicko2:
+    tau: 0.5
+    default-rd: 350
+    min-rd: 45
+    default-volatility: 0.06
+
+season:
+  # Name used for the first season on a fresh database.
+  first-name: "Beta"
+
+arena:
+  # Void world that hosts every match instance (world key duelcore:<name>).
+  world: arenas
+  # Keep the arena world between restarts. Pasted arenas are reused after a restart (verified block by block)
+  # and chunks are generated only once. false = delete and regenerate the world on every start (slow first pastes).
+  persistent-world: true
+  # Generate the chunks of this many instance slots in the background, so new instances paste in about a second.
+  pregenerate-slots: 16
+  # Void world for building and editing arena templates (/duelcore arena world). Kept between restarts.
+  editor-world: editor
+  # Distance between instance slots. Must be larger than your biggest arena plus render distance.
+  slot-spacing: 1024
+  base-y: 64
+  # Max instances alive at once (limits memory). Matches wait for a free arena when all are busy.
+  max-instances: 48
+  # Ready-to-use instances kept per template after matches end (instant match starts).
+  keep-idle-per-template: 2
+  # Paste one instance of every template at startup.
+  prewarm: true
+  # Main-thread time budget per tick for pasting/resetting blocks (milliseconds).
+  block-budget-ms: 4
+  # Arenas are reset between rounds (true) or only after the match (false).
+  reset-between-rounds: true
+  # View distance in the arena world (simulation distance is capped at 4). The default maps are 180 blocks wide.
+  view-distance: 7
+
+leaderboard:
+  # How often cached leaderboards refresh from the database.
+  refresh-seconds: 30
+  size: 100
+  # Region codes players can pick in Settings (used by leaderboards and matchmaking).
+  regions: [EU, NA, SA, AS, OC, AF]
+
+dialogs:
+  # Open menus whose content changes (the queue menu's timers and counts, the party menu and friends list's online
+  # states, the live spectate list, a profile's "5m ago") are rebuilt this often and sent again only when something
+  # visible changed. Each re-send scrolls the menu back to the top (see gui.yml queue-menu.clock-max-kits). Menus with
+  # a text box are never refreshed (it would clear what the player typed).
+  refresh:
+    enabled: true
+    # Ticks between refreshes (20 = once a second, 5 to 1200).
+    interval-ticks: 20
+
+display:
+  # Show the tier tag in chat, the tab list and above heads. Formats are in gui.yml.
+  chat-tag: true
+  tab-tag: true
+  nametag-tag: true
+
+# Read-only JSON API for websites (phase 2). Needs a free port on your host.
+web-api:
+  enabled: false
+  bind: 0.0.0.0
+  port: 8765
+  # Requests must send "Authorization: Bearer <token>" (or ?token=). Change this!
+  token: "change-me"
+  # Cache responses for this many seconds.
+  cache-seconds: 10
+
+tournaments:
+  # Minimum and maximum signups for an automated bracket.
+  min-players: 4
+  max-players: 64
+  # Seconds between the signup closing and the first round.
+  start-delay-seconds: 10
+
+party:
+  # Most members a party can have (parties are kept while members are offline and across restarts).
+  max-size: 20
+  # Seconds before a party invite or a party-vs-party challenge expires.
+  invite-seconds: 60
+  # New parties start open (listed in the party menu for anyone to join) instead of private (invite or password).
+  open-by-default: false
+
+debug:
+  # Extra console output for matches and arena resets.
+  verbose: false

@@ -1,0 +1,124 @@
+# ─────────────────────────────────────────────────────────────
+#  DuelCore — chat filter for public chat and private messages (/msg, /tell, /r, /me, …).
+#
+#  Terms are written plainly; each one automatically also catches:
+#    - leetspeak and symbols   n1gg3r  f@g  $h!t  (a=4@ e=3 i=1!|l o=0 s=5$z t=7+ g=69 …)
+#    - look-alike letters      Cyrillic/Greek homoglyphs, accents, fullwidth letters, small caps
+#    - hidden characters       zero-width spaces, soft hyphens, combining marks
+#    - stretched letters       niiiigger  fuuuuck
+#    - up to 3 separators      n.i.g.g.e.r  f u c k  f_u-c*k
+#    - common endings          -s -z -es -ed -er -ers -a -as -ah -uh -y -ing -in
+#  A term matches a whole word. A leading/trailing * lets it match inside longer words ("*fuck*" also catches
+#  "motherfucker"). Spaces in a term allow any separators there ("kill yourself").
+#  Entries starting with "re:" are raw Java regexes run on the normalized (lowercase, folded) text.
+#  Reload with /duelcore reload. Permissions: duelcore.chatfilter.bypass, duelcore.chatfilter.notify.
+# ─────────────────────────────────────────────────────────────
+enabled: true
+
+# Character used to mask censored words.
+mask: "*"
+
+# Slurs, hate speech and self-harm harassment: the whole message is blocked, the sender is told, staff with
+# duelcore.chatfilter.notify see the original and it is logged.
+block:
+  - "*nigg*"
+  - "niga"
+  - "nigah"
+  - "niggah"
+  - "nigguh"
+  - "negroid"
+  - "chink"
+  - "ching chong"
+  - "gook"
+  - "spic"
+  - "spick"
+  - "wetback"
+  - "beaner"
+  - "kike"
+  - "kyke"
+  - "coon"
+  - "jigaboo"
+  - "jiggaboo"
+  - "porch monkey"
+  - "towelhead"
+  - "raghead"
+  - "sand monkey"
+  - "zipperhead"
+  - "paki"
+  - "gyppo"
+  - "golliwog"
+  - "darkie"
+  - "faggot*"
+  - "fagot*"
+  - "fag"
+  - "dyke"
+  - "tranny"
+  - "trannies"
+  - "shemale"
+  - "heil hitler"
+  - "sieg heil"
+  - "gas the jews"
+  - "white power"
+  - "re:(?<![0-9])14[^0-9a-z]{0,2}88(?![0-9])"
+  - "kys"
+  - "kill yourself"
+  - "kill urself"
+  - "kill ur self"
+  - "hang yourself"
+  - "neck yourself"
+
+# Swearing: the words are masked, the message still goes through.
+censor:
+  - "*fuck*"
+  - "*fuk*"
+  - "*fck*"
+  - "*shit*"
+  - "*bitch*"
+  - "*cunt*"
+  - "*whore*"
+  - "slut*"
+  - "bastard*"
+  - "asshole*"
+  - "ass"
+  - "arse"
+  - "arsehole*"
+  - "dick"
+  - "dickhead*"
+  - "cock"
+  - "cocksucker*"
+  - "pussy"
+  - "pussies"
+  - "wanker*"
+  - "twat*"
+  - "retard*"
+  - "negro"
+  - "rape"
+  - "raping"
+  - "rapist*"
+  - "cum"
+  - "porn*"
+
+# Words that contain a term but are fine; never flagged.
+allow:
+  - snigger
+  - sniggers
+  - sniggered
+  - sniggering
+  - niggle
+  - niggles
+  - niggled
+  - niggling
+  - spicy
+  - spice
+  - spices
+  - spiced
+  - scunthorpe
+  - shiitake
+  - shitake
+  - raccoon
+  - raccoons
+  - cocoon
+  - cocoons
+
+# Console commands run when a message is blocked. <player> = the sender. Example: "mute <player> 10m Slurs"
+on-block-commands: []

@@ -1,0 +1,20 @@
+name: DuelCoreTestKit
+version: 1.0.0
+main: top.cheesesmp.duelcore.testkit.TestKitPlugin
+api-version: '26.2'
+description: Test-only helper that runs headless bot scripts against this server. Do not install on production.
+commands:
+  dctest:
+    description: Run or stop bot scripts
+    permission: duelcore.testkit
+  tester:
+    description: "Offline-mode join guard: on = testers only, off = open testing (anyone, IP-locked on first use)"
+    usage: /tester on | off | status | add <player> | remove <player> | list
+    aliases: [testers]
+    permission: duelcore.testkit.guard
+permissions:
+  duelcore.testkit.guard:
+    description: The join guard (/tester); op only, not part of duelcore.admin
+    default: op
+  duelcore.testkit:
+    default: op
