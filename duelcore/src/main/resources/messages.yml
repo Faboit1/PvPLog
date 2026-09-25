@@ -599,11 +599,12 @@ kit-editor:
       chestplate: "chestplate"
       leggings: "leggings"
       boots: "boots"
-  # The kit picker dialog. <icon> <name> = the queue menu's tab icon and name of a category.
+  # The kit picker dialog. <icon> <name> = the queue menu's tab icon and name of a category (a section header, so
+  # it looks different from the kits under it).
   picker:
     title: "Kit Editor"
     header: "<accent>Pick a kit to arrange its items.</accent>"
-    category: "<icon> <text><name></text>"
+    category: "<muted>—</muted> <icon> <b><text><name></text></b> <muted>—</muted>"
     kit: "<kit_icon> <text><kit></text>"
     kit-custom: "<kit_icon> <good><kit> ✎</good>"
     separator: "    "

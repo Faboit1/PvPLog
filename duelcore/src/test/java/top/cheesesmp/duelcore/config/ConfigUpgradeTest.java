@@ -94,4 +94,27 @@ class ConfigUpgradeTest {
             assertEquals(ConfigManager.MUSIC_TRACKS, bundled.getStringList("queue.music.tracks"));
         }
     }
+
+    @Test
+    void retiredMessageDefaultsAreReplacedButEditsKept() throws Exception {
+        java.util.Map<String, String> retired = java.util.Map.of("a.b", "old", "a.c", "old too");
+        YamlConfiguration defaults = yml("a:\n  b: \"new\"\n  c: \"new too\"\n");
+        YamlConfiguration y = yml("a:\n  b: \"old\"\n  c: \"my own\"\n");
+        assertTrue(ConfigManager.retireDefaults(y, defaults, retired));
+        assertEquals("new", y.getString("a.b"));
+        assertEquals("my own", y.getString("a.c"));
+        assertFalse(ConfigManager.retireDefaults(y, defaults, retired));
+    }
+
+    @Test
+    void bundledMessagesDoNotHoldRetiredDefaults() throws Exception {
+        YamlConfiguration bundled = new YamlConfiguration();
+        try (var in = new InputStreamReader(ConfigUpgradeTest.class.getResourceAsStream("/messages.yml"), StandardCharsets.UTF_8)) {
+            bundled.load(in);
+        }
+        for (var e : ConfigManager.RETIRED_MESSAGES.entrySet()) {
+            assertTrue(bundled.isString(e.getKey()), e.getKey());
+            assertFalse(e.getValue().equals(bundled.getString(e.getKey())), e.getKey());
+        }
+    }
 }

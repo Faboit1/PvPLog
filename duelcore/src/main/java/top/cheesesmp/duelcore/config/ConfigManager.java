@@ -62,6 +62,7 @@ public final class ConfigManager {
             if (in != null) {
                 YamlConfiguration defaults = YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
                 boolean changed = name.equals("config.yml") && upgrade(yml, plugin.getLogger());
+                if (name.equals("messages.yml")) changed |= retireDefaults(yml, defaults, RETIRED_MESSAGES);
                 for (String key : defaults.getKeys(true)) {
                     if (defaults.isConfigurationSection(key)) continue;
                     if (!yml.contains(key, true) && !isUserMap(name, key)) {
@@ -124,6 +125,25 @@ public final class ConfigManager {
         }
         yml.set("config-version", CONFIG_VERSION);
         return true;
+    }
+
+    /**
+     * messages.yml texts whose bundled default changed, as key → old default. A file still holding the old default
+     * gets the new one; a text edited by hand is kept.
+     */
+    static final Map<String, String> RETIRED_MESSAGES = Map.of(
+            "kit-editor.picker.category", "<icon> <text><name></text>");
+
+    /** Replaces every value that still equals its retired default with the current default; true when any did. */
+    static boolean retireDefaults(YamlConfiguration yml, YamlConfiguration defaults, Map<String, String> retired) {
+        boolean changed = false;
+        for (Map.Entry<String, String> e : retired.entrySet()) {
+            if (defaults.isString(e.getKey()) && e.getValue().equals(yml.getString(e.getKey()))) {
+                yml.set(e.getKey(), defaults.getString(e.getKey()));
+                changed = true;
+            }
+        }
+        return changed;
     }
 
     private static List<String> normalized(List<String> list) {

@@ -80,6 +80,18 @@ function createBot (name, opts = {}) {
       e.velocity.set(packet.velocity.x, packet.velocity.y, packet.velocity.z)
     })
   })
+  // physics diagnostics for the fighter's "stuck" log: mineflayer only simulates after a position packet, and stops on
+  // death, respawn, mount, configuration or when the chunk at the bot's feet is unloaded
+  const phys = bot.dc.phys = { ticks: 0, positions: 0, posAt: 0, events: [] }
+  const physEvent = e => { phys.events.push(e + '@' + ((Date.now() - t0) / 1000).toFixed(1)); if (phys.events.length > 8) phys.events.shift() }
+  bot.on('physicsTick', () => { phys.ticks++ })
+  bot.on('respawn', () => physEvent('respawn'))
+  bot.on('death', () => physEvent('death'))
+  bot.on('mount', () => physEvent('mount'))
+  bot.once('login', () => {
+    bot._client.on('position', () => { phys.positions++; phys.posAt = Date.now() })
+    bot._client.on('start_configuration', () => physEvent('config'))
+  })
   bot.on('kicked', r => log(name, 'kicked', plain(r)))
   bot.on('error', e => log(name, 'error', e.message))
   bot.on('end', r => log(name, 'end', r))
@@ -379,9 +391,13 @@ function fighter (bot, opts = {}) {
           const ah = bot.blockAt(ahead.offset(0, 1, 0))
           around.ahead = af && af.name
           around.aheadUp = ah && ah.name
+          const ph = bot.dc.phys
           log(bot.dc.name, 'stuck', { pos, dist: +dist.toFixed(1), onGround: bot.entity.onGround,
             collided: bot.entity.isCollidedHorizontally, vel: bot.entity.velocity, controls: bot.controlState,
-            around, target: target.position })
+            around, target: target.position,
+            phys: ph && { ticks: ph.ticks, positions: ph.positions, sincePos: ph.posAt ? Date.now() - ph.posAt : -1,
+              events: ph.events, enabled: bot.physicsEnabled, feetBlock: !!bot.blockAt(pos), state: bot._client.state,
+              vehicle: !!bot.vehicle, alive: bot.isAlive } })
         }
         bot.setControlState('left', !!(strafing && strafeDir === 'left'))
         bot.setControlState('right', !!(strafing && strafeDir === 'right'))
