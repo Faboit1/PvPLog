@@ -126,26 +126,27 @@ inventory.
 kit, since vanilla has no single red-potion texture). A vanilla item string can change components the YAML keys
 don't cover, e.g. `"tnt_minecart[max_stack_size=64]"` to stack carts.
 
-**Default kits.** The kit ids match MCPVP's list. MCPVP hasn't published kit contents, so the loadouts follow the
-widely copied MCTiers default layouts (all enchantments maxed unless noted):
+**Default kits.** The kit ids match MCPVP's list. Spear, Crystal, SMP, Mace, Bow and Late Game copy the MCPVP kit
+previews (hotbar layout included); the others follow the widely copied MCTiers layouts, filled out with refill
+stacks in the same style. All enchantments are maxed unless noted.
 
 | Kit | Loadout |
 | --- | --- |
 | Sword | Diamond Prot I, diamond sword Sharpness I |
-| Shield | Unenchanted diamond, shield, diamond axe and sword, bow, crossbow, 6 arrows |
+| Axe & Shield | Unenchanted diamond, shield, diamond axe and sword, bow, crossbow, 6 arrows |
 | Pot | Diamond Prot IV, sword Sharp V/Sweeping III, 26 splash Healing II, 3 each Speed II, Strength II, Regeneration; 5 steak |
 | Netherite Pot | Netherite Prot IV/Mending, sword Sharp V, 21 Healing II, 3 each Strength, Speed, Fire Resistance, 3 totems, 64 gapples, 128 XP |
-| SMP | Netherite with helmet/leggings/boots utility enchants, two Sharp V/Fire Aspect II swords (one Knockback I), Sharp V axe, shield, 1 totem, 128 gapples, 32 pearls, 64 XP, 12 Strength II, 12 Speed II, 3 Fire Resistance |
-| Diamond SMP | SMP in diamond: sword, axe, shield, 1 totem, gapples, pearls, 64 cobwebs, buckets, Strength/Speed/Fire Resistance |
-| Crystal | Netherite (Blast Prot IV legs and boots), sword, Silk Touch pickaxe, 128 crystals and obsidian, 64 anchors and glowstone, 9 totems, 128 gapples, 48 pearls, 128 XP, slow-falling crossbow |
-| Mace | Netherite, Density V + Wind Burst mace and Breach IV mace, sword, axe, shield, elytra, 2 totems, 128 wind charges, 16 pearls, 64 gapples, 13 Strength II, 8 Speed II |
-| Cart | Netherite, Power V/Flame/Punch/Infinity bow, Piercing IV crossbow, 64 stacked TNT carts, 128 rails, planks, cobwebs, 2 totems, gapples, pearls |
-| Creeper | Netherite (Blast Prot legs and boots), 64 creeper eggs, 2 flint and steel, shield, 2 totems, gapples, pearls, cobwebs, planks |
-| Spear | Netherite, spear Sharp V/Lunge III, sword, shield, 1 totem, gapples, steak, pearls, Strength/Speed II |
-| Early Game | Iron Prot II, iron sword and axe, shield, Power I bow, 4 gapples, steak, cobblestone, buckets |
-| Late Game | Diamond Prot IV, Sharp V sword and axe, shield, Power IV bow, 16 gapples, 16 pearls, buckets, cobwebs, 1 totem |
-| End Game | Netherite, sword, axe, pickaxe, 64 crystals and obsidian, 32 anchors and glowstone, elytra + rockets, shield, 5 totems, gapples, pearls, potions |
-| Bow | Iron/chain Projectile Prot II, Power V/Punch/Infinity bow, Quick Charge crossbow, iron sword |
+| SMP | (MCPVP) Netherite with helmet/leggings/boots utility enchants, shield, two Sharp V/Fire Aspect II swords (one Knockback I), axe, 1 totem, 128 gapples, 32 pearls, 64 XP, the rest full of splash potions: 12 Strength II, 12 Speed II, 3 Fire Resistance |
+| Diamond SMP | The SMP layout in diamond plus 128 cobwebs, 2 water and 1 lava bucket, 128 cobblestone; 1 totem, 128 gapples, 32 pearls, 64 XP, 9 Strength II, 9 Speed II, 3 Fire Resistance |
+| Crystal | (MCPVP) Netherite (Blast Prot IV legs and boots), sword, Silk Touch pickaxe, 128 crystals and obsidian, 64 anchors and glowstone, 14 totems, 112 pearls, 64 gapples, 192 XP, crossbow with 64 slow-falling arrows, shield, Density mace |
+| Mace | (MCPVP) Netherite, Density V + Wind Burst mace and Breach IV mace, sword, axe, shield, elytra + 3 rockets, 2 totems, 128 wind charges, 64 pearls, 128 gapples; no potions |
+| Cart | Netherite (Blast Prot legs and boots), Power V/Flame/Punch/Infinity bow, Piercing IV crossbow, 128 stacked TNT carts, 192 rails, planks, cobwebs, flint and steel, 2 totems, 128 gapples, 48 pearls, 128 XP, 4 Strength II, 4 Speed II, 3 Fire Resistance |
+| Creeper | Netherite (Blast Prot legs and boots), 128 creeper eggs, 2 flint and steel, sword, axe, shield, 2 totems, 128 gapples, 48 pearls, 128 cobwebs, planks, 128 XP, 4 Strength II, 4 Speed II, 2 Fire Resistance |
+| Spear | (MCPVP) Netherite, spear Lunge III/Sharp V/Unbreaking III, Density + Wind Burst mace, sword, axe, shield, 2 totems, 64 pearls, 256 wind charges, 64 gapples, 64 steak |
+| Early Game | The Late Game layout in iron: Iron Prot II, shield, iron sword (Sharp I) and axe, bow, crossbow, 16 arrows, 4 gapples, steak, planks, cobblestone, 2 water and 1 lava bucket, iron pickaxe and shovel |
+| Late Game | (MCPVP UHC-style diamond) Diamond Prot II, shield, Sharp III sword, axe, Power III bow, Piercing crossbow, 16 arrows, 8 gapples, 16 steak, planks, cobblestone, 8 cobwebs, 4 water and 2 lava buckets, pickaxe, Efficiency shovel; no pearls or totems |
+| End Game | Netherite, crystal hotbar (128 crystals and obsidian, 64 anchors and glowstone), sword, axe, pickaxe, Density mace + 64 wind charges, elytra + 64 rockets, shield, 8 totems, 64 pearls, 128 gapples, 128 XP, 32 cobwebs, 2 each Strength II, Speed II, Fire Resistance |
+| Bow | (MCPVP) Iron Projectile Prot II, Power V/Punch bow, 64 arrows; nothing else (no food, no regeneration) |
 
 Kit files already on a server are not overwritten on update; delete a file (or copy the new default over it) to get
 the new loadout.

@@ -1,7 +1,7 @@
-# Spear: maxed netherite spear with Lunge III (drains hunger, so food matters), sword backup, shield, a totem,
-# gapples, pearls and Strength/Speed II.
+# Spear: the MCPVP spear kit. Maxed netherite, a Lunge III spear (lunging drains hunger, so steak matters), a
+# Density mace for wind-charge smashes, sword and axe backups, shield, 2 totems, 64 pearls and 256 wind charges.
 display-name: "Spear"
-description: "Maxed netherite spear with Lunge, sword backup and a totem."
+description: "Lunge spear, mace and wind charges. Maxed netherite, two totems."
 icon: netherite_spear
 category: main
 order: 2
@@ -28,19 +28,23 @@ loadout:
     helmet: { item: netherite_helmet, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
     chestplate: { item: netherite_chestplate, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
     leggings: { item: netherite_leggings, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
-    boots: { item: netherite_boots, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
+    boots: { item: netherite_boots, enchants: { protection: 4, feather_falling: 4, unbreaking: 3, mending: 1 } }
   items:
-    0: { item: netherite_spear, enchants: { sharpness: 5, lunge: 3, unbreaking: 3, mending: 1 } }
-    1: { item: netherite_sword, enchants: { sharpness: 5, unbreaking: 3, mending: 1 } }
-    2: { item: golden_apple, amount: 64 }
-    3: { item: cooked_beef, amount: 64 }
-    4: { item: ender_pearl, amount: 16 }
-    5: { item: splash_potion, potion: strong_strength }
-    6: { item: splash_potion, potion: strong_swiftness }
-    7: { item: splash_potion, potion: strong_strength }
-    8: totem_of_undying
-    9: { item: splash_potion, potion: strong_strength }
-    10: { item: splash_potion, potion: strong_swiftness }
-    11: { item: splash_potion, potion: strong_swiftness }
-  offhand: { item: shield, enchants: { unbreaking: 3, mending: 1 } }
+    0: { item: netherite_sword, enchants: { sharpness: 5, unbreaking: 3, mending: 1 } }
+    1: { item: mace, enchants: { density: 5, wind_burst: 1, unbreaking: 3, mending: 1 } }
+    2: { item: ender_pearl, amount: 16 }
+    3: { item: golden_apple, amount: 64 }
+    4: { item: wind_charge, amount: 64 }
+    5: { item: cooked_beef, amount: 64 }
+    6: { item: netherite_axe, enchants: { sharpness: 5, efficiency: 5, unbreaking: 3, mending: 1 } }
+    7: { item: netherite_spear, enchants: { lunge: 3, sharpness: 5, unbreaking: 3 } }
+    8: { item: shield, enchants: { unbreaking: 3, mending: 1 } }
+    9: { item: ender_pearl, amount: 16 }
+    10: { item: wind_charge, amount: 64 }
+    13: totem_of_undying
+    18: { item: ender_pearl, amount: 16 }
+    19: { item: wind_charge, amount: 64 }
+    27: { item: ender_pearl, amount: 16 }
+    28: { item: wind_charge, amount: 64 }
+  offhand: totem_of_undying
 effects: []

@@ -1,6 +1,8 @@
-# Early Game: iron gear with Protection II, iron sword and axe, shield, bow, a few gapples, blocks and buckets.
+# Early Game: the Late Game (UHC) layout one tier down. Protection II iron, shield, iron sword and axe, a plain bow
+# and crossbow, 4 gapples, planks and cobblestone, 2 water and 1 lava bucket, iron pickaxe and shovel.
+# No pearls, totems, cobwebs or potions.
 display-name: "Early Game"
-description: "Iron gear, shield, bow, blocks and buckets. Early survival PvP."
+description: "Iron gear, shield, bow, crossbow, blocks and buckets. Early survival PvP."
 icon: iron_chestplate
 category: main
 order: 7
@@ -15,7 +17,7 @@ rules:
   fall-damage: true
   build: true
   break: all
-  allowed-blocks: [cobblestone, water, lava]
+  allowed-blocks: [oak_planks, cobblestone, water, lava]
   ender-pearls: false
   totems: false
   crystals: false
@@ -32,13 +34,18 @@ loadout:
   items:
     0: { item: iron_sword, enchants: { sharpness: 1 } }
     1: iron_axe
-    2: { item: bow, enchants: { power: 1 } }
-    3: { item: golden_apple, amount: 4 }
-    4: { item: cooked_beef, amount: 32 }
+    2: { item: golden_apple, amount: 4 }
+    3: bow
+    4: { item: oak_planks, amount: 64 }
     5: water_bucket
-    6: { item: cobblestone, amount: 64 }
-    7: iron_pickaxe
-    8: lava_bucket
-    9: { item: arrow, amount: 16 }
+    6: lava_bucket
+    7: crossbow
+    8: { item: cobblestone, amount: 64 }
+    9: { item: cooked_beef, amount: 16 }
+    10: iron_pickaxe
+    11: iron_shovel
+    12: water_bucket
+    17: { item: arrow, amount: 16 }
+    26: { item: oak_planks, amount: 64 }
   offhand: shield
 effects: []

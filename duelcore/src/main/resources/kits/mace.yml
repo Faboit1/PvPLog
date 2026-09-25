@@ -1,7 +1,7 @@
-# Mace: MCTiers mace. Maxed netherite, a Density + Wind Burst mace and a Breach mace, sword, axe, shield, elytra,
-# 2 totems, 128 wind charges, pearls, gapples, 13 Strength II and 8 Speed II splash potions.
+# Mace: the MCPVP mace kit. Maxed netherite, a Density V + Wind Burst mace and a Breach IV mace, sword, axe,
+# shield, elytra with 3 rockets, 2 totems, 64 pearls, 128 gapples and 128 wind charges. No potions.
 display-name: "Mace"
-description: "Density and Breach maces, wind charges, elytra and totems."
+description: "Density and Breach maces, wind charges, elytra and two totems."
 icon: mace
 category: main
 order: 3
@@ -32,35 +32,19 @@ loadout:
   items:
     0: { item: netherite_sword, enchants: { sharpness: 5, unbreaking: 3, mending: 1 } }
     1: { item: mace, enchants: { density: 5, wind_burst: 1, unbreaking: 3, mending: 1 } }
-    2: { item: mace, enchants: { breach: 4, unbreaking: 3, mending: 1 } }
-    3: { item: netherite_axe, enchants: { sharpness: 5, unbreaking: 3, mending: 1 } }
-    4: { item: wind_charge, amount: 64 }
-    5: { item: ender_pearl, amount: 16 }
-    6: { item: golden_apple, amount: 64 }
-    7: { item: splash_potion, potion: strong_strength }
-    8: { item: splash_potion, potion: strong_swiftness }
-    9: { item: shield, enchants: { unbreaking: 3, mending: 1 } }
-    10: { item: elytra, enchants: { unbreaking: 3, mending: 1 } }
-    11: totem_of_undying
-    12: { item: wind_charge, amount: 64 }
-    13: { item: splash_potion, potion: strong_strength }
-    14: { item: splash_potion, potion: strong_strength }
-    15: { item: splash_potion, potion: strong_strength }
-    16: { item: splash_potion, potion: strong_strength }
-    17: { item: splash_potion, potion: strong_strength }
-    18: { item: splash_potion, potion: strong_strength }
-    19: { item: splash_potion, potion: strong_strength }
-    20: { item: splash_potion, potion: strong_strength }
-    21: { item: splash_potion, potion: strong_strength }
-    22: { item: splash_potion, potion: strong_strength }
-    23: { item: splash_potion, potion: strong_strength }
-    24: { item: splash_potion, potion: strong_strength }
-    25: { item: splash_potion, potion: strong_swiftness }
-    26: { item: splash_potion, potion: strong_swiftness }
-    27: { item: splash_potion, potion: strong_swiftness }
-    28: { item: splash_potion, potion: strong_swiftness }
-    29: { item: splash_potion, potion: strong_swiftness }
-    30: { item: splash_potion, potion: strong_swiftness }
-    31: { item: splash_potion, potion: strong_swiftness }
+    2: { item: ender_pearl, amount: 16 }
+    3: { item: golden_apple, amount: 64 }
+    4: { item: elytra, enchants: { unbreaking: 3, mending: 1 } }
+    5: { item: wind_charge, amount: 64 }
+    6: { item: netherite_axe, enchants: { sharpness: 5, efficiency: 5, unbreaking: 3, mending: 1 } }
+    7: { item: mace, enchants: { breach: 4, unbreaking: 3, mending: 1 } }
+    8: { item: shield, enchants: { unbreaking: 3, mending: 1 } }
+    9: { item: ender_pearl, amount: 16 }
+    13: totem_of_undying
+    17: { item: firework_rocket, amount: 3 }
+    18: { item: ender_pearl, amount: 16 }
+    26: { item: golden_apple, amount: 64 }
+    27: { item: ender_pearl, amount: 16 }
+    34: { item: wind_charge, amount: 64 }
   offhand: totem_of_undying
 effects: []
