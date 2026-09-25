@@ -236,12 +236,14 @@ public final class KitEditor implements Listener {
             return;
         }
         if (!layouts.loaded(player.getUniqueId())) {
-            plugin.openDialogs().awaitNext(player); // a dialog it was opened from stays until the editor opens
+            // a dialog it was opened from stays until the editor opens; closed meanwhile (Escape): it doesn't open
+            long ticket = plugin.openDialogs().awaitNext(player);
             layouts.load(player).thenRun(() -> {
-                if (player.isOnline() && layouts.loaded(player.getUniqueId())) open(player, kit);
-                else if (player.isOnline()) {
+                if (player.isOnline() && layouts.loaded(player.getUniqueId())) {
+                    plugin.openDialogs().continueAwait(player, ticket, () -> open(player, kit));
+                } else if (player.isOnline()) {
                     plugin.messages().send(player, "kit-editor.not-ready");
-                    plugin.openDialogs().abandon(player);
+                    plugin.openDialogs().abandon(player, ticket);
                 }
             });
             return;

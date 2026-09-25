@@ -370,7 +370,7 @@ public final class PartyDialogs {
         }
         Component info = msg().get("party.dialog.member-body", Messages.comp("head", head(member)),
             Messages.text("player", member.name()), Messages.comp("status", status(member.uuid())),
-            Messages.text("ago", ago(member.joinedAt())));
+            Messages.text("ago", plugin.dialogs().ago(member.joinedAt())));
         int w = plugin.gui().partyButtonWidth * 3 / 2;
         Map<String, String> data = payload("id", member.uuid().toString());
         Component promote = msg().get("party.dialog.promote");
@@ -381,14 +381,6 @@ public final class PartyDialogs {
         Component title = msg().get("party.dialog.member-title", Messages.text("player", member.name()));
         return new OpenDialogs.Rendered(dialog(title, body(null, info), List.of(),
             DialogType.multiAction(buttons).columns(2).exitAction(back()).build()), Fingerprint.of(title, info, buttons));
-    }
-
-    private static String ago(long at) {
-        long s = Math.max(0, (System.currentTimeMillis() - at) / 1000);
-        if (s < 60) return s + "s";
-        if (s < 3600) return (s / 60) + "m";
-        if (s < 86400) return (s / 3600) + "h";
-        return (s / 86400) + "d";
     }
 
     // ------------------------------------------------------------------ invite
@@ -544,12 +536,12 @@ public final class PartyDialogs {
             case "party/page" -> openMenu(player, number(data.get("page")), null);
             case "party/create" -> {
                 String password = input(view, "password");
-                plugin.openDialogs().awaitNext(player); // the dialog stays until the party is saved
-                parties.create(player, password.isEmpty() ? null : password).thenAccept(o -> {
-                    if (!player.isOnline()) return;
-                    if (o.ok()) openMenu(player, 0, null);
-                    else openNone(player, error(o));
-                });
+                long ticket = plugin.openDialogs().awaitNext(player); // the dialog stays until the party is saved
+                parties.create(player, password.isEmpty() ? null : password).thenAccept(o ->
+                    plugin.openDialogs().continueAwait(player, ticket, () -> {
+                        if (o.ok()) openMenu(player, 0, null);
+                        else openNone(player, error(o));
+                    }));
             }
             case "party/join-menu" -> openJoin(player, "", null);
             case "party/join" -> {
@@ -662,12 +654,12 @@ public final class PartyDialogs {
     }
 
     private void afterJoin(Player player, String leader, CompletableFuture<Outcome> result) {
-        if (!result.isDone()) plugin.openDialogs().awaitNext(player); // (a password is checked off the main thread)
-        result.thenAccept(o -> {
-            if (!player.isOnline()) return;
+        // (a password is checked off the main thread; a result that is already there is shown right away)
+        long ticket = plugin.openDialogs().awaitNext(player);
+        result.thenAccept(o -> plugin.openDialogs().continueAwait(player, ticket, () -> {
             if (o.ok()) openMenu(player, 0, null);
             else openJoin(player, leader, error(o));
-        });
+        }));
     }
 
     private void savePrivacy(Player player, @Nullable DialogResponseView view) {
@@ -689,12 +681,11 @@ public final class PartyDialogs {
         CompletableFuture<Outcome> change = !password.isEmpty() ? parties.setPassword(player, password)
             : Boolean.TRUE.equals(remove) ? parties.setPassword(player, null)
             : CompletableFuture.completedFuture(Outcome.OK);
-        if (!change.isDone()) plugin.openDialogs().awaitNext(player);
-        change.thenAccept(o -> {
-            if (!player.isOnline()) return;
+        long ticket = plugin.openDialogs().awaitNext(player); // (a new password is hashed off the main thread)
+        change.thenAccept(o -> plugin.openDialogs().continueAwait(player, ticket, () -> {
             if (o.ok()) openMenu(player, 0, null);
             else openPrivacy(player, error(o));
-        });
+        }));
     }
 
     private void start(Player player, Map<String, String> data) {

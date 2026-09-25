@@ -632,6 +632,10 @@ kit-editor:
 
 dialog:
   close: "<muted>Close</muted>"
+  # "How long ago" under a minute in menus that update themselves (profile history, a friend's or party member's
+  # page; otherwise "5m", "3h", "2d"), and the queue wait on long tabs. Plain text. Not seconds: a menu that changes
+  # every second is sent again every second, which scrolls it back to the top.
+  under-a-minute: "<1m"
   # The queue menu (Play item, /queue). Layout knobs are in gui.yml (queue-menu).
   queue:
     menu-title: "Queue"

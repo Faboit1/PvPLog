@@ -148,11 +148,11 @@ public final class DialogService {
     public void profile(Player viewer, PlayerProfile target, boolean legacy) {
         var history = target.recent();
         if (history == null) {
-            open().awaitNext(viewer);
+            long ticket = open().awaitNext(viewer);
             plugin.profiles().history(target, Math.max(1, plugin.gui().historyLines)).thenAccept(list ->
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     if (plugin.profiles().get(target.uuid()) == target) target.recent(list);
-                    if (viewer.isOnline()) showProfile(viewer, target, list, legacy);
+                    open().continueAwait(viewer, ticket, () -> showProfile(viewer, target, list, legacy));
                 }));
             return;
         }
@@ -221,9 +221,14 @@ public final class DialogService {
         return new OpenDialogs.Rendered(d, Fingerprint.of(title, body, buttons));
     }
 
-    private static String ago(long at) {
+    /**
+     * "5m", "3h", "2d": how long ago {@code at} was, for refreshed dialogs. Under a minute it is
+     * {@code dialog.under-a-minute} ("&lt;1m"), not seconds: a text that changes every second would re-send the dialog
+     * every second, and each re-send scrolls it back to the top.
+     */
+    public String ago(long at) {
         long s = Math.max(0, (System.currentTimeMillis() - at) / 1000);
-        if (s < 60) return s + "s";
+        if (s < 60) return msg().raw("dialog.under-a-minute");
         if (s < 3600) return (s / 60) + "m";
         if (s < 86400) return (s / 3600) + "h";
         return (s / 86400) + "d";
@@ -235,11 +240,10 @@ public final class DialogService {
         String cat = category.toLowerCase(Locale.ROOT);
         if (!cat.equals(LeaderboardService.OVERALL) && plugin.kits().get(cat) == null) cat = LeaderboardService.OVERALL;
         String finalCat = cat;
-        open().awaitNext(viewer);
+        long ticket = open().awaitNext(viewer);
         plugin.leaderboards().get(cat, region, null).thenAccept(rows ->
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                if (viewer.isOnline()) showLeaderboard(viewer, finalCat, region, rows);
-            }));
+            Bukkit.getScheduler().runTask(plugin, () ->
+                open().continueAwait(viewer, ticket, () -> showLeaderboard(viewer, finalCat, region, rows))));
     }
 
     private void showLeaderboard(Player viewer, String category, @Nullable String region, List<LeaderboardDao.Row> rows) {
@@ -343,15 +347,25 @@ public final class DialogService {
 
     /**
      * Live matches, filtered by {@code query} (a player name or kit, case-insensitive substring), highest average
-     * Elo first, then by name.
+     * Elo first, then by name. Without a query it is the live list, refreshed while open; its Search button opens
+     * {@link #spectateSearch}. With one it is the list with the search box, which isn't refreshed (a re-send would
+     * clear what the player types).
      */
     public void spectate(Player player, String query) {
-        // refreshed while nothing was searched (the search box would lose what is typed)
-        open().show(player, OpenDialogs.Kind.SPECTATE, buildSpectate(player, query),
-            DialogRefresh.spectateRefreshable(query) ? p -> buildSpectate(p, query) : null);
+        if (query.isBlank()) {
+            open().show(player, OpenDialogs.Kind.SPECTATE, buildSpectate(player, "", false), p -> buildSpectate(p, "", false));
+        } else {
+            open().show(player, OpenDialogs.Kind.SPECTATE, buildSpectate(player, query, true), null);
+        }
     }
 
-    private OpenDialogs.Rendered buildSpectate(Player player, String query) {
+    /** The live list with the search box (the live list's Search button); not refreshed. */
+    public void spectateSearch(Player player) {
+        open().show(player, OpenDialogs.Kind.SPECTATE, buildSpectate(player, "", true), null);
+    }
+
+    /** The spectate list; {@code search}: with the search box, whose Search button runs the search. */
+    private OpenDialogs.Rendered buildSpectate(Player player, String query, boolean search) {
         String q = query.strip().toLowerCase(Locale.ROOT);
         List<Match> live = new ArrayList<>();
         for (Match m : plugin.matches().active()) {
@@ -369,7 +383,8 @@ public final class DialogService {
                 Fingerprint.of(title, none));
         }
         List<ActionButton> buttons = new ArrayList<>();
-        buttons.add(button(msg().get("dialog.spectate.search"), null, plugin.gui().wideWidth, "spectate/search", Map.of()));
+        buttons.add(button(msg().get("dialog.spectate.search"), null, plugin.gui().wideWidth,
+            search ? "spectate/search" : "spectate/find", Map.of()));
         int limit = Math.max(1, plugin.gui().spectateLimit);
         for (Match m : shown.subList(0, Math.min(shown.size(), limit))) {
             if (top.cheesesmp.duelcore.match.SpectateService.isFreeForAll(m)) {
@@ -393,13 +408,16 @@ public final class DialogService {
             buttons.add(button(label, tooltip, plugin.gui().wideWidth, "spectate/match", payload("id", String.valueOf(m.id()))));
         }
         List<DialogInput> inputs = new ArrayList<>();
-        inputs.add(DialogInput.text("search", msg().get("dialog.spectate.search-label")).width(plugin.gui().wideWidth)
-            .initial(query.strip()).maxLength(32).build());
+        if (search) {
+            inputs.add(DialogInput.text("search", msg().get("dialog.spectate.search-label")).width(plugin.gui().wideWidth)
+                .initial(query.strip()).maxLength(32).build());
+        }
         Component body = shown.isEmpty()
             ? msg().get("dialog.spectate.no-results", Messages.text("query", query.strip()))
             : msg().get("dialog.spectate.body", Messages.num("shown", Math.min(shown.size(), limit)), Messages.num("live", live.size()));
         return new OpenDialogs.Rendered(dialog(title, List.of(text(body)), inputs,
-            DialogType.multiAction(buttons).columns(1).exitAction(close()).build()), Fingerprint.of(title, body, buttons, query.strip()));
+            DialogType.multiAction(buttons).columns(1).exitAction(close()).build()), Fingerprint.of(title, body, buttons, query.strip()),
+            !inputs.isEmpty());
     }
 
     /** "A, B, C +3": the fighters of a free-for-all, still standing ones first. */

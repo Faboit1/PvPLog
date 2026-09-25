@@ -5,7 +5,8 @@
 //  2. queued with the menu open: at least two refreshed menus with a changing search timer within ~3 s, none after
 //     Close;
 //  3. the Friends dialog is sent again (no click, no clear_dialog) when a friend comes online, showing them online.
-// args: [kit] [prefix] (bots <prefix>a and <prefix>b; the kit must have nobody else searching). Exit code 0 = pass.
+// args: [kit] [prefix] (bots <prefix>a and <prefix>b; the kit must have nobody else searching and be on a tab with at
+// most gui.yml queue-menu.clock-max-kits kits, where the search time is a ticking clock). Exit code 0 = pass.
 const L = require('./lib')
 const KIT = process.argv[2] || 'sword'
 const P = process.argv[3] || 'dcbot_df'

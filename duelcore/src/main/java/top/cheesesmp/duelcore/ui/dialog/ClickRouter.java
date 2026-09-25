@@ -60,8 +60,8 @@ public final class ClickRouter implements Listener {
         if (!(event.getCommonConnection() instanceof PlayerGameConnection connection)) return;
         Player player = connection.getPlayer();
         String action = event.getIdentifier().value();
-        // closing (also what Escape sends) is harmless to repeat and must never be dropped
-        if (!isClose(action)) {
+        // exit actions (what Escape sends) are harmless to repeat and must never be dropped
+        if (!unguarded(action)) {
             long now = System.currentTimeMillis();
             Long last = lastClick.get(player.getUniqueId());
             if (last != null && now - last < 150) return; // double-click / spam guard
@@ -88,6 +88,15 @@ public final class ClickRouter implements Listener {
         return action.equals(OpenDialogs.CLOSE) || action.equals("queue/close") || action.equals("party/close");
     }
 
+    /**
+     * Clicks the spam guard never drops: the close clicks and {@code party/menu}, the exit action (Back) of the party
+     * dialogs. Escape runs a dialog's exit action and closes the screen (after-action CLOSE), so a dropped one would
+     * leave the server tracking (and refreshing) a dialog the player closed. They only close or navigate.
+     */
+    static boolean unguarded(String action) {
+        return isClose(action) || action.equals("party/menu");
+    }
+
     private void handle(Player player, String action, Map<String, String> data, @Nullable DialogResponseView view) {
         if (isClose(action)) {
             plugin.openDialogs().close(player);
@@ -105,6 +114,7 @@ public final class ClickRouter implements Listener {
                 saveSettings(player, view);
                 plugin.openDialogs().close(player); // the result is a chat message
             }
+            case "spectate/find" -> plugin.dialogs().spectateSearch(player);
             case "spectate/search" -> {
                 String query = view == null ? "" : java.util.Objects.requireNonNullElse(view.getText("search"), "");
                 plugin.dialogs().spectate(player, query.length() > 32 ? query.substring(0, 32) : query);

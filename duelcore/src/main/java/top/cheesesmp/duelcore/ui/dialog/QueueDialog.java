@@ -150,10 +150,10 @@ public final class QueueDialog {
             show(player, shown);
             return;
         }
-        plugin.openDialogs().awaitNext(player); // an open dialog stays until the menu is loaded
-        prefs.load(player).thenRun(() -> {
-            if (player.isOnline() && plugin.matches().match(player.getUniqueId()) == null) show(player, shown);
-        });
+        long ticket = plugin.openDialogs().awaitNext(player); // an open dialog stays until the menu is loaded
+        prefs.load(player).thenRun(() -> plugin.openDialogs().continueAwait(player, ticket, () -> {
+            if (plugin.matches().match(player.getUniqueId()) == null) show(player, shown);
+        }));
     }
 
     /** All tab ids in menu order: favorites, then the kit categories. */
@@ -229,7 +229,12 @@ public final class QueueDialog {
             body.add(plain(msg().get(tab.equals(FAVORITES) ? "dialog.queue.no-favorites" : "dialog.queue.no-kits"),
                 gui.queueWidth, fp));
         }
-        for (Kit kit : kits) body.add(kitRow(uuid, profile, kit, favorites.contains(kit.id()), tab, now, frame, edit, fp));
+        // a clock ticking every second re-sends the menu every second, and each re-send scrolls it back to the top:
+        // only on tabs short enough not to need scrolling
+        boolean clock = kits.size() <= gui.queueClockKits;
+        for (Kit kit : kits) {
+            body.add(kitRow(uuid, profile, kit, favorites.contains(kit.id()), tab, now, clock, frame, edit, fp));
+        }
         // Close (and Escape) sends dialog/close: the menu is forgotten and a running animation stops
         ActionButton close = plugin.dialogs().close();
         Component title = msg().get("dialog.queue.menu-title");
@@ -299,7 +304,7 @@ public final class QueueDialog {
     }
 
     private DialogBody kitRow(UUID uuid, @Nullable PlayerProfile profile, Kit kit, boolean favorite, String tab, long now,
-                              @Nullable MenuFrame frame, boolean edit, Fingerprint fp) {
+                              boolean clock, @Nullable MenuFrame frame, boolean edit, Fingerprint fp) {
         QueueEntry entry = plugin.queue().entry(uuid, kit.id());
         int queued = plugin.queue().size(kit.id());
         int playing = playing(kit.id());
@@ -308,7 +313,7 @@ public final class QueueDialog {
             .clickEvent(action("favorite", "kit", kit.id(), "tab", tab));
         Component first = msg().get(entry != null ? "dialog.queue.kit-queued" : "dialog.queue.kit",
             Messages.comp("kit", kit.displayName()), Messages.num("players", queued + playing),
-            Messages.text("wait", clock(entry == null ? 0 : entry.waitSeconds(now))), Messages.comp("star", star));
+            Messages.text("wait", wait(entry == null ? 0 : entry.waitSeconds(now), clock)), Messages.comp("star", star));
         if (edit) {
             // the ✎ opens the kit's editor (its own click and hover over the row's)
             first = first.append(msg().get("dialog.queue.edit")
@@ -661,9 +666,11 @@ public final class QueueDialog {
         return n;
     }
 
-    private static String clock(double seconds) {
+    /** The search time: a m:ss clock, or whole minutes ("&lt;1m", "2m") on long tabs (gui.yml queue-menu.clock-max-kits). */
+    private String wait(double seconds, boolean clock) {
         int s = (int) seconds;
-        return String.format(Locale.ROOT, "%d:%02d", s / 60, s % 60);
+        if (clock) return String.format(Locale.ROOT, "%d:%02d", s / 60, s % 60);
+        return s < 60 ? msg().raw("dialog.under-a-minute") : (s / 60) + "m";
     }
 
     private static ClickEvent<?> action(String action, String... kv) {

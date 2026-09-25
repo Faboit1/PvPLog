@@ -143,30 +143,31 @@ public final class CommandService {
             plugin.messages().send(viewer, "command.no-permission");
             return;
         }
-        plugin.openDialogs().awaitNext(viewer); // a dialog it was opened from stays until the profile is loaded
+        // a dialog it was opened from stays until the profile is loaded (not shown if it was closed meanwhile)
+        long ticket = plugin.openDialogs().awaitNext(viewer);
         if (legacy) {
             plugin.profiles().previousSeason().thenAccept(season -> Bukkit.getScheduler().runTask(plugin, () -> {
                 if (season == null) {
                     plugin.messages().send(viewer, "profile.no-legacy");
-                    plugin.openDialogs().abandon(viewer);
+                    plugin.openDialogs().abandon(viewer, ticket);
                     return;
                 }
-                lookupAndShow(viewer, name, season.id(), true);
+                lookupAndShow(viewer, name, season.id(), true, ticket);
             }));
             return;
         }
-        lookupAndShow(viewer, name, null, false);
+        lookupAndShow(viewer, name, null, false, ticket);
     }
 
-    private void lookupAndShow(Player viewer, String name, @Nullable Integer season, boolean legacy) {
+    private void lookupAndShow(Player viewer, String name, @Nullable Integer season, boolean legacy, long ticket) {
         plugin.profiles().lookup(name, season).thenAccept(result -> Bukkit.getScheduler().runTask(plugin, () -> {
             if (!viewer.isOnline()) return;
             if (result.isEmpty()) {
                 plugin.messages().send(viewer, "profile.not-found", Messages.text("player", name));
-                plugin.openDialogs().abandon(viewer);
+                plugin.openDialogs().abandon(viewer, ticket);
                 return;
             }
-            plugin.dialogs().profile(viewer, result.get(), legacy);
+            plugin.openDialogs().continueAwait(viewer, ticket, () -> plugin.dialogs().profile(viewer, result.get(), legacy));
         }));
     }
 

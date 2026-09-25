@@ -141,15 +141,23 @@ A server shutdown during a match cancels it without any rating change. `/duelcor
   open kind and, for dialogs whose content changes, a renderer that captures what it needs (queue tab, friends
   page/filter, party page, spectate query, …). `ClickRouter` compares the player's dialog serial before and after a
   click: a click that showed no dialog closes it (`clear_dialog`), unless it called `awaitNext` because its dialog is
-  loaded first (closed after 5 s, or at once through `abandon`, if that fails). Every close/exit button sends
+  loaded first (closed after 5 s, or at once through `abandon`, if that fails). `awaitNext` returns a ticket, and the
+  loaded dialog (or the kit editor chest) is shown through `continueAwait(player, ticket, …)`: every show and close
+  (Escape) cancels the ticket, so a load that finishes after the player closed the dialog shows nothing. Friend
+  follows and reloads report failures (`FriendService.Then.failed`), which abandon the wait. Every close/exit button sends
   `duelcore:dialog/close`; the client runs a dialog's exit action on Escape (notice: its button, multi-action: the exit
   action, confirmation: the no button, with after-action CLOSE), so Escape is seen too. The open dialog is also
   forgotten on an inventory opening, quit, world change, match start, reload and disable (which closes them all), and
   on client signs that no screen is open (a movement key, an item used, a command) once the dialog had time to arrive
-  (1 tick + ping). A 1-tick timer re-renders refreshable dialogs every `dialogs.refresh.interval-ticks` and re-sends
-  them only when their fingerprint (components, buttons, item parameters) changed, never while a click waits or a
-  `DIALOG`-channel animation (the queue menu's progress fill) shows frames. Dialogs with text inputs are never
-  refreshed; the spectate list only without a search query.
+  and the sign to come back (ping rounded up to ticks + 3 ticks, from the last show or re-send). The spam guard never
+  drops exit actions (`dialog/close`, `party/menu`), which Escape runs. A 1-tick timer re-renders refreshable dialogs
+  every `dialogs.refresh.interval-ticks` and re-sends them only when their fingerprint (components, buttons, item
+  parameters) changed, never while a click waits or a `DIALOG`-channel animation (the queue menu's progress fill)
+  shows frames. The client builds a new screen for every `show_dialog`, which resets the scroll position and focus,
+  so refreshed dialogs avoid per-second texts where they may scroll: "ago" times under a minute read "<1m" and the
+  queue menu's m:ss clock is only used on tabs with at most `queue-menu.clock-max-kits` kits. Dialogs with inputs are
+  never refreshed (`Rendered.inputs` drops the renderer): the live spectate list has no search box, its Search
+  button opens the list with one (not refreshed).
 * **Sidebar** uses a blank number format and per-line custom names. The hub shows name, tier and overall Elo, queued and live counts. In a match it shows score, round, timer and ping.
 * **Queue music**: while searching, `QueueMusic` plays a random music disc to the player only (record source,
   emitted from the player, `Setting.QUEUE_MUSIC`). The next track starts from the configured track length; the music

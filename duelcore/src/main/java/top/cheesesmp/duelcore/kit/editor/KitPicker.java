@@ -43,12 +43,13 @@ public final class KitPicker {
         }
         KitLayouts layouts = editor.layouts();
         if (!layouts.loaded(player.getUniqueId())) {
-            plugin.openDialogs().awaitNext(player); // an open dialog stays until the picker is loaded
+            long ticket = plugin.openDialogs().awaitNext(player); // an open dialog stays until the picker is loaded
             layouts.load(player).thenRun(() -> {
-                if (player.isOnline() && layouts.loaded(player.getUniqueId())) show(player);
-                else if (player.isOnline()) {
+                if (player.isOnline() && layouts.loaded(player.getUniqueId())) {
+                    plugin.openDialogs().continueAwait(player, ticket, () -> show(player));
+                } else if (player.isOnline()) {
                     plugin.messages().send(player, "kit-editor.not-ready");
-                    plugin.openDialogs().abandon(player);
+                    plugin.openDialogs().abandon(player, ticket);
                 }
             });
             return;

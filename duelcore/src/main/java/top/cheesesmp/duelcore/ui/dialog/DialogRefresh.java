@@ -29,17 +29,12 @@ public final class DialogRefresh {
         return enabled && refreshable && !awaiting && !animating && ticksSinceCheck >= interval;
     }
 
-    /** Whether a re-rendered dialog is sent: only when what it shows changed (the client keeps its scroll position). */
+    /**
+     * Whether a re-rendered dialog is sent: only when what it shows changed. (A re-send is a new screen on the client,
+     * scrolled back to the top: unchanged dialogs are left alone.)
+     */
     public static boolean changed(long shown, long rendered) {
         return shown != rendered;
-    }
-
-    /**
-     * Whether the spectate list refreshes: only while nothing was searched. Its search box would lose what the player
-     * typed, and the client doesn't say whether something is being typed.
-     */
-    public static boolean spectateRefreshable(String query) {
-        return query.isBlank();
     }
 
     /**
@@ -50,13 +45,17 @@ public final class DialogRefresh {
         return serialAfter != serialBefore || awaiting;
     }
 
+    /** Ticks added to the ping for {@link #signApplies}: the client's tick, the server's tick and their alignment. */
+    public static final int SIGN_GRACE = 3;
+
     /**
      * Whether a sign from the client that no screen is open (a key pressed, an item used, a command typed) means the
-     * tracked dialog is gone. Not while the dialog may still be on its way to the client ({@code ping} ms, plus a tick):
-     * the client did that before it got the dialog.
+     * tracked dialog is gone. Not while the dialog may still be on its way to the client, or the sign on its way back
+     * ({@code ping} ms rounded up to ticks, plus {@link #SIGN_GRACE} ticks): the client did that before it got the
+     * dialog.
      */
     public static boolean signApplies(int shownAt, int now, int ping) {
-        return now - shownAt > 1 + Math.max(0, ping) / 50;
+        return now - shownAt > SIGN_GRACE + Math.ceilDiv(Math.max(0, ping), 50);
     }
 
     /** Whether a click has waited too long for its next dialog (the load failed or was refused). */

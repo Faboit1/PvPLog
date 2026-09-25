@@ -214,7 +214,9 @@ public final class FriendDialogs {
         body.add(msg().get("friends.person.header", Messages.comp("head", Icons.head(target, name)),
             Messages.text("player", name), Messages.comp("status", status(target, e.status()))));
         body.add(msg().get("friends.person." + relation.name().toLowerCase(Locale.ROOT), Messages.text("player", name)));
-        if (following != null) body.add(msg().get("friends.person.since", Messages.text("ago", ago(following.since()))));
+        if (following != null) {
+            body.add(msg().get("friends.person.since", Messages.text("ago", plugin.dialogs().ago(following.since()))));
+        }
 
         String t = target.toString();
         String pg = String.valueOf(page);
@@ -243,14 +245,6 @@ public final class FriendDialogs {
         Component title = msg().get("friends.person.title", Messages.text("player", name));
         return new OpenDialogs.Rendered(DialogService.dialog(title, List.of(ui().text(ui().lines(body))), List.of(),
             DialogType.multiAction(buttons).columns(2).exitAction(ui().close()).build()), Fingerprint.of(title, body, buttons));
-    }
-
-    private static String ago(long at) {
-        long s = Math.max(0, (System.currentTimeMillis() - at) / 1000);
-        if (s < 60) return s + "s";
-        if (s < 3600) return (s / 60) + "m";
-        if (s < 86400) return (s / 3600) + "h";
-        return (s / 86400) + "d";
     }
 
     // ------------------------------------------------------------------ add
@@ -334,10 +328,8 @@ public final class FriendDialogs {
         UUID target = uuid(data.get("target"));
         switch (action) {
             case "friend/open" -> open(player, page, filter);
-            case "friend/refresh" -> {
-                plugin.openDialogs().awaitNext(player); // the list stays until it is reloaded
-                service.reload(player, () -> open(player, page, filter));
-            }
+            // the list stays until it is reloaded
+            case "friend/refresh" -> service.reload(player, awaiting(player, () -> open(player, page, filter)));
             case "friend/add" -> add(player, "");
             case "friend/search" -> add(player, view == null ? "" : Objects.requireNonNullElse(view.getText("search"), ""));
             case "friend/person" -> {
@@ -385,12 +377,15 @@ public final class FriendDialogs {
     }
 
     /**
-     * A follow's "then": the click's dialog waits for it (the follow may be saved first); without one (a chat click)
-     * nothing waits and the click closes its dialog.
+     * A follow's (or reload's) "then": the click's dialog waits for {@code next} (the follow may be saved first), which
+     * isn't shown when the player closed the dialog meanwhile; when the follow fails (told in chat) the dialog is
+     * closed at once. Without a {@code next} (a chat click) nothing waits and the click closes its dialog.
      */
-    private @Nullable Runnable awaiting(Player player, @Nullable Runnable then) {
-        if (then != null) plugin.openDialogs().awaitNext(player);
-        return then;
+    private FriendService.@Nullable Then awaiting(Player player, @Nullable Runnable next) {
+        if (next == null) return null;
+        long ticket = plugin.openDialogs().awaitNext(player);
+        return new FriendService.Then(() -> plugin.openDialogs().continueAwait(player, ticket, next),
+            () -> plugin.openDialogs().abandon(player, ticket));
     }
 
     /** What to show after a follow or unfollow, from the click's "back" field. */

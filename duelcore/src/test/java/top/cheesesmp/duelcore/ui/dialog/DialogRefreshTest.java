@@ -31,13 +31,6 @@ class DialogRefreshTest {
     }
 
     @Test
-    void spectateListRefreshesOnlyWithoutASearch() {
-        assertTrue(DialogRefresh.spectateRefreshable(""));
-        assertTrue(DialogRefresh.spectateRefreshable("  "));
-        assertFalse(DialogRefresh.spectateRefreshable("dcbot"));
-    }
-
-    @Test
     void aClickKeepsItsDialogOnlyWhenTheNextOneCame() {
         assertTrue(DialogRefresh.keepsDialog(5, 6, false), "showed the next dialog");
         assertTrue(DialogRefresh.keepsDialog(5, 5, true), "the next dialog is loading");
@@ -48,12 +41,16 @@ class DialogRefreshTest {
     @Test
     void signsDoNotApplyWhileTheDialogIsOnItsWay() {
         assertFalse(DialogRefresh.signApplies(100, 100, 0), "same tick");
-        assertFalse(DialogRefresh.signApplies(100, 101, 0));
-        assertTrue(DialogRefresh.signApplies(100, 102, 0));
+        assertFalse(DialogRefresh.signApplies(100, 103, 0), "client and server ticks");
+        assertTrue(DialogRefresh.signApplies(100, 104, 0));
+        // 40 ms ping: a key pressed while jumping, just before the dialog arrived, comes 2 ticks after the show
+        assertFalse(DialogRefresh.signApplies(100, 102, 40));
+        assertFalse(DialogRefresh.signApplies(100, 104, 40));
+        assertTrue(DialogRefresh.signApplies(100, 105, 40));
         // 200 ms ping: four more ticks before a key press can come from a client that has the dialog
-        assertFalse(DialogRefresh.signApplies(100, 105, 200));
-        assertTrue(DialogRefresh.signApplies(100, 106, 200));
-        assertTrue(DialogRefresh.signApplies(100, 102, -1), "unknown ping");
+        assertFalse(DialogRefresh.signApplies(100, 107, 200));
+        assertTrue(DialogRefresh.signApplies(100, 108, 200));
+        assertTrue(DialogRefresh.signApplies(100, 104, -1), "unknown ping");
     }
 
     @Test
@@ -79,5 +76,16 @@ class DialogRefreshTest {
         assertTrue(ClickRouter.isClose("party/close"));
         assertFalse(ClickRouter.isClose("party/menu"));
         assertFalse(ClickRouter.isClose("queue/tab"));
+    }
+
+    @Test
+    void exitActionsAreNeverDroppedAsSpam() {
+        // Escape runs the exit action with after-action CLOSE: dropping it would leave a closed dialog tracked (and
+        // refreshed back onto the screen); these only navigate, so repeating them is harmless
+        assertTrue(ClickRouter.unguarded(OpenDialogs.CLOSE));
+        assertTrue(ClickRouter.unguarded("queue/close"));
+        assertTrue(ClickRouter.unguarded("party/menu"), "the exit action of the party dialogs (Back)");
+        assertFalse(ClickRouter.unguarded("party/kick"));
+        assertFalse(ClickRouter.unguarded("queue/toggle"));
     }
 }

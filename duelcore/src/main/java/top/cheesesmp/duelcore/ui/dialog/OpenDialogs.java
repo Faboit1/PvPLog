@@ -32,16 +32,19 @@ import top.cheesesmp.duelcore.ui.anim.Channel;
  * <p>Every DuelCore dialog uses after-action NONE: a click keeps the dialog on screen until the server answers with
  * the next dialog, which replaces it without a close-then-reopen flicker. A click that doesn't show another dialog
  * closes it ({@link ClickRouter} does that for every click, see {@link DialogRefresh#keepsDialog}); a click whose next
- * dialog is loaded first calls {@link #awaitNext}. Every close or exit button sends {@code duelcore:dialog/close}, and
+ * dialog is loaded first calls {@link #awaitNext} and shows it through {@link #continueAwait}, so a close (Escape) or
+ * another dialog meanwhile cancels it. Every close or exit button sends {@code duelcore:dialog/close}, and
  * Escape runs a dialog's exit action (notice: its button, multi-action: the exit action, confirmation: the "no"
  * button) with after-action CLOSE, so closing with Escape is seen as well.
  *
  * <p>The open dialog is forgotten on a close click, Escape, any action that closes it, an inventory opening, quit,
  * world change, joining a match, reload and disable, and on signs that no screen is open any more (a movement key,
  * an item used, a command typed). Refreshable dialogs are re-rendered every {@code dialogs.refresh.interval-
- * ticks} and re-sent only when their {@link Fingerprint} changed, so the scroll position stays put; never while a
- * click waits for its next dialog or an animation shows frames of it (the queue menu's progress fill). Main thread
- * only.
+ * ticks} and re-sent only when their {@link Fingerprint} changed; never while a click waits for its next dialog or an
+ * animation shows frames of it (the queue menu's progress fill), and never a dialog with inputs (it would clear what
+ * the player typed). A re-send builds a new screen on the client, which scrolls back to the top, so refreshed dialogs
+ * avoid texts that change every second where they may need scrolling (times under a minute read "&lt;1m", long queue
+ * tabs show the wait in minutes). Main thread only.
  */
 public final class OpenDialogs implements Listener, Runnable {
 
@@ -57,8 +60,16 @@ public final class OpenDialogs implements Listener, Runnable {
         KIT_PICKER
     }
 
-    /** A built dialog and the fingerprint of what it shows. */
-    public record Rendered(Dialog dialog, long fingerprint) {
+    /**
+     * A built dialog and the fingerprint of what it shows. A dialog with {@code inputs} (a text box, toggles, …) is
+     * never refreshed, whatever renderer it is shown with: a re-send would clear what the player typed.
+     */
+    public record Rendered(Dialog dialog, long fingerprint, boolean inputs) {
+
+        /** A dialog without inputs. */
+        public Rendered(Dialog dialog, long fingerprint) {
+            this(dialog, fingerprint, false);
+        }
     }
 
     /**
@@ -80,10 +91,16 @@ public final class OpenDialogs implements Listener, Runnable {
         long serial;
         /** Tick a click started waiting for its next dialog, or -1. */
         int awaitingSince = -1;
+        /**
+         * The ticket of the wait whose dialog may still be shown, or 0: cleared by every show and close (Escape),
+         * so a load that finishes later doesn't pop its dialog up over another one or an empty screen.
+         */
+        long awaitTicket;
     }
 
     private final DuelCorePlugin plugin;
     private final Map<UUID, State> states = new HashMap<>();
+    private long tickets;
     private long shown;
     private long refreshed;
     private long unchanged;
@@ -103,18 +120,19 @@ public final class OpenDialogs implements Listener, Runnable {
         show(player, kind, new Rendered(dialog, 0L), null);
     }
 
-    /** Shows a dialog; with a {@code renderer} it is refreshed while open. */
+    /** Shows a dialog; with a {@code renderer} it is refreshed while open (unless it has inputs). */
     public void show(Player player, Kind kind, Rendered rendered, @Nullable Renderer renderer) {
         if (!player.isOnline()) return;
         State s = states.computeIfAbsent(player.getUniqueId(), k -> new State());
         int now = now();
         s.kind = kind;
-        s.renderer = renderer;
+        s.renderer = rendered.inputs() ? null : renderer;
         s.fingerprint = rendered.fingerprint();
         s.shownAt = now;
         s.checkedAt = now + 1; // first check an interval and a tick later, after the timers shown tick over
         s.serial++;
         s.awaitingSince = -1;
+        s.awaitTicket = 0;
         shown++;
         player.showDialog(rendered.dialog());
     }
@@ -134,6 +152,7 @@ public final class OpenDialogs implements Listener, Runnable {
         s.renderer = null;
         s.serial++;
         s.awaitingSince = -1;
+        s.awaitTicket = 0;
         // an animating queue menu must not show frames of a closed menu
         Player player = wasOpen ? Bukkit.getPlayer(uuid) : null;
         if (player != null && plugin.anim() != null) plugin.anim().cancel(player, Channel.DIALOG);
@@ -149,10 +168,30 @@ public final class OpenDialogs implements Listener, Runnable {
 
     /**
      * The click being handled opens its dialog later (after loading it): its dialog stays on screen until then (or is
-     * closed after {@link DialogRefresh#AWAIT_TIMEOUT} ticks, when the load fails).
+     * closed after {@link DialogRefresh#AWAIT_TIMEOUT} ticks, when the load fails). The loaded dialog is shown through
+     * {@link #continueAwait} with the returned ticket, so it is dropped when the player closed the dialog (Escape) or
+     * another one was shown meanwhile.
      */
-    public void awaitNext(Player player) {
-        states.computeIfAbsent(player.getUniqueId(), k -> new State()).awaitingSince = now();
+    public long awaitNext(Player player) {
+        State s = states.computeIfAbsent(player.getUniqueId(), k -> new State());
+        s.awaitingSince = now();
+        s.awaitTicket = ++tickets;
+        return s.awaitTicket;
+    }
+
+    /** Whether the dialog of the wait with this ticket may still be shown (nothing was shown or closed since). */
+    public boolean stillAwaited(Player player, long ticket) {
+        State s = states.get(player.getUniqueId());
+        return s != null && ticket != 0 && s.awaitTicket == ticket;
+    }
+
+    /**
+     * After a load: runs {@code next} (which shows the awaited dialog or opens the kit editor) only while the player
+     * is online and the wait of {@code ticket} wasn't cancelled. Side effects that already happened (a follow, a
+     * party saved) stay.
+     */
+    public void continueAwait(Player player, long ticket, Runnable next) {
+        if (player.isOnline() && stillAwaited(player, ticket)) next.run();
     }
 
     /**
@@ -163,7 +202,13 @@ public final class OpenDialogs implements Listener, Runnable {
         State s = states.get(player.getUniqueId());
         if (s == null || s.awaitingSince < 0) return;
         s.awaitingSince = -1;
+        s.awaitTicket = 0;
         if (s.kind != null) close(player);
+    }
+
+    /** {@link #abandon(Player)} for the wait of {@code ticket} only (not when it was cancelled or replaced). */
+    public void abandon(Player player, long ticket) {
+        if (stillAwaited(player, ticket)) abandon(player);
     }
 
     /** Bumped on every show and close of this player's dialog. */
@@ -262,11 +307,16 @@ public final class OpenDialogs implements Listener, Runnable {
             return;
         }
         if (r == null || s.kind != kind) return;
+        if (r.inputs()) { // (never re-sent: it would clear what the player typed)
+            s.renderer = null;
+            return;
+        }
         if (!DialogRefresh.changed(s.fingerprint, r.fingerprint())) {
             unchanged++;
             return;
         }
         s.fingerprint = r.fingerprint();
+        s.shownAt = now(); // a key pressed before the re-sent dialog arrived isn't a sign that it is gone
         refreshed++;
         player.showDialog(r.dialog());
     }
