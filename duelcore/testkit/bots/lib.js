@@ -2,6 +2,17 @@
 const mineflayer = require('mineflayer')
 const nbt = require('prismarine-nbt')
 
+// ../bot-env.properties (next to the bots on the server) fills in settings the environment doesn't have
+try {
+  const envFile = require('path').join(__dirname, '..', 'bot-env.properties')
+  for (const line of require('fs').readFileSync(envFile, 'utf8').split('\n')) {
+    const i = line.indexOf('=')
+    if (i > 0 && !line.trim().startsWith('#')) {
+      const k = line.slice(0, i).trim()
+      if (process.env[k] === undefined) process.env[k] = line.slice(i + 1).trim()
+    }
+  }
+} catch { }
 const HOST = process.env.MC_HOST || '127.0.0.1'
 const PORT = parseInt(process.env.MC_PORT || '25569')
 const t0 = Date.now()
@@ -53,7 +64,8 @@ let nextSlot = 0
 function createBot (name, opts = {}) {
   const now = Date.now()
   const wait = Math.max(0, nextSlot - now)
-  nextSlot = Math.max(now, nextSlot) + 2200
+  // BOT_JOIN_GAP_MS: behind a proxy its per-IP login rate limit (Velocity: 3 s) needs a wider gap
+  nextSlot = Math.max(now, nextSlot) + parseInt(process.env.BOT_JOIN_GAP_MS || '2200')
   if (wait > 0) {
     // busy-wait (blocks the event loop for at most ~2.2 s, only while bots are still logging in) so createBot
     // stays synchronous for the scripts that call it
