@@ -1,7 +1,9 @@
-# Crystal ("Vanilla"): maxed netherite with blast-protection legs and boots, 128 crystals and obsidian, respawn
-# anchors with glowstone, 9 totems, gapples, pearls, XP and a slow-falling crossbow.
+# Crystal ("Vanilla"): the MCPVP crystal kit. Maxed netherite (blast-protection leggings and boots), 128 crystals
+# and obsidian, 64 anchors and glowstone, 14 totems, 112 pearls, 64 gapples, 192 XP, a slow-falling crossbow, shield
+# and a Density mace. MCPVP's preview has shulker boxes in the left column; they are useless in a duel, so they
+# became the crossbow, its arrows and more pearls.
 display-name: "Crystal"
-description: "Netherite crystal PvP: crystals, anchors, obsidian and totems."
+description: "Netherite crystal PvP: crystals, anchors, obsidian and 14 totems."
 icon: obsidian
 sprite: "blocks:block/obsidian"
 category: extra
@@ -35,27 +37,38 @@ loadout:
     0: { item: netherite_sword, enchants: { sharpness: 5, knockback: 1, sweeping_edge: 3, unbreaking: 3, mending: 1 } }
     1: { item: obsidian, amount: 64 }
     2: { item: end_crystal, amount: 64 }
-    3: { item: respawn_anchor, amount: 64 }
+    3: { item: ender_pearl, amount: 16 }
     4: { item: glowstone, amount: 64 }
-    5: { item: golden_apple, amount: 64 }
+    5: { item: respawn_anchor, amount: 64 }
     6: { item: ender_pearl, amount: 16 }
-    7: { item: experience_bottle, amount: 64 }
-    8: totem_of_undying
-    9: { item: netherite_pickaxe, enchants: { efficiency: 5, silk_touch: 1, unbreaking: 3, mending: 1 } }
-    10: { item: crossbow, enchants: { multishot: 1, quick_charge: 3, unbreaking: 3, mending: 1 } }
-    11: { item: tipped_arrow, potion: long_slow_falling, amount: 64 }
-    12: { item: obsidian, amount: 64 }
-    13: { item: end_crystal, amount: 64 }
-    14: { item: experience_bottle, amount: 64 }
-    15: { item: ender_pearl, amount: 16 }
-    16: { item: ender_pearl, amount: 16 }
-    17: { item: golden_apple, amount: 64 }
-    18: totem_of_undying
+    7: { item: golden_apple, amount: 64 }
+    8: { item: netherite_pickaxe, enchants: { efficiency: 5, silk_touch: 1, unbreaking: 3, mending: 1 } }
+    9: { item: crossbow, enchants: { multishot: 1, quick_charge: 3, unbreaking: 3, mending: 1 } }
+    10: totem_of_undying
+    11: totem_of_undying
+    12: totem_of_undying
+    13: totem_of_undying
+    14: totem_of_undying
+    15: totem_of_undying
+    16: totem_of_undying
+    17: { item: experience_bottle, amount: 64 }
+    18: { item: tipped_arrow, potion: long_slow_falling, amount: 64 }
     19: totem_of_undying
     20: totem_of_undying
     21: totem_of_undying
     22: totem_of_undying
     23: totem_of_undying
     24: totem_of_undying
+    25: { item: shield, enchants: { unbreaking: 3, mending: 1 } }
+    26: { item: experience_bottle, amount: 64 }
+    27: { item: ender_pearl, amount: 16 }
+    28: { item: ender_pearl, amount: 16 }
+    29: { item: ender_pearl, amount: 16 }
+    30: { item: ender_pearl, amount: 16 }
+    31: { item: ender_pearl, amount: 16 }
+    32: { item: obsidian, amount: 64 }
+    33: { item: end_crystal, amount: 64 }
+    34: { item: mace, enchants: { density: 5, wind_burst: 1, unbreaking: 3, mending: 1 } }
+    35: { item: experience_bottle, amount: 64 }
   offhand: totem_of_undying
 effects: []

@@ -1,7 +1,9 @@
-# Late Game: Protection IV diamond, Sharpness V sword and axe, shield, Power IV bow, gapples, pearls, buckets,
-# cobwebs, one totem and Strength/Speed II.
+# Late Game: the MCPVP UHC-style diamond kit. Protection II diamond, shield, Sharpness III diamond sword, diamond axe,
+# a Power III bow, a Piercing crossbow, 8 gapples, blocks, 4 water and 2 lava buckets, cobwebs, a diamond pickaxe
+# and an Efficiency shovel. No pearls, totems or potions: buckets, webs and blocks decide it. (MCPVP's sword is
+# unenchanted; against enchanted diamond that barely scratches, so it gets Sharpness III.)
 display-name: "Late Game"
-description: "Maxed diamond survival gear: shield, bow, buckets and a totem."
+description: "UHC-style diamond: shield, bow, crossbow, buckets, cobwebs and blocks."
 icon: diamond_chestplate
 category: main
 order: 8
@@ -16,10 +18,9 @@ rules:
   fall-damage: true
   build: true
   break: all
-  allowed-blocks: [cobblestone, cobweb, water, lava]
-  ender-pearls: true
-  pearl-cooldown: 1
-  totems: true
+  allowed-blocks: [oak_planks, cobblestone, cobweb, water, lava]
+  ender-pearls: false
+  totems: false
   crystals: false
   anchors: false
   cobwebs: true
@@ -27,27 +28,28 @@ rules:
   item-drops: false
 loadout:
   armor:
-    helmet: { item: diamond_helmet, enchants: { protection: 4, unbreaking: 3 } }
-    chestplate: { item: diamond_chestplate, enchants: { protection: 4, unbreaking: 3 } }
-    leggings: { item: diamond_leggings, enchants: { protection: 4, unbreaking: 3 } }
-    boots: { item: diamond_boots, enchants: { protection: 4, unbreaking: 3 } }
+    helmet: { item: diamond_helmet, enchants: { protection: 2, unbreaking: 3 } }
+    chestplate: { item: diamond_chestplate, enchants: { protection: 2, unbreaking: 3 } }
+    leggings: { item: diamond_leggings, enchants: { protection: 2, unbreaking: 3 } }
+    boots: { item: diamond_boots, enchants: { protection: 2, unbreaking: 3 } }
   items:
-    0: { item: diamond_sword, enchants: { sharpness: 5, unbreaking: 3 } }
-    1: { item: diamond_axe, enchants: { sharpness: 5, efficiency: 5, unbreaking: 3 } }
-    2: { item: bow, enchants: { power: 4, unbreaking: 3 } }
-    3: { item: golden_apple, amount: 16 }
-    4: { item: ender_pearl, amount: 16 }
+    0: { item: diamond_sword, enchants: { sharpness: 3, unbreaking: 3 } }
+    1: diamond_axe
+    2: { item: golden_apple, amount: 8 }
+    3: { item: bow, enchants: { power: 3, unbreaking: 3 } }
+    4: { item: oak_planks, amount: 64 }
     5: water_bucket
-    6: { item: cobblestone, amount: 64 }
-    7: { item: cobweb, amount: 16 }
-    8: { item: cooked_beef, amount: 64 }
-    9: { item: arrow, amount: 32 }
-    10: lava_bucket
-    11: { item: splash_potion, potion: strong_strength }
-    12: { item: splash_potion, potion: strong_strength }
-    13: { item: splash_potion, potion: strong_swiftness }
-    14: { item: splash_potion, potion: strong_swiftness }
-    15: { item: diamond_pickaxe, enchants: { efficiency: 5, unbreaking: 3 } }
-    16: totem_of_undying
+    6: lava_bucket
+    7: { item: crossbow, enchants: { piercing: 1, unbreaking: 3 } }
+    8: { item: cobweb, amount: 8 }
+    9: { item: cooked_beef, amount: 16 }
+    10: diamond_pickaxe
+    11: { item: diamond_shovel, enchants: { efficiency: 3, unbreaking: 3 } }
+    12: water_bucket
+    13: water_bucket
+    14: water_bucket
+    17: { item: arrow, amount: 16 }
+    22: lava_bucket
+    26: { item: cobblestone, amount: 64 }
   offhand: { item: shield, enchants: { unbreaking: 3 } }
 effects: []

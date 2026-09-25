@@ -1,7 +1,7 @@
-# Shield: the MCTiers "Axe" kit. Unenchanted diamond, shield, axe to disable shields, sword to punish,
-# bow and crossbow to poke.
-display-name: "Shield"
-description: "Unenchanted diamond, axe, sword, shield, bow and crossbow."
+# Axe & Shield: MCPVP's name for the MCTiers "Axe" kit. Unenchanted diamond, shield, an axe to disable shields,
+# a sword to punish the opening, bow and crossbow (6 arrows) to poke. No food needed: hunger is off.
+display-name: "Axe & Shield"
+description: "Unenchanted diamond: axe to break shields, sword, bow and crossbow."
 icon: diamond_axe
 category: main
 order: 4

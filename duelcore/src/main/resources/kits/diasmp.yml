@@ -1,7 +1,8 @@
-# Diamond SMP: the SMP kit in maxed diamond: sword, axe, shield, one totem, gapples, pearls, cobwebs, buckets and
-# Strength/Speed/Fire Resistance splash potions.
+# Diamond SMP: the SMP layout in maxed diamond, plus the diamond-era tools: cobwebs, water and lava buckets and
+# cobblestone. Shield, Sharpness V sword and axe, one totem, 128 gapples, 32 pearls, 64 XP, 9 Strength II,
+# 9 Speed II and 3 Fire Resistance splash potions.
 display-name: "Diamond SMP"
-description: "Maxed diamond SMP gear: shield, cobwebs, pearls, a totem and potions."
+description: "Maxed diamond SMP: shield, cobwebs, buckets, a totem and potions."
 icon: diamond_sword
 category: extra
 order: 10
@@ -29,36 +30,44 @@ loadout:
   armor:
     helmet: { item: diamond_helmet, enchants: { protection: 4, unbreaking: 3, mending: 1, respiration: 3, aqua_affinity: 1 } }
     chestplate: { item: diamond_chestplate, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
-    leggings: { item: diamond_leggings, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
+    leggings: { item: diamond_leggings, enchants: { protection: 4, unbreaking: 3, mending: 1, swift_sneak: 3 } }
     boots: { item: diamond_boots, enchants: { protection: 4, unbreaking: 3, mending: 1, feather_falling: 4, depth_strider: 3 } }
   items:
-    0: { item: diamond_sword, enchants: { sharpness: 5, fire_aspect: 2, unbreaking: 3, mending: 1 } }
+    0: { item: diamond_sword, enchants: { sharpness: 5, fire_aspect: 2, sweeping_edge: 3, unbreaking: 3, mending: 1 } }
     1: { item: diamond_axe, enchants: { sharpness: 5, efficiency: 5, unbreaking: 3, mending: 1 } }
-    2: { item: golden_apple, amount: 64 }
-    3: { item: ender_pearl, amount: 16 }
+    2: { item: ender_pearl, amount: 16 }
+    3: { item: golden_apple, amount: 64 }
     4: { item: cobweb, amount: 64 }
     5: water_bucket
     6: { item: splash_potion, potion: strong_strength }
     7: { item: splash_potion, potion: strong_swiftness }
     8: totem_of_undying
-    9: { item: experience_bottle, amount: 64 }
-    10: { item: cobblestone, amount: 64 }
-    11: lava_bucket
-    12: { item: splash_potion, potion: strong_strength }
-    13: { item: splash_potion, potion: strong_strength }
-    14: { item: splash_potion, potion: strong_strength }
-    15: { item: splash_potion, potion: strong_strength }
-    16: { item: splash_potion, potion: strong_strength }
-    17: { item: splash_potion, potion: strong_strength }
+    9: { item: golden_apple, amount: 64 }
+    10: { item: ender_pearl, amount: 16 }
+    11: { item: experience_bottle, amount: 64 }
+    12: lava_bucket
+    13: water_bucket
+    14: { item: cobblestone, amount: 64 }
+    15: { item: splash_potion, potion: long_fire_resistance }
+    16: { item: splash_potion, potion: long_fire_resistance }
+    17: { item: splash_potion, potion: long_fire_resistance }
     18: { item: splash_potion, potion: strong_strength }
-    19: { item: splash_potion, potion: strong_swiftness }
-    20: { item: splash_potion, potion: strong_swiftness }
-    21: { item: splash_potion, potion: strong_swiftness }
+    19: { item: splash_potion, potion: strong_strength }
+    20: { item: splash_potion, potion: strong_strength }
+    21: { item: splash_potion, potion: strong_strength }
     22: { item: splash_potion, potion: strong_swiftness }
     23: { item: splash_potion, potion: strong_swiftness }
     24: { item: splash_potion, potion: strong_swiftness }
     25: { item: splash_potion, potion: strong_swiftness }
-    26: { item: splash_potion, potion: long_fire_resistance }
-    27: { item: splash_potion, potion: long_fire_resistance }
+    26: { item: cobweb, amount: 64 }
+    27: { item: splash_potion, potion: strong_strength }
+    28: { item: splash_potion, potion: strong_strength }
+    29: { item: splash_potion, potion: strong_strength }
+    30: { item: splash_potion, potion: strong_strength }
+    31: { item: splash_potion, potion: strong_swiftness }
+    32: { item: splash_potion, potion: strong_swiftness }
+    33: { item: splash_potion, potion: strong_swiftness }
+    34: { item: splash_potion, potion: strong_swiftness }
+    35: { item: cobblestone, amount: 64 }
   offhand: { item: shield, enchants: { unbreaking: 3, mending: 1 } }
 effects: []

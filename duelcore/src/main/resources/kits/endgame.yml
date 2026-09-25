@@ -1,7 +1,9 @@
-# End Game: everything a fully geared late survival fight has. Maxed netherite, crystals, anchors, elytra with
-# rockets, shield, 5 totems, gapples, pearls, XP and potions.
+# End Game: everything a fully geared late survival fight has. Maxed netherite (blast-protection leggings), crystal
+# hotbar (128 crystals and obsidian, 64 anchors and glowstone), sword, axe, Density mace with 64 wind charges,
+# elytra with 64 rockets, shield, 8 totems, 64 pearls, 128 gapples, 128 XP, 32 cobwebs and Strength/Speed/Fire
+# Resistance splash potions.
 display-name: "End Game"
-description: "Maxed netherite, crystals, anchors, elytra and totems."
+description: "Maxed netherite with crystals, anchors, a mace, elytra and eight totems."
 icon: end_crystal
 category: main
 order: 6
@@ -32,27 +34,40 @@ loadout:
     boots: { item: netherite_boots, enchants: { protection: 4, feather_falling: 4, unbreaking: 3, mending: 1 } }
   items:
     0: { item: netherite_sword, enchants: { sharpness: 5, fire_aspect: 2, sweeping_edge: 3, unbreaking: 3, mending: 1 } }
-    1: { item: end_crystal, amount: 64 }
-    2: { item: obsidian, amount: 64 }
-    3: { item: respawn_anchor, amount: 32 }
-    4: { item: glowstone, amount: 32 }
-    5: { item: golden_apple, amount: 64 }
-    6: { item: ender_pearl, amount: 16 }
-    7: { item: firework_rocket, amount: 64 }
+    1: { item: obsidian, amount: 64 }
+    2: { item: end_crystal, amount: 64 }
+    3: { item: ender_pearl, amount: 16 }
+    4: { item: glowstone, amount: 64 }
+    5: { item: respawn_anchor, amount: 64 }
+    6: { item: golden_apple, amount: 64 }
+    7: { item: netherite_axe, enchants: { sharpness: 5, efficiency: 5, unbreaking: 3, mending: 1 } }
     8: totem_of_undying
-    9: { item: netherite_axe, enchants: { sharpness: 5, efficiency: 5, unbreaking: 3, mending: 1 } }
-    10: { item: netherite_pickaxe, enchants: { efficiency: 5, unbreaking: 3, mending: 1 } }
-    11: { item: elytra, enchants: { unbreaking: 3, mending: 1 } }
-    12: { item: shield, enchants: { unbreaking: 3, mending: 1 } }
-    13: { item: experience_bottle, amount: 64 }
-    14: { item: cobweb, amount: 16 }
-    15: { item: splash_potion, potion: strong_strength }
-    16: { item: splash_potion, potion: strong_strength }
-    17: { item: splash_potion, potion: strong_swiftness }
-    18: { item: splash_potion, potion: strong_swiftness }
-    19: { item: splash_potion, potion: long_fire_resistance }
+    9: { item: netherite_pickaxe, enchants: { efficiency: 5, unbreaking: 3, mending: 1 } }
+    10: { item: mace, enchants: { density: 5, wind_burst: 1, unbreaking: 3, mending: 1 } }
+    11: { item: wind_charge, amount: 64 }
+    12: { item: elytra, enchants: { unbreaking: 3, mending: 1 } }
+    13: { item: firework_rocket, amount: 64 }
+    14: { item: shield, enchants: { unbreaking: 3, mending: 1 } }
+    15: { item: cobweb, amount: 32 }
+    16: { item: golden_apple, amount: 64 }
+    17: { item: experience_bottle, amount: 64 }
+    18: totem_of_undying
+    19: totem_of_undying
     20: totem_of_undying
     21: totem_of_undying
     22: totem_of_undying
+    23: totem_of_undying
+    24: { item: splash_potion, potion: strong_strength }
+    25: { item: splash_potion, potion: strong_strength }
+    26: { item: experience_bottle, amount: 64 }
+    27: { item: ender_pearl, amount: 16 }
+    28: { item: ender_pearl, amount: 16 }
+    29: { item: ender_pearl, amount: 16 }
+    30: { item: obsidian, amount: 64 }
+    31: { item: end_crystal, amount: 64 }
+    32: { item: splash_potion, potion: strong_swiftness }
+    33: { item: splash_potion, potion: strong_swiftness }
+    34: { item: splash_potion, potion: long_fire_resistance }
+    35: { item: splash_potion, potion: long_fire_resistance }
   offhand: totem_of_undying
 effects: []
