@@ -18,7 +18,7 @@ out('count', lite.prepare('SELECT COUNT(*) AS n FROM authme').get().n)
 const sample = lite.prepare("SELECT username, realname, substr(password,1,5) AS pw, length(password) AS pwlen, regdate, lastlogin FROM authme ORDER BY id DESC LIMIT 3").all()
 out('sample', sample)
 out('hashPrefixes', lite.prepare("SELECT substr(password,1,4) AS p, COUNT(*) AS n FROM authme GROUP BY substr(password,1,4) ORDER BY n DESC LIMIT 8").all())
-if (mode !== 'import') process.exit(0)
+if (mode !== 'import' && mode !== 'authme') process.exit(0)
 
 function offlineUuid (name) {
   const h = crypto.createHash('md5').update('OfflinePlayer:' + name, 'utf8').digest()
@@ -33,6 +33,36 @@ function offlineUuid (name) {
     .split('\n').filter(l => l.includes('=')).map(l => [l.slice(0, l.indexOf('=')).trim(), l.slice(l.indexOf('=') + 1).trim()]))
   const mysql = require('mysql2/promise')
   const my = await mysql.createConnection({ host: props.host, port: +props.port, user: props.user, password: props.password, database: props.database })
+  if (mode === 'authme') {
+    // AuthMe's own MySQL layout (AuthMe adds any column it misses on start); the shared table for every AuthMe server
+    await my.query('CREATE TABLE IF NOT EXISTS `authme` (`id` MEDIUMINT(8) UNSIGNED AUTO_INCREMENT, ' +
+      '`username` VARCHAR(255) NOT NULL, `realname` VARCHAR(255) NOT NULL, ' +
+      '`password` VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, ' +
+      '`ip` VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin, `lastlogin` BIGINT, ' +
+      '`regip` VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin, `regdate` BIGINT NOT NULL DEFAULT 0, ' +
+      "`x` DOUBLE NOT NULL DEFAULT '0.0', `y` DOUBLE NOT NULL DEFAULT '0.0', `z` DOUBLE NOT NULL DEFAULT '0.0', " +
+      "`world` VARCHAR(255) NOT NULL DEFAULT 'world', `yaw` FLOAT, `pitch` FLOAT, `email` VARCHAR(255), " +
+      "`isLogged` SMALLINT NOT NULL DEFAULT '0', `hasSession` SMALLINT NOT NULL DEFAULT '0', `totp` VARCHAR(32), " +
+      '`premiumUUID` VARCHAR(36), PRIMARY KEY (`id`), UNIQUE KEY `username` (`username`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4')
+    const cols2 = ['id', 'username', 'realname', 'password', 'ip', 'lastlogin', 'regip', 'regdate', 'x', 'y', 'z', 'world', 'yaw', 'pitch',
+      'email', 'isLogged', 'hasSession', 'totp', 'premiumUUID']
+    const all = lite.prepare('SELECT * FROM authme').all()
+    // rows with an id first, so an id handed out for the id-less old rows never takes a real one
+    const ordered = [...all.filter(r => r.id != null), ...all.filter(r => r.id == null)]
+    let n = 0
+    for (let i = 0; i < ordered.length; i += 500) {
+      const chunk = ordered.slice(i, i + 500).map(r => cols2.map(c => c === 'isLogged' || c === 'hasSession' ? 0
+        : c === 'regdate' ? (Number(r.regdate) || 0) : c === 'world' ? (r.world || 'world')
+          : ['x', 'y', 'z'].includes(c) ? (Number(r[c]) || 0) : (r[c] === undefined ? null : r[c])))
+      await my.query('INSERT INTO `authme` (' + cols2.map(c => '`' + c + '`').join(',') + ') VALUES ? ON DUPLICATE KEY UPDATE ' +
+        cols2.filter(c => c !== 'id' && c !== 'username').map(c => '`' + c + '`=VALUES(`' + c + '`)').join(','), [chunk])
+      n += chunk.length
+    }
+    const [[c]] = await my.query('SELECT COUNT(*) AS n FROM `authme`')
+    out('authme', { source: all.length, written: n, mysql: c.n })
+    await my.end()
+    return
+  }
   const typeOf = t => /INT|TIMESTAMP/i.test(t) ? 'BIGINT' : /REAL|FLOA|DOUB/i.test(t) ? 'DOUBLE' : 'TEXT'
   const names = cols.map(c => c.name)
   // raw copy, same columns plus SQLite's row number as the key (some old rows have no id); the SQLite file is untouched
