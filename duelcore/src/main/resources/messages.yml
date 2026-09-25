@@ -23,6 +23,21 @@ hub:
   # Title on joining (config.yml animations.join-title).
   join-title: "<#f2c14e>Cheese</#f2c14e> <#f7e3a1>PvP</#f7e3a1>"
   join-subtitle: "<muted>Ranked duels</muted>"
+  # The typed welcome title instead (config.yml animations.join-welcome). <player>; in welcome-subtitle also <tier>
+  # (icon + tier of the best kit), <overall> (overall tier) and <elo> (overall Elo).
+  welcome-back-title: "<text>Welcome back,</text> <accent><player></accent>"
+  welcome-first-title: "<text>Welcome to</text> <#f2c14e>Cheese</#f2c14e> <#f7e3a1>PvP</#f7e3a1>"
+  welcome-subtitle: "<tier> <muted>· <elo> Elo</muted>"
+  # First join, or nothing ranked yet.
+  welcome-subtitle-unranked: "<muted>Right-click</muted> <text>Play</text> <muted>to find a match</muted>"
+  # Short action bar pops next to the friend and party chat alerts (config.yml animations.alert-pops). "" = none.
+  alerts:
+    friend-online: "<good>●</good> <text><player></text> <muted>is online</muted>"
+    followed-you: "<accent>+</accent> <text><player></text> <muted>followed you</muted>"
+    now-friends: "<good>♥</good> <muted>You and</muted> <text><player></text> <muted>are friends</muted>"
+    party-invite: "<accent>✉</accent> <text><player></text> <muted>invited you to their party</muted>"
+    party-joined: "<good>+</good> <text><player></text> <muted>joined the party</muted>"
+    you-joined: "<good>✔</good> <muted>You joined</muted> <text><leader></text><muted>'s party</muted>"
 
 command:
   no-permission: "<bad>You can't do that."

@@ -39,6 +39,7 @@ import top.cheesesmp.duelcore.match.Match;
 import top.cheesesmp.duelcore.match.Participant;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.Setting;
+import top.cheesesmp.duelcore.ui.AlertPop;
 import top.cheesesmp.duelcore.ui.Icons;
 import top.cheesesmp.duelcore.ui.dialog.DialogService;
 
@@ -433,6 +434,7 @@ public final class PartyService implements Listener, Runnable {
             Messages.num("seconds", inviteSeconds()),
             Messages.comp("accept", clickable("party.accept-button", "party/accept", payload)),
             Messages.comp("deny", clickable("party.deny-button", "party/deny", payload)));
+        plugin.alerts().pop(target, AlertPop.Kind.PARTY_INVITE, "hub.alerts.party-invite", Messages.text("player", from.getName()));
         msg.send(from, "party.invite-sent", Messages.text("player", name), Messages.num("seconds", inviteSeconds()));
         notifyParty(party, from.getUniqueId(), "party.notify.invited", Messages.text("player", name),
             Messages.text("inviter", from.getName()));
@@ -549,6 +551,14 @@ public final class PartyService implements Listener, Runnable {
         Party.Member leader = party.leaderMember();
         plugin.messages().send(player, "party.you-joined", Messages.text("leader", leader == null ? "?" : leader.name()),
             Messages.num("size", party.size()), Messages.num("max", maxSize()));
+        for (Party.Member m : party.members()) {
+            Player p = m.uuid().equals(uuid) ? null : Bukkit.getPlayer(m.uuid());
+            if (p != null) {
+                plugin.alerts().pop(p, AlertPop.Kind.PARTY_JOINED, "hub.alerts.party-joined", Messages.text("player", player.getName()));
+            }
+        }
+        plugin.alerts().pop(player, AlertPop.Kind.PARTY_JOINED, "hub.alerts.you-joined",
+            Messages.text("leader", leader == null ? "?" : leader.name()));
     }
 
     // ------------------------------------------------------------------ leave / kick / promote / disband

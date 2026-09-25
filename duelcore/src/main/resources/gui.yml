@@ -173,6 +173,14 @@ match-fx:
 sidebar:
   enabled: true
   title: "<accent>Duels</accent>"
+  # The sweep over the title (config.yml animations.sidebar-title): the title is drawn in its first colour with a
+  # band of highlight sweeping across it (width = half the band in characters), taking sweep-ticks, then it rests
+  # for pause-ticks (20 ticks = 1 second).
+  title-shimmer:
+    highlight: "#fff4c8"
+    width: 1.6
+    sweep-ticks: 32
+    pause-ticks: 160
   # Placeholders: <player> <tier> <elo> (overall Elo) <queued> <live> <online> <region> <ping>
   hub:
     - ""
@@ -259,9 +267,16 @@ tags:
 # Placeholders: <online> <live> <fighting> <queued> <ping> <tps> <spectators> (spectating any match)
 #   <watching> (spectators of the player's own match, or of the match they watch)
 tab:
+  # <logo> in the header: the text in a colour wave between two colours that shifts by step (1.0 = a full cycle) at
+  # every tab refresh (every 2 seconds; config.yml animations.tab-logo, off = a still wave).
+  logo:
+    text: "Cheese PvP"
+    colors: ["#f2c14e", "#fff1b8"]
+    bold: true
+    step: 0.12
   header:
     - ""
-    - "<#f2c14e><b>Cheese PvP</b></#f2c14e>"
+    - "<logo>"
     - "<#8b9099><online> online</#8b9099> <#4b4f57>·</#4b4f57> <#8b9099><live> live</#8b9099> <#4b4f57>·</#4b4f57> <#8b9099><queued> queued</#8b9099>"
     - ""
   footer:

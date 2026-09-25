@@ -154,6 +154,7 @@ public final class HubService {
         giveItems(player);
         plugin.visibility().refresh(player);
         plugin.tags().update(player);
+        plugin.hubProgress().show(player); // XP bar = overall progress (resetState above cleared it)
     }
 
     /**

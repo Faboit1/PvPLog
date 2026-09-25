@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -38,6 +39,9 @@ import top.cheesesmp.duelcore.rating.Tier;
  *
  * <p>Spectators of a match look like vanilla spectator-mode entries: a grey italic name, sorted last (their team
  * name sorts after every tier team). Their chat tag stays their normal one.
+ *
+ * <p>{@code <logo>} in the tab header is gui.yml {@code tab.logo} in a colour wave that moves on with every header
+ * refresh ({@code animations.tab-logo}); the header is re-sent every 2 seconds anyway, so it costs no packets.
  */
 public final class TagService implements Listener, Runnable {
 
@@ -60,6 +64,8 @@ public final class TagService implements Listener, Runnable {
     /** Rendered tag per player; read by the async chat renderer. */
     private final Map<UUID, Component> tags = new ConcurrentHashMap<>();
     private final Map<UUID, Shown> shown = new ConcurrentHashMap<>();
+    /** Where the tab logo's colour wave is (0..1). */
+    private double logoPhase;
 
     public TagService(DuelCorePlugin plugin) {
         this.plugin = plugin;
@@ -173,10 +179,22 @@ public final class TagService implements Listener, Runnable {
         if (before == null || before.spectator() != s.spectator()) header(player);
     }
 
-    /** Tab header and footer for everyone; runs every second. */
+    /** The rendered tag of an online player (icon + tier of their best kit in the hub), empty when none. */
+    public Component tag(UUID player) {
+        return tags.getOrDefault(player, Component.empty());
+    }
+
+    /** Tab header and footer for everyone; runs every 2 seconds. */
     @Override
     public void run() {
+        if (plugin.settings().animTabLogo) logoPhase = (logoPhase + plugin.gui().tabLogoStep) % 1.0;
         for (Player p : Bukkit.getOnlinePlayers()) header(p);
+    }
+
+    private Component logo() {
+        GuiConfig gui = plugin.gui();
+        return WaveText.wave(gui.tabLogoText, gui.tabLogoFrom, gui.tabLogoTo, logoPhase,
+            gui.tabLogoBold ? new TextDecoration[] {TextDecoration.BOLD} : new TextDecoration[0]);
     }
 
     private void header(Player player) {
@@ -193,6 +211,7 @@ public final class TagService implements Listener, Runnable {
             Messages.num("spectators", plugin.spectate().count()),
             Messages.num("watching", match == null ? 0 : match.spectators().size()),
             Messages.num("ping", player.getPing()),
+            Messages.comp("logo", logo()),
             Messages.text("tps", String.format(Locale.ROOT, "%.1f", Math.min(20.0, Bukkit.getTPS()[0]))));
         java.util.List<String> footer = match != null && !gui.tabFooterMatch.isEmpty() ? gui.tabFooterMatch : gui.tabFooter;
         player.sendPlayerListHeaderAndFooter(lines(gui.tabHeader, tags), lines(footer, tags));

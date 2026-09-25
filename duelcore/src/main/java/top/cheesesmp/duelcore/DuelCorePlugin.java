@@ -75,6 +75,8 @@ public final class DuelCorePlugin extends JavaPlugin {
     private top.cheesesmp.duelcore.profile.ProgressTracker progress;
     private top.cheesesmp.duelcore.ui.anim.ProgressReveal progressReveal;
     private top.cheesesmp.duelcore.debug.TesterMode tester;
+    private top.cheesesmp.duelcore.hub.HubProgress hubProgress;
+    private top.cheesesmp.duelcore.ui.AlertPop alerts;
     private boolean papiHooked;
 
     @Override
@@ -118,6 +120,9 @@ public final class DuelCorePlugin extends JavaPlugin {
         progress = new top.cheesesmp.duelcore.profile.ProgressTracker();
         progressReveal = new top.cheesesmp.duelcore.ui.anim.ProgressReveal(this);
         tester = new top.cheesesmp.duelcore.debug.TesterMode(this);
+        hubProgress = new top.cheesesmp.duelcore.hub.HubProgress(this);
+        alerts = new top.cheesesmp.duelcore.ui.AlertPop(this);
+        tester.preview("sidebar-title", p -> sidebar.sweepTitleNow());
         dialogs = new DialogService(this);
         hints = new top.cheesesmp.duelcore.hub.HotbarHints(this);
         leaderboards = new LeaderboardService(this, database);
@@ -152,6 +157,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         pm.registerEvents(new top.cheesesmp.duelcore.ui.MotdService(this), this);
         pm.registerEvents(anim, this);
         pm.registerEvents(progress, this);
+        pm.registerEvents(hubProgress, this);
         friends = new top.cheesesmp.duelcore.friends.FriendService(this);
         friends.enable();
 
@@ -164,6 +170,8 @@ public final class DuelCorePlugin extends JavaPlugin {
         scheduler.runTaskTimer(this, queue, 20L, cfg.mmIntervalTicks);
         scheduler.runTaskTimer(this, queueMusic, 20L, 10L);
         scheduler.runTaskTimer(this, sidebar, 20L, 20L);
+        scheduler.runTaskTimer(this, sidebar::animateTitle, 24L, SidebarService.TITLE_PERIOD);
+        scheduler.runTaskTimer(this, hubProgress, 20L, top.cheesesmp.duelcore.hub.HubProgress.PERIOD);
         scheduler.runTaskTimer(this, hints, 20L, 20L);
         scheduler.runTaskTimer(this, tags, 40L, 40L);
         scheduler.runTaskTimer(this, duels, 20L, 20L);
@@ -204,6 +212,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         }
         try {
             if (hub != null) hub.revokeFlight();
+            if (hubProgress != null) hubProgress.clearAll();
         } catch (Throwable t) {
             getLogger().log(Level.WARNING, "Resetting hub flight failed", t);
         }
@@ -238,6 +247,7 @@ public final class DuelCorePlugin extends JavaPlugin {
             if (matches.match(p.getUniqueId()) == null && spectate.spectating(p.getUniqueId()) == null) {
                 hub.giveItems(p);
                 if (hub.isHubWorld(p.getWorld())) hub.applyFlight(p);
+                hubProgress.refresh(p);
             }
             sidebar.refresh(p);
             queueMusic.refresh(p);
@@ -400,6 +410,16 @@ public final class DuelCorePlugin extends JavaPlugin {
     /** /tester: tester mode, animation previews, simulated reveals. */
     public top.cheesesmp.duelcore.debug.TesterMode tester() {
         return tester;
+    }
+
+    /** The hub XP bar as overall progress, its fill after a match and the tier-up ring. */
+    public top.cheesesmp.duelcore.hub.HubProgress hubProgress() {
+        return hubProgress;
+    }
+
+    /** Sound + action bar pop for friend and party alerts. */
+    public top.cheesesmp.duelcore.ui.AlertPop alerts() {
+        return alerts;
     }
 
     /** Persistent parties: /party, party chat, party matches. */
