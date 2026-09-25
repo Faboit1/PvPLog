@@ -61,7 +61,7 @@ public final class ConfigManager {
         try (InputStream in = plugin.getResource(name)) {
             if (in != null) {
                 YamlConfiguration defaults = YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
-                boolean changed = false;
+                boolean changed = name.equals("config.yml") && upgrade(yml, plugin.getLogger());
                 for (String key : defaults.getKeys(true)) {
                     if (defaults.isConfigurationSection(key)) continue;
                     if (!yml.contains(key, true) && !isUserMap(name, key)) {
@@ -76,6 +76,31 @@ public final class ConfigManager {
             plugin.getLogger().warning("Could not merge defaults into " + name + ": " + e.getMessage());
         }
         return yml;
+    }
+
+    /** The config-version this build writes; {@link #upgrade} brings older config.yml files up to it. */
+    static final int CONFIG_VERSION = 2;
+
+    /**
+     * Upgrades an existing config.yml whose defaults changed (missing keys are merged anyway). Version 2: the queue
+     * menu queues several kits at once and has no unranked queue, so the old defaults {@code queue.allow-multiple:
+     * false} and {@code queue.unranked: true} are switched (values changed by hand are left alone). Returns true when
+     * something changed.
+     */
+    static boolean upgrade(YamlConfiguration yml, java.util.logging.Logger log) {
+        if (!yml.contains("config-version", true)) return false; // empty or broken file: defaults are merged in
+        int version = yml.getInt("config-version", 1);
+        if (version >= CONFIG_VERSION) return false;
+        if (yml.isBoolean("queue.allow-multiple") && !yml.getBoolean("queue.allow-multiple")) {
+            yml.set("queue.allow-multiple", true);
+            log.info("config.yml: queue.allow-multiple is now true (the queue menu's Queue All)");
+        }
+        if (yml.isBoolean("queue.unranked") && yml.getBoolean("queue.unranked")) {
+            yml.set("queue.unranked", false);
+            log.info("config.yml: queue.unranked is now false (only kits with ranked: false use it)");
+        }
+        yml.set("config-version", CONFIG_VERSION);
+        return true;
     }
 
     /** Sections the user owns completely (don't re-add keys they deleted on purpose). */

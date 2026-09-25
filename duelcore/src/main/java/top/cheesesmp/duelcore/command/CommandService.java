@@ -190,17 +190,22 @@ public final class CommandService {
                 return Command.SINGLE_SUCCESS;
             })
             .then(Commands.argument("kit", StringArgumentType.word()).suggests(kitSuggestions())
-                .executes(ctx -> queueCmd(ctx, QueueMode.RANKED))
+                .executes(ctx -> queueCmd(ctx, null))
                 .then(Commands.literal("ranked").executes(ctx -> queueCmd(ctx, QueueMode.RANKED)))
-                .then(Commands.literal("unranked").executes(ctx -> queueCmd(ctx, QueueMode.UNRANKED))))
+                .then(Commands.literal("unranked").requires(s -> plugin.settings().queueUnranked)
+                    .executes(ctx -> queueCmd(ctx, QueueMode.UNRANKED))))
             .build();
     }
 
-    private int queueCmd(CommandContext<CommandSourceStack> ctx, QueueMode mode) {
+    /** Joins a kit queue; without a mode it is the menu's ({@link QueueService#modeFor}). */
+    private int queueCmd(CommandContext<CommandSourceStack> ctx, @Nullable QueueMode mode) {
         Player p = player(ctx);
         if (p == null) return 0;
         Kit kit = kit(p, StringArgumentType.getString(ctx, "kit"));
-        if (kit != null) joinQueue(p, kit, mode);
+        if (kit == null) return Command.SINGLE_SUCCESS;
+        QueueMode m = mode != null ? mode : plugin.queue().modeFor(kit);
+        if (m == null) plugin.messages().send(p, "queue.result.mode_disabled", Messages.comp("kit", kit.displayName()));
+        else joinQueue(p, kit, m);
         return Command.SINGLE_SUCCESS;
     }
 

@@ -1,5 +1,7 @@
 package top.cheesesmp.duelcore.ui;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.IntPredicate;
 
 /**
@@ -17,6 +19,26 @@ public record RiseGeometry(int cornerX, int cornerZ, int topY, int depth) {
     public static RiseGeometry around(double x, double y, double z, int depth) {
         // a spawn on the surface (y = 64.0) stands on block 63; one on a slab (64.5) on block 64
         return new RiseGeometry((int) Math.round(x), (int) Math.round(z), (int) Math.floor(y - 1.0e-3), depth);
+    }
+
+    /**
+     * Every corner the platform can sit on for this spawn: {@link #around} first, then the other block corners of
+     * the spawn's block, nearest first (used when the first one has no room above it).
+     */
+    public static List<RiseGeometry> candidates(double x, double y, double z, int depth) {
+        RiseGeometry first = around(x, y, z, depth);
+        List<RiseGeometry> list = new ArrayList<>(List.of(first));
+        List<RiseGeometry> others = new ArrayList<>();
+        for (int cx : new int[] {(int) Math.floor(x), (int) Math.ceil(x)}) {
+            for (int cz : new int[] {(int) Math.floor(z), (int) Math.ceil(z)}) {
+                RiseGeometry g = new RiseGeometry(cx, cz, first.topY(), depth);
+                if (!list.contains(g) && !others.contains(g)) others.add(g);
+            }
+        }
+        others.sort(java.util.Comparator.comparingDouble(g -> (g.cornerX() - x) * (g.cornerX() - x)
+            + (g.cornerZ() - z) * (g.cornerZ() - z)));
+        list.addAll(others);
+        return list;
     }
 
     public RiseGeometry withDepth(int newDepth) {

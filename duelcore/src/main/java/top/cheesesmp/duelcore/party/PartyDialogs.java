@@ -505,6 +505,10 @@ public final class PartyDialogs {
 
     /** Every {@code duelcore:party/*} click (dialog buttons, clickable dialog lines and chat). */
     void click(Player player, String action, Map<String, String> data, @Nullable DialogResponseView view) {
+        if (!player.hasPermission(PartyService.PERMISSION)) {
+            msg().send(player, "command.no-permission");
+            return;
+        }
         boolean fromChat = "chat".equals(data.get("from"));
         switch (action) {
             case "party/close" -> player.closeDialog();

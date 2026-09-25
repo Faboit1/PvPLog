@@ -79,6 +79,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         new File(getDataFolder(), "schematics").mkdirs();
         config = new ConfigManager(this);
         config.load();
+        for (String problem : settings().soundProblems) getLogger().warning("config.yml " + problem);
         kits = new KitManager(this);
         kits.load();
 
@@ -199,6 +200,7 @@ public final class DuelCorePlugin extends JavaPlugin {
     public List<String> reload() {
         List<String> problems = new ArrayList<>();
         config.load();
+        for (String problem : settings().soundProblems) problems.add("config.yml " + problem);
         problems.addAll(kits.load());
         profiles.syncKits(kits.ids());
         problems.addAll(arenas.loadTemplates());

@@ -82,6 +82,7 @@ public final class FriendCommands {
         FriendService.Graph g = service.graph(player.getUniqueId());
         if (g == null) {
             plugin.messages().send(player, "friends.loading");
+            service.ensureLoaded(player);
             return;
         }
         List<FriendDialogs.Entry> friends = service.dialogs().entries(g, FriendDialogs.Filter.FRIENDS);

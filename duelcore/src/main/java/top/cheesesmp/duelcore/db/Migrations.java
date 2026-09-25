@@ -11,7 +11,7 @@ import java.util.List;
 /** Versioned schema. Append new versions; never edit a released one. */
 public final class Migrations {
 
-    public static final int LATEST = 4;
+    public static final int LATEST = 5;
 
     private Migrations() {
     }
@@ -180,6 +180,11 @@ public final class Migrations {
                     + "player_id INT NOT NULL, "
                     + "kit_id SMALLINT NOT NULL, "
                     + "PRIMARY KEY (player_id, kit_id))" + d.clustered());
+            }
+            case 5 -> {
+                // new settings that default to on (FRIEND_ALERTS bit 7, PARTY_INVITES bit 8) for players who existed
+                // before them; new rows get them from Setting.defaults()
+                s.add("UPDATE dc_players SET settings = settings | 384");
             }
             default -> throw new IllegalStateException("unknown schema version " + version);
         }

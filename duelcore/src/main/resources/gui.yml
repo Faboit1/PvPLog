@@ -7,6 +7,7 @@
 # Hub hotbar. Items can't be moved or dropped. "player_head" shows the player's own skin.
 # action-bar: hint shown in the action bar while the item is held ("" = none); switching items shows the new
 # item's hint and switching to an empty slot clears it. While queued, the queue's "searching" bar has priority.
+# enabled: false removes an item from the hotbar (deleted entries come back on the next load, this doesn't).
 hotbar:
   # Parties (/party): the party menu, or the create / join screen when not in a party.
   party:

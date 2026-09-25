@@ -149,7 +149,8 @@ stacks in the same style. All enchantments are maxed unless noted.
 | Bow | (MCPVP) Iron Projectile Prot II, Power V/Punch bow, 64 arrows; nothing else (no food, no regeneration) |
 
 Kit files already on a server are not overwritten on update; delete a file (or copy the new default over it) to get
-the new loadout.
+the new loadout. The Cart kit's flint and steel only lights fire when `fire` is in its `allowed-blocks`: add it to an
+older `kits/cart.yml` by hand.
 
 ---
 
@@ -164,7 +165,7 @@ Player commands (all players by default):
 | `/profile [player]` | `/stats` | Profile: overall tier and Elo, per-kit tier/rating/record, recent matches. `/profile <p> legacy` shows last season |
 | `/leaderboard [kit\|overall] [region]` | `/lb`, `/top` | Leaderboards, global or per region |
 | `/spectate [player]` | `/spec` | Watch a match. Without a name it opens the live list (search; highest Elo first, then by name). `/spectate stop` |
-| `/party` | `/p` | Party menu (see *Parties*). `create`, `invite <player>`, `accept\|deny [player]`, `join <leader> [password]`, `leave`, `kick <player>`, `promote <player>`, `disband`, `chat`, `open`, `private`, `password [pw]`, `list`, `ffa [kit]`, `split [kit]`, `duel [leader] [kit]`, `duel accept\|deny [leader]` |
+| `/party` | `/p` | Party menu (see *Parties*). `create`, `invite <player>`, `accept\|deny [player]`, `join <leader>`, `leave`, `kick <player>`, `promote <player>`, `disband`, `chat`, `open`, `private`, `password`, `list`, `ffa [kit]`, `split [kit]`, `duel [leader] [kit]`, `duel accept\|deny [leader]` |
 | `/pc <message>` | | Party chat. Starting a chat message with `@` does the same |
 | `/duel [player] [kit]` | | Unranked challenge. Without arguments it opens a player picker. `/duel accept\|deny <player>` |
 | `/settings` | | Duel requests, sidebar, sounds, chat tags, hub visibility, spectators, friend alerts, party invites, region, country, max ping |
@@ -208,7 +209,9 @@ Staff:
 
 ## Configuration
 
-Every file is commented, and new keys are added to your files automatically on update. Main settings:
+Every file is commented, and new keys are added to your files automatically on update. When a default changes,
+`config-version` upgrades the old value once: version 2 switches `queue.allow-multiple` to true and `queue.unranked`
+to false when they still have the old defaults (false / true). Main settings:
 
 **config.yml**
 
@@ -248,7 +251,8 @@ the overall Elo: the average rating of every kit a player has finished placement
 
 - Hotbar items, each with an optional `action-bar` hint shown while it is held ("Right click to play"). Switching
   items shows the new item's hint and switching to an empty slot clears it; while queued the "searching" bar has
-  priority.
+  priority. `enabled: false` removes an item (a deleted entry is added back from the defaults on the next load). The
+  Party and Friends items are only given to players with `duelcore.party` / `duelcore.friends`.
 - `queue-menu`: widths, tab icons and the placement progress bar of the queue menu.
 - Sidebar lines for hub, queue, match and spectate.
 - Tier tags (`tags`): the icon of a kit followed by the tier in it (`icon-tier: "<icon><tier>"`). In the hub a
@@ -282,14 +286,15 @@ invitations with Accept/Deny, and the open parties to join with one click.
 
 - **Persistent.** Parties are stored in the database (`dc_parties`, `dc_party_members`) and loaded at startup.
   Members stay in their party when they log out or the server restarts; offline members are shown as offline. When
-  the leader leaves, the longest-standing member takes over (online members first). The last one to leave deletes
-  the party. Up to `party.max-size` members (20).
+  the leader leaves, or stays offline for a minute while another member is online, the longest-standing member
+  takes over (online members first). The last one to leave deletes the party. Up to `party.max-size` members (20).
 - **Joining.** An invite always works (`/party invite <name>`, or the menu's list of online players who aren't in a
   party; the invite is a clickable [Accept] [Deny] chat message that expires after `invite-seconds`). *Open*
   parties are listed in everyone's menu; a password, if set, is asked from anyone who joins without an invite, also
-  for private parties. Passwords are stored as salted PBKDF2 hashes. Players who turned off *party invites from
-  anyone* (setting `PARTY_INVITES`) can only be invited by their friends (mutual follows); friends are listed first
-  in the menu's invite list.
+  for private parties. Passwords are stored as salted PBKDF2 hashes and are only typed into the dialogs (the server
+  logs every command line, so `/party password` and `/party join <leader>` open the dialog instead of taking one).
+  Players who turned off *party invites from anyone* (setting `PARTY_INVITES`) can only be invited by their friends
+  (mutual follows); friends are listed first in the menu's invite list.
 - **The menu** shows the members (leader ★, head, online / offline / in match, pages of 8) and the buttons *Invite
   Player*, *Party Chat*, *Party FFA*, *Party Duel*, *Party vs Party*, *Privacy* and *Disband* / *Leave*. Buttons that
   can't be used right now are struck through and their tooltip says why. The leader clicks a member to kick them or
@@ -300,8 +305,8 @@ invitations with Accept/Deny, and the open parties to join with one click.
 - **Party matches** (leader only, unranked, the leader picks the kit). Everyone online must be free of matches;
   queues and spectating are left automatically. *Party FFA*: everyone for themselves, one round, last one standing
   wins (spawns on a ring between the arena spawns). *Party Duel*: the online members in two random teams of equal
-  size (±1). *Party vs Party*: the other leader gets a request (dialog and chat) and the match is party against
-  party. Team mates can't hurt each other. The party is told the result afterwards and stays together.
+  size (±1). *Party vs Party*: the other leader gets a request (dialog and chat; the same leader can ask again after
+  15 seconds) and the match is party against party. Team mates can't hurt each other. The party is told the result afterwards and stays together.
 - **Notices.** The party hears about joins, leaves, kicks, leader changes, members coming online or going offline
   and disbanding. Someone removed or disbanded while offline is told on their next join.
 

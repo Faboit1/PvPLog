@@ -27,7 +27,7 @@ import top.cheesesmp.duelcore.party.PartyService.Result;
  */
 public final class PartyCommands {
 
-    private static final String PERMISSION = "duelcore.party";
+    private static final String PERMISSION = PartyService.PERMISSION;
 
     private final DuelCorePlugin plugin;
 
@@ -61,9 +61,7 @@ public final class PartyCommands {
                     .executes(ctx -> run(ctx, p -> feedback(p, parties().deny(p, null, StringArgumentType.getString(ctx, "player")))))))
             .then(Commands.literal("join")
                 .then(Commands.argument("leader", StringArgumentType.word()).suggests(leaders())
-                    .executes(ctx -> join(ctx, null))
-                    .then(Commands.argument("password", StringArgumentType.greedyString())
-                        .executes(ctx -> join(ctx, StringArgumentType.getString(ctx, "password"))))))
+                    .executes(this::join)))
             .then(Commands.literal("leave").executes(ctx -> run(ctx, p -> feedback(p, parties().leave(p)))))
             .then(Commands.literal("kick")
                 .then(Commands.argument("player", StringArgumentType.word()).suggests(members())
@@ -75,11 +73,8 @@ public final class PartyCommands {
             .then(Commands.literal("chat").executes(ctx -> run(ctx, p -> feedback(p, parties().toggleChat(p)))))
             .then(Commands.literal("open").executes(ctx -> run(ctx, p -> feedback(p, parties().setOpen(p, true)))))
             .then(Commands.literal("private").executes(ctx -> run(ctx, p -> feedback(p, parties().setOpen(p, false)))))
-            .then(Commands.literal("password")
-                .executes(ctx -> run(ctx, p -> parties().setPassword(p, null).thenAccept(o -> feedback(p, o))))
-                .then(Commands.argument("password", StringArgumentType.greedyString())
-                    .executes(ctx -> run(ctx, p -> parties().setPassword(p, StringArgumentType.getString(ctx, "password").strip())
-                        .thenAccept(o -> feedback(p, o))))))
+            // passwords are typed in the dialog only: the server logs every command line in plain text
+            .then(Commands.literal("password").executes(ctx -> run(ctx, p -> parties().dialogs().openPrivacy(p, null))))
             .then(Commands.literal("list").executes(ctx -> run(ctx, this::list)))
             .then(Commands.literal("ffa")
                 .executes(ctx -> run(ctx, p -> pickKit(p, Mode.FFA, null)))
@@ -118,9 +113,17 @@ public final class PartyCommands {
 
     // ------------------------------------------------------------------ actions
 
-    private int join(CommandContext<CommandSourceStack> ctx, @Nullable String password) {
-        return run(ctx, p -> parties().join(p, StringArgumentType.getString(ctx, "leader"), password == null ? null : password.strip())
-            .thenAccept(o -> feedback(p, o)));
+    /** Joins without a password; a party that needs one opens the join dialog (commands are logged in plain text). */
+    private int join(CommandContext<CommandSourceStack> ctx) {
+        String leader = StringArgumentType.getString(ctx, "leader");
+        return run(ctx, p -> parties().join(p, leader, null).thenAccept(o -> {
+            if (!p.isOnline()) return;
+            if (o.result() == Result.NEEDS_PASSWORD) {
+                parties().dialogs().openJoin(p, leader, plugin.messages().get("party.result.needs_password"));
+            } else {
+                feedback(p, o);
+            }
+        }));
     }
 
     /** Opens the kit picker (or, for Party vs Party without a leader name, the party list). */

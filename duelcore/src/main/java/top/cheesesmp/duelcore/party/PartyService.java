@@ -31,6 +31,7 @@ import org.bukkit.scheduler.BukkitTask;
 import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.config.Messages;
+import top.cheesesmp.duelcore.db.OrderedWrites;
 import top.cheesesmp.duelcore.db.SqlWork;
 import top.cheesesmp.duelcore.db.dao.PartyDao;
 import top.cheesesmp.duelcore.kit.Kit;
@@ -48,6 +49,12 @@ import top.cheesesmp.duelcore.ui.dialog.DialogService;
  * listener reads an immutable per-player {@link ChatRoute}.
  */
 public final class PartyService implements Listener, Runnable {
+
+    public static final String PERMISSION = "duelcore.party";
+    /** A leader offline this long while another member is online hands the lead to that member. */
+    static final long LEADER_AWAY_MS = 60_000;
+    /** The same leader can challenge the same party leader at most this often. */
+    static final long CHALLENGE_COOLDOWN_MS = 15_000;
 
     public enum Result {
         OK, NOT_LOADED, NO_PROFILE, IN_PARTY, NOT_IN_PARTY, NOT_LEADER, FULL, OFFLINE, SELF, TARGET_IN_PARTY,
@@ -118,6 +125,10 @@ public final class PartyService implements Listener, Runnable {
     private final Map<UUID, ChatRoute> routes = new ConcurrentHashMap<>();
     /** Last password attempt per player (slows down guessing). */
     private final Map<UUID, Long> lastAttempt = new HashMap<>();
+    /** Last Party vs Party challenge per "challenger uuid>challenged leader uuid" (survives disband and re-create). */
+    private final Map<String, Long> lastChallenge = new HashMap<>();
+    /** Since when a party's leader has been offline while members may be online, by party id. */
+    private final Map<String, Long> leaderAway = new HashMap<>();
     private @Nullable OrderedWrites writes;
     private @Nullable BukkitTask ticker;
     private @Nullable BukkitTask waiter;
@@ -143,7 +154,10 @@ public final class PartyService implements Listener, Runnable {
         pm.registerEvents(this, plugin);
         pm.registerEvents(new PartyChatListener(this), plugin);
         plugin.clicks().register("party", dialogs::click);
-        plugin.hub().registerItem("party", dialogs::open);
+        plugin.hub().registerItem("party", PERMISSION, player -> {
+            if (player.hasPermission(PERMISSION)) dialogs.open(player);
+            else plugin.messages().send(player, "command.no-permission");
+        });
         ticker = Bukkit.getScheduler().runTaskTimer(plugin, this, 20L, 20L);
         waiter = Bukkit.getScheduler().runTaskTimer(plugin, this::loadWhenReady, 5L, 10L);
     }
@@ -160,6 +174,8 @@ public final class PartyService implements Listener, Runnable {
         notices.clear();
         routes.clear();
         lastAttempt.clear();
+        lastChallenge.clear();
+        leaderAway.clear();
     }
 
     private void loadWhenReady() {
@@ -202,6 +218,10 @@ public final class PartyService implements Listener, Runnable {
             if (repaired) persist(party);
         }
         for (PartyDao.Notice n : data.notices()) notices.put(n.uuid(), n);
+        long now = System.currentTimeMillis();
+        for (Party party : parties.values()) {
+            if (!online(party.leader()) && onlineCount(party) > 0) leaderAway.put(party.id(), now);
+        }
         loaded = true;
         plugin.getLogger().info("Loaded " + parties.size() + " parties"
             + (data.removed() > 0 ? " (removed " + data.removed() + " stale rows)" : ""));
@@ -822,8 +842,13 @@ public final class PartyService implements Listener, Runnable {
         Outcome blocked = startable(leader, kit);
         if (blocked != null) return blocked;
         for (Challenge c : challenges(target.id())) if (c.from().equals(own.id())) return Outcome.of(Result.ALREADY_CHALLENGED);
+        long now = System.currentTimeMillis();
+        String pair = leader.getUniqueId() + ">" + targetLeader.getUniqueId();
+        Long last = lastChallenge.get(pair);
+        if (last != null && now - last < CHALLENGE_COOLDOWN_MS) return Outcome.of(Result.SLOW_DOWN);
+        lastChallenge.put(pair, now);
         Challenge challenge = new Challenge(own.id(), leader.getName(), target.id(), targetLeader.getName(), kit.id(),
-            System.currentTimeMillis() + inviteSeconds() * 1000L);
+            now + inviteSeconds() * 1000L);
         challenges.computeIfAbsent(target.id(), k -> new ArrayList<>()).add(challenge);
         String payload = "{party:\"" + own.id() + "\",from:\"chat\"}";
         plugin.messages().send(targetLeader, "party.challenge-received", Messages.text("leader", leader.getName()),
@@ -982,6 +1007,8 @@ public final class PartyService implements Listener, Runnable {
         Party.Member member = party == null ? null : party.member(player.getUniqueId());
         if (party == null || member == null) return;
         member.name(player.getName());
+        if (party.isLeader(player.getUniqueId())) leaderAway.remove(party.id());
+        else if (!online(party.leader())) leaderAway.putIfAbsent(party.id(), System.currentTimeMillis());
         notifyParty(party, player.getUniqueId(), "party.notify.online", Messages.text("player", player.getName()));
         Party.Member leader = party.leaderMember();
         plugin.messages().send(player, "party.welcome-back", Messages.text("leader", leader == null ? "?" : leader.name()),
@@ -994,13 +1021,16 @@ public final class PartyService implements Listener, Runnable {
         invites.remove(uuid);
         lastAttempt.remove(uuid);
         Party party = byMember.get(uuid);
-        if (party != null) notifyParty(party, uuid, "party.notify.offline", Messages.text("player", event.getPlayer().getName()));
+        if (party == null) return;
+        notifyParty(party, uuid, "party.notify.offline", Messages.text("player", event.getPlayer().getName()));
+        if (party.isLeader(uuid)) leaderAway.put(party.id(), System.currentTimeMillis());
     }
 
-    /** Expires invites and challenges (every second). */
+    /** Expires invites and challenges and replaces leaders who stay away (every second). */
     @Override
     public void run() {
         long now = System.currentTimeMillis();
+        replaceAwayLeaders(now);
         for (Iterator<Map.Entry<UUID, List<Invite>>> it = invites.entrySet().iterator(); it.hasNext(); ) {
             List<Invite> list = it.next().getValue();
             list.removeIf(i -> {
@@ -1023,6 +1053,33 @@ public final class PartyService implements Listener, Runnable {
             if (list.isEmpty()) it.remove();
         }
         if (lastAttempt.size() > 256) lastAttempt.values().removeIf(t -> now - t > 60_000);
+        if (!lastChallenge.isEmpty()) lastChallenge.values().removeIf(t -> now - t >= CHALLENGE_COOLDOWN_MS);
+    }
+
+    /**
+     * A leader who has been offline for {@link #LEADER_AWAY_MS} hands the lead to an online member (the longest-standing
+     * one), so a party whose leader never comes back isn't stuck. With nobody online it waits for the next member.
+     */
+    private void replaceAwayLeaders(long now) {
+        if (!loaded) return;
+        for (Iterator<Map.Entry<String, Long>> it = leaderAway.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<String, Long> e = it.next();
+            Party party = parties.get(e.getKey());
+            if (party == null || online(party.leader())) {
+                it.remove();
+                continue;
+            }
+            if (now - e.getValue() < LEADER_AWAY_MS) continue;
+            Party.Member next = Party.successor(party.members(), party.leader(), PartyService::online);
+            if (next == null || !online(next.uuid())) {
+                it.remove(); // nobody online: the next member to join starts the wait again
+                continue;
+            }
+            it.remove();
+            party.leader(next.uuid());
+            persist(party);
+            notifyParty(party, null, "party.notify.leader", Messages.text("player", next.name()));
+        }
     }
 
     // ------------------------------------------------------------------ async hashing

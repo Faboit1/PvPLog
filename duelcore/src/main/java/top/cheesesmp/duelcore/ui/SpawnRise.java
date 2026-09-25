@@ -58,6 +58,11 @@ public final class SpawnRise implements Listener {
     private static final int WAIT_LIMIT_TICKS = 20;
     /** Decoration above the top block that rises with it (grass, flowers, snow layers). */
     private static final int DECORATION_LAYERS = 2;
+    /**
+     * Longest wait of a plain-teleport fallback for another rise's open hole under its spawn to close (a rise lasts
+     * at most about 110 ticks), so the player never drops into it and gets sealed in.
+     */
+    private static final int FALLBACK_WAIT_TICKS = 120;
 
     private final DuelCorePlugin plugin;
     private final Map<UUID, Rise> active = new HashMap<>();
@@ -82,6 +87,9 @@ public final class SpawnRise implements Listener {
         volatile boolean arrived;
         BukkitTask task;
         boolean finished;
+        /** No hole here: the plain teleport waits until no other open hole lies under the spawn. */
+        boolean fallingBack;
+        int fallbackWaited;
 
         Rise(Player player, Location spawn, List<Player> viewers, BooleanSupplier ready, BooleanSupplier valid,
              Runnable done) {
@@ -130,6 +138,10 @@ public final class SpawnRise implements Listener {
                     finish(r, player.isOnline());
                     return;
                 }
+                if (r.fallingBack) {
+                    fallback(r);
+                    return;
+                }
                 if (r.geo == null) {
                     // waiting for the arena to be ready
                     if (r.ready.getAsBoolean()) {
@@ -165,20 +177,88 @@ public final class SpawnRise implements Listener {
                 }
                 // one extra tick so the clients' interpolation has surely ended before the real blocks come back
                 if (k++ == ticks) return;
-                finish(r, true);
+                finish(r, true, true);
             }
         }, 1L, 1L);
         // the arena is usually ready right away (round 1): start in this tick instead of the next
         if (ready.getAsBoolean() && valid.getAsBoolean() && !begin(r)) fallback(r);
     }
 
-    /** No hole possible (or the arena never got ready): a plain teleport onto the spawn. */
+    /**
+     * No hole possible (or the arena never got ready): a plain teleport onto the spawn, once no other rise's open hole
+     * is under it (the task calls this again every tick until then).
+     */
     private void fallback(Rise r) {
         if (r.finished) return;
+        if (overOpenHole(r) && r.fallbackWaited++ < FALLBACK_WAIT_TICKS) {
+            r.fallingBack = true;
+            return;
+        }
         r.finished = true;
         active.remove(r.player.getUniqueId(), r);
         r.task.cancel();
         r.player.teleportAsync(r.spawn).whenComplete((ok, err) -> r.done.run());
+    }
+
+    /** True when the player's footprint at the spawn lies over another rise's open hole. */
+    private boolean overOpenHole(Rise r) {
+        World world = r.spawn.getWorld();
+        int minX = (int) Math.floor(r.spawn.getX() - 0.3);
+        int maxX = (int) Math.floor(r.spawn.getX() + 0.3);
+        int minZ = (int) Math.floor(r.spawn.getZ() - 0.3);
+        int maxZ = (int) Math.floor(r.spawn.getZ() + 0.3);
+        for (Rise other : active.values()) {
+            RiseGeometry g = other.geo;
+            if (other == r || g == null || other.spawn.getWorld() != world) continue;
+            for (int x = minX; x <= maxX; x++) {
+                for (int z = minZ; z <= maxZ; z++) if (g.contains(x, z)) return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * A platform for this spawn: the nearest block corner whose 2×2 overlaps no open hole, has room for the player
+     * above it (they end up standing on all four columns) and can be carved. Null when none fits.
+     */
+    private @Nullable RiseGeometry place(Rise r, World world) {
+        for (RiseGeometry geo : RiseGeometry.candidates(r.spawn.getX(), r.spawn.getY(), r.spawn.getZ(),
+                plugin.settings().animSpawnRiseDepth)) {
+            int[][] columns = geo.columns();
+            if (overlapsOpenHole(r, world, columns) || !headroom(world, columns, geo.topY())) continue;
+            int depth = RiseGeometry.usableDepth(geo.topY(), geo.depth(),
+                y -> {
+                    for (int[] c : columns) if (!carvable(world.getBlockAt(c[0], y, c[1]))) return false;
+                    return true;
+                },
+                y -> {
+                    for (int[] c : columns) if (!world.getBlockAt(c[0], y, c[1]).isSolid()) return false;
+                    return true;
+                });
+            if (depth > 0) return geo.withDepth(depth);
+        }
+        return null;
+    }
+
+    /** Team mates spawn close together: never dig into a hole that is already open. */
+    private boolean overlapsOpenHole(Rise r, World world, int[][] columns) {
+        for (Rise other : active.values()) {
+            RiseGeometry g = other.geo;
+            if (other == r || g == null || other.spawn.getWorld() != world) continue;
+            for (int[] c : columns) if (g.contains(c[0], c[1])) return true;
+        }
+        return false;
+    }
+
+    /** Feet and head height above the platform are free in all four columns (no wall, step or glass to rise into). */
+    private static boolean headroom(World world, int[][] columns, int topY) {
+        for (int[] c : columns) {
+            for (int dy = 1; dy <= 2; dy++) {
+                Block b = world.getBlockAt(c[0], topY + dy, c[1]);
+                if (!b.isPassable() || b.isLiquid()) return false;
+            }
+        }
+        return true;
     }
 
     /** Carves the hole, sinks the platform and puts the player at the bottom. False when no hole fits here. */
@@ -186,26 +266,10 @@ public final class SpawnRise implements Listener {
         if (r.geo != null) return true;
         Player player = r.player;
         World world = r.spawn.getWorld();
-        RiseGeometry geo = RiseGeometry.around(r.spawn.getX(), r.spawn.getY(), r.spawn.getZ(),
-            plugin.settings().animSpawnRiseDepth);
+        RiseGeometry geo = place(r, world);
+        if (geo == null) return false;
+        int depth = geo.depth();
         int[][] columns = geo.columns();
-        for (Rise other : active.values()) {
-            // team mates spawn close together: never dig into a hole that is already open
-            RiseGeometry g = other.geo;
-            if (other == r || g == null || other.spawn.getWorld() != world) continue;
-            for (int[] c : columns) if (g.contains(c[0], c[1])) return false;
-        }
-        int depth = RiseGeometry.usableDepth(geo.topY(), geo.depth(),
-            y -> {
-                for (int[] c : columns) if (!carvable(world.getBlockAt(c[0], y, c[1]))) return false;
-                return true;
-            },
-            y -> {
-                for (int[] c : columns) if (!world.getBlockAt(c[0], y, c[1]).isSolid()) return false;
-                return true;
-            });
-        if (depth <= 0) return false;
-        geo = geo.withDepth(depth);
         r.geo = geo;
 
         // light of the surface, so the platform isn't drawn dark while it is still below ground
@@ -318,26 +382,35 @@ public final class SpawnRise implements Listener {
         return null;
     }
 
-    /** Restores the blocks, removes the displays and runs {@code done}; with {@code land} the player ends on the spawn. */
     private void finish(Rise r, boolean land) {
+        finish(r, land, false);
+    }
+
+    /**
+     * Restores the blocks, removes the displays and runs {@code done}; with {@code land} the player ends on the spawn
+     * when still near it. A {@code completed} rise always ends exactly on the spawn, however far the player got
+     * (movement isn't checked by the server while rising, so a modified client could otherwise start anywhere).
+     */
+    private void finish(Rise r, boolean land, boolean completed) {
         if (r.finished) return;
         r.finished = true;
         active.remove(r.player.getUniqueId(), r);
         if (r.task != null) r.task.cancel();
+        BlockData top = topData(r); // before restore() forgets the carved blocks
         restore(r);
         Location target = r.target;
         Player player = r.player;
-        if (land && target != null && player.isOnline() && player.getWorld() == target.getWorld()
-            && player.getLocation().distanceSquared(target) < 16 * 16) {
+        boolean sameWorld = target != null && player.getWorld() == target.getWorld();
+        boolean near = sameWorld && player.getLocation().distanceSquared(target) < 16 * 16;
+        if (land && target != null && player.isOnline() && (near || completed)) {
             player.setVelocity(new Vector());
             player.setFallDistance(0);
-            BlockData top = topData(r);
-            for (Player v : r.viewers) {
+            for (Player v : near ? r.viewers : List.<Player>of()) {
                 if (!v.isOnline() || v.getWorld() != target.getWorld()) continue;
                 v.playSound(target, Sound.BLOCK_PISTON_CONTRACT, 0.3f, 0.7f);
                 if (top != null) v.spawnParticle(Particle.BLOCK, target.clone().add(0, 0.1, 0), 12, 0.8, 0.05, 0.8, 0, top);
             }
-            if (player.getLocation().distanceSquared(target) > 0.01) {
+            if (!sameWorld || player.getLocation().distanceSquared(target) > 0.01) {
                 Location exact = target.clone();
                 exact.setYaw(player.getLocation().getYaw());
                 exact.setPitch(player.getLocation().getPitch());

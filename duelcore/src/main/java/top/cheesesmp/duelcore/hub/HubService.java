@@ -156,6 +156,8 @@ public final class HubService {
 
     /** Hub items added by features (party, friends, …): gui.yml key → what a right click does. */
     private final java.util.Map<String, java.util.function.Consumer<Player>> extraItems = new java.util.LinkedHashMap<>();
+    /** gui.yml key → permission a player needs to get that feature item. */
+    private final java.util.Map<String, String> extraPermissions = new java.util.HashMap<>();
 
     /**
      * Adds a hub hotbar item: it is given with the others whenever gui.yml has a {@code hotbar.<key>} entry, and a
@@ -163,6 +165,12 @@ public final class HubService {
      */
     public void registerItem(String key, java.util.function.Consumer<Player> onUse) {
         extraItems.put(key, onUse);
+    }
+
+    /** Like {@link #registerItem(String, java.util.function.Consumer)}, given only to players with {@code permission}. */
+    public void registerItem(String key, String permission, java.util.function.Consumer<Player> onUse) {
+        extraItems.put(key, onUse);
+        extraPermissions.put(key, permission);
     }
 
     /** The action of a feature-registered hub item, or null. */
@@ -181,6 +189,8 @@ public final class HubService {
         for (String key : keys) {
             GuiConfig.HotbarItem def = gui.item(key);
             if (def == null) continue;
+            String permission = extraPermissions.get(key);
+            if (permission != null && !player.hasPermission(permission)) continue;
             player.getInventory().setItem(def.slot(), build(player, key, def));
         }
         player.getInventory().setHeldItemSlot(0);

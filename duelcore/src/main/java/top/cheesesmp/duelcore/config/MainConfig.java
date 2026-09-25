@@ -72,6 +72,8 @@ public final class MainConfig {
     public final int animSpawnRiseTicks;
     public final top.cheesesmp.duelcore.ui.SoundPool matchFoundSounds;
     public final top.cheesesmp.duelcore.ui.SoundPool fightStartSounds;
+    /** Sound lines of match-found-sounds / fight-start-sounds that could not be read (reported on load and reload). */
+    public final List<String> soundProblems = new java.util.ArrayList<>();
     public final int voidDepth;
 
     // rating
@@ -185,7 +187,12 @@ public final class MainConfig {
         animSpawnRiseDepth = Math.clamp(c.getInt("animations.spawn-rise-depth", 3), 1, 6);
         animSpawnRiseTicks = Math.clamp(c.getInt("animations.spawn-rise-ticks", 50), 10, 60);
         matchFoundSounds = top.cheesesmp.duelcore.ui.SoundPool.parse(c.getStringList("animations.match-found-sounds"));
-        fightStartSounds = top.cheesesmp.duelcore.ui.SoundPool.parse(c.getStringList("animations.fight-start-sounds"));
+        var fightStart = top.cheesesmp.duelcore.ui.SoundPool.parse(c.getStringList("animations.fight-start-sounds"));
+        for (String p : matchFoundSounds.problems()) soundProblems.add("animations.match-found-sounds: " + p);
+        for (String p : fightStart.problems()) soundProblems.add("animations.fight-start-sounds: " + p);
+        // a round always started with a pling; keep it when every configured line is broken
+        fightStartSounds = fightStart.combos().isEmpty() && !fightStart.problems().isEmpty()
+            ? top.cheesesmp.duelcore.ui.SoundPool.parse(List.of("block.note_block.pling 1.6")) : fightStart;
         voidDepth = Math.max(1, c.getInt("match.void-depth", 6));
 
         ratingSystem = c.getString("rating.system", "elo").toLowerCase(Locale.ROOT);

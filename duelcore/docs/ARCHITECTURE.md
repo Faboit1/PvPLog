@@ -19,7 +19,7 @@ top.cheesesmp.duelcore
 ├── api/                      DuelCoreApi + Bukkit events (MatchStart/End, RatingChange)
 ├── config/                   ConfigManager, MainConfig (typed), Messages (MiniMessage templates)
 ├── db/                       Database (Hikari, SQLite|MySQL dialect), DbExecutor, MainThreadGuard,
-│   │                         Migrations (versioned DDL)
+│   │                         Migrations (versioned DDL), OrderedWrites
 │   └── dao/                  PlayerDao, RatingDao, MatchDao, SeasonDao, LeaderboardDao
 ├── profile/                  PlayerProfile, KitStats, PlayerSettings, ProfileService (cache + async save)
 ├── kit/                      Kit, KitRules, KitLoader (YAML → Kit, vanilla item strings), KitManager
@@ -39,7 +39,7 @@ top.cheesesmp.duelcore
 ├── hook/                     PlaceholderHook (loaded only when PlaceholderAPI exists)
 ├── debug/                    Diagnostics (/duelcore debug: matches, instances, chunks, entities, tasks, heap, DB)
 ├── party/                    Party, PartyService (persistent parties, invites, chat routing, party matches),
-│                             PartyDialogs, PartyCommands (/party, /pc), PartyChatListener, OrderedWrites
+│                             PartyDialogs, PartyCommands (/party, /pc), PartyChatListener
 └── (phase 2) feed/, tournament/, web/ (REST)
 ```
 
@@ -73,8 +73,8 @@ dc_parties       (id VARCHAR(36) PK, leader_id INT, open TINYINT, password VARCH
 dc_party_members (player_id INT PK, party_id VARCHAR(36) IDX, joined_at BIGINT, chat TINYINT)  -- one party each
 ```
 
-Parties are loaded once at startup and changed in memory; their writes go through `party/OrderedWrites`, which keeps
-them in order on the MySQL pool. Passwords are salted PBKDF2 hashes. A player removed from a party while offline gets
+Parties are loaded once at startup and changed in memory; their writes go through `db/OrderedWrites`, which keeps
+them in order on the MySQL pool (follows, follow-graph loads and queue favourites use it too). Passwords are salted PBKDF2 hashes. A player removed from a party while offline gets
 a `dc_meta` row `party-notice:<player id>` that is shown (and deleted) on their next join.
 
 A **season reset ("beta reset")** creates a new `dc_seasons` row and marks the old one `legacy=1`. Nothing is copied. Old rows stay as the archive and can be read with `/profile <player> legacy`. Every read and write is scoped to the current season id.

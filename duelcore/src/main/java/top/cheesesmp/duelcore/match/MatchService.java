@@ -553,6 +553,8 @@ public final class MatchService implements Runnable {
         }
         if (decided) {
             end(m, winnerTeam, Match.EndReason.SCORE);
+        } else if (m.ffa()) {
+            end(m, -1, Match.EndReason.DRAW); // one round only: a replay would bring the eliminated back
         } else if (capped) {
             int w = Teams.leader(m.score);
             end(m, w, w < 0 ? Match.EndReason.DRAW : Match.EndReason.SCORE);
@@ -596,6 +598,7 @@ public final class MatchService implements Runnable {
         p.left = true;
         p.alive = false;
         if (quit) byPlayer.remove(player.getUniqueId());
+        else plugin.queue().forget(player.getUniqueId()); // left on purpose: Keep Queuing doesn't bring back the old kits
         for (Player other : online(m)) {
             if (other != player) plugin.messages().send(other, quit ? "match.opponent-quit" : "match.opponent-forfeit",
                 Messages.text("player", p.name()));
@@ -734,6 +737,10 @@ public final class MatchService implements Runnable {
             m.arena = null;
         }
         matches.remove(m.id());
+        runEndListeners(m);
+    }
+
+    private void runEndListeners(Match m) {
         for (var listener : m.endListeners()) {
             try {
                 listener.accept(m);
@@ -762,6 +769,7 @@ public final class MatchService implements Runnable {
                 if (sp != null) sp.teleport(plugin.hub().spawn());
             }
             m.state = Match.State.ENDED;
+            runEndListeners(m); // e.g. Keep Queuing forgets the kits chosen before this match
         }
         matches.clear();
         byPlayer.clear();

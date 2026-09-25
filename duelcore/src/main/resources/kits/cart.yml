@@ -17,7 +17,7 @@ rules:
   fall-damage: true
   build: true
   break: all
-  allowed-blocks: [rail, oak_planks, cobweb]
+  allowed-blocks: [rail, oak_planks, cobweb, fire]
   ender-pearls: true
   pearl-cooldown: 1
   totems: true

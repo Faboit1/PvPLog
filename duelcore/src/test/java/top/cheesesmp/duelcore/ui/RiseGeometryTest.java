@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -27,6 +28,27 @@ class RiseGeometryTest {
         }
         assertFalse(g.contains(12, -3));
         assertFalse(g.contains(10, -2));
+    }
+
+    @Test
+    void otherCornersOfTheSpawnBlockFollowTheNearest() {
+        List<RiseGeometry> list = RiseGeometry.candidates(10.5, 64.0, -3.5, 3);
+        assertEquals(RiseGeometry.around(10.5, 64.0, -3.5, 3), list.getFirst());
+        Set<String> corners = new HashSet<>();
+        for (RiseGeometry g : list) {
+            corners.add(g.cornerX() + "," + g.cornerZ());
+            assertEquals(63, g.topY());
+        }
+        assertEquals(Set.of("10,-4", "11,-4", "10,-3", "11,-3"), corners);
+        assertEquals(4, list.size());
+        // off-centre: the nearest corner first, the farthest last
+        List<RiseGeometry> off = RiseGeometry.candidates(10.2, 64.0, 5.9, 3);
+        assertEquals(10, off.getFirst().cornerX());
+        assertEquals(6, off.getFirst().cornerZ());
+        assertEquals(11, off.getLast().cornerX());
+        assertEquals(5, off.getLast().cornerZ());
+        // on a corner already: only that one
+        assertEquals(1, RiseGeometry.candidates(3.0, 64.0, 7.0, 2).size());
     }
 
     @Test

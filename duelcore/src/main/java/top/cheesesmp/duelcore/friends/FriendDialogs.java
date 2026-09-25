@@ -172,6 +172,7 @@ public final class FriendDialogs {
         FriendService.Graph g = service.graph(viewer.getUniqueId());
         if (g == null) {
             msg().send(viewer, "friends.loading");
+            service.ensureLoaded(viewer);
             return;
         }
         Person following = g.following.get(target);
@@ -235,6 +236,7 @@ public final class FriendDialogs {
         FriendService.Graph g = service.graph(viewer.getUniqueId());
         if (g == null) {
             msg().send(viewer, "friends.loading");
+            service.ensureLoaded(viewer);
             return;
         }
         String q = query.strip();
@@ -283,7 +285,10 @@ public final class FriendDialogs {
     public @Nullable ActionButton profileButton(Player viewer, PlayerProfile target) {
         if (target.uuid().equals(viewer.getUniqueId()) || !viewer.hasPermission(FriendService.PERMISSION)) return null;
         FriendService.Graph g = service.graph(viewer.getUniqueId());
-        if (g == null) return null;
+        if (g == null) {
+            service.ensureLoaded(viewer);
+            return null;
+        }
         boolean following = g.following.containsKey(target.uuid());
         String key = following ? "friends.profile.unfollow"
             : g.followers.containsKey(target.uuid()) ? "friends.profile.follow-back" : "friends.profile.follow";

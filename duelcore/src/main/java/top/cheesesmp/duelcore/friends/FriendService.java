@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -25,6 +27,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.config.Messages;
+import top.cheesesmp.duelcore.db.OrderedWrites;
 import top.cheesesmp.duelcore.db.SqlWork;
 import top.cheesesmp.duelcore.db.dao.FollowDao;
 import top.cheesesmp.duelcore.db.dao.FollowDao.Person;
@@ -51,6 +54,8 @@ public final class FriendService implements Listener {
     static final class Graph {
         final Map<UUID, Person> following = new ConcurrentHashMap<>();
         final Map<UUID, Person> followers = new ConcurrentHashMap<>();
+        /** Bumped on every local change of {@link #following}; a reload snapshot taken before one is stale. */
+        int changes;
     }
 
     private final DuelCorePlugin plugin;
@@ -60,6 +65,13 @@ public final class FriendService implements Listener {
     /** Newest load per player; an older load finishing late (quit and rejoin) is dropped. */
     private final Map<UUID, Long> loads = new HashMap<>();
     private final Map<String, Long> noticed = new HashMap<>();
+    /** Players whose load waits for their profile (one retry chain each). */
+    private final Set<UUID> waiting = new HashSet<>();
+    /**
+     * Follow writes and graph loads, in order even on the MySQL pool: an unfollow and a follow must not swap, and a
+     * load must see every write queued before it (and its callback must run before theirs).
+     */
+    private @Nullable OrderedWrites ordered;
     private long loadCounter;
 
     public FriendService(DuelCorePlugin plugin) {
@@ -69,9 +81,10 @@ public final class FriendService implements Listener {
 
     /** Registers the listener, the {@code duelcore:friend/…} clicks and the hub item, and loads online players. */
     public void enable() {
+        ordered = new OrderedWrites(plugin.database()::submit);
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
         plugin.clicks().register("friend", dialogs::click);
-        plugin.hub().registerItem("friends", player -> {
+        plugin.hub().registerItem("friends", PERMISSION, player -> {
             if (player.hasPermission(PERMISSION)) dialogs.open(player, 0, FriendDialogs.Filter.ALL);
             else plugin.messages().send(player, "command.no-permission");
         });
@@ -82,6 +95,7 @@ public final class FriendService implements Listener {
         graphs.clear();
         loads.clear();
         noticed.clear();
+        waiting.clear();
     }
 
     public FriendDialogs dialogs() {
@@ -161,6 +175,7 @@ public final class FriendService implements Listener {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
         loads.remove(uuid);
+        waiting.remove(uuid);
         Graph g = graphs.remove(uuid);
         if (g == null) return;
         for (Person p : g.following.values()) {
@@ -172,22 +187,22 @@ public final class FriendService implements Listener {
         }
     }
 
-    /** Loads the graph of an online player (retried while the profile is still loading). */
+    /** Loads the graph of an online player (retried while the profile is still loading, slower after 15 s). */
     private void load(Player player, int attempt, boolean announce) {
         PlayerProfile profile = plugin.profiles().get(player);
+        UUID uuid = player.getUniqueId();
         if (profile == null) {
-            if (attempt < 15) {
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    if (player.isOnline()) load(player, attempt + 1, announce);
-                }, 20L);
-            }
+            if (attempt == 0 && !waiting.add(uuid)) return; // a retry is already scheduled
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (player.isOnline()) load(player, attempt + 1, announce);
+            }, attempt < 15 ? 20L : 100L);
             return;
         }
-        UUID uuid = player.getUniqueId();
+        waiting.remove(uuid);
         long token = ++loadCounter;
         loads.put(uuid, token);
         int id = profile.id();
-        async(c -> FollowDao.load(c, id), relations -> {
+        ordered(c -> FollowDao.load(c, id), relations -> {
             if (!player.isOnline() || !Long.valueOf(token).equals(loads.get(uuid))) return;
             loads.remove(uuid);
             Graph g = new Graph();
@@ -207,15 +222,29 @@ public final class FriendService implements Listener {
 
     /** Reloads a player's graph from the database (the dialog's Refresh), then runs {@code then}. */
     public void reload(Player player, Runnable then) {
+        reload(player, then, 0);
+    }
+
+    private void reload(Player player, Runnable then, int attempt) {
         PlayerProfile profile = plugin.profiles().get(player);
         if (profile == null) {
             plugin.messages().send(player, "friends.loading");
+            ensureLoaded(player);
             return;
         }
         UUID uuid = player.getUniqueId();
         int id = profile.id();
-        async(c -> FollowDao.load(c, id), relations -> {
+        Graph before = graphs.get(uuid);
+        int changes = before == null ? 0 : before.changes;
+        ordered(c -> FollowDao.load(c, id), relations -> {
             if (Bukkit.getPlayer(uuid) != player) return; // quit (or quit and rejoined) meanwhile
+            Graph now = graphs.get(uuid);
+            if (now != null && (now != before || now.changes != changes)) {
+                // followed or unfollowed while this was read: read again (queued after that write), or keep the cache
+                if (attempt < 3) reload(player, then, attempt + 1);
+                else then.run();
+                return;
+            }
             Graph g = new Graph();
             for (Person p : relations.following()) g.following.put(p.uuid(), p);
             for (Person p : relations.followers()) g.followers.put(p.uuid(), p);
@@ -297,6 +326,7 @@ public final class FriendService implements Listener {
         Graph g = graphs.get(uuid);
         if (me == null || g == null) {
             plugin.messages().send(player, "friends.loading");
+            ensureLoaded(player);
             return;
         }
         String targetName = name(target);
@@ -317,13 +347,14 @@ public final class FriendService implements Listener {
         Person followed = new Person(target.id(), target.uuid(), targetName, now);
         Person self = new Person(me.id(), uuid, player.getName(), now);
         g.following.put(target.uuid(), followed);
+        g.changes++;
         sync(uuid, self, target.uuid());
         int meId = me.id();
         int targetId = target.id();
         var dialect = plugin.database().dialect();
-        async(c -> FollowDao.follow(c, dialect, meId, targetId, now), added -> sync(uuid, self, target.uuid()), () -> {
+        ordered(c -> FollowDao.follow(c, dialect, meId, targetId, now), added -> sync(uuid, self, target.uuid()), () -> {
             Graph cur = graphs.get(uuid);
-            if (cur != null) cur.following.remove(target.uuid(), followed);
+            if (cur != null && cur.following.remove(target.uuid(), followed)) cur.changes++;
             sync(uuid, self, target.uuid());
             if (player.isOnline()) plugin.messages().send(player, "friends.error");
         });
@@ -331,12 +362,12 @@ public final class FriendService implements Listener {
         Player targetOnline = Bukkit.getPlayer(target.uuid());
         if (g.followers.containsKey(target.uuid())) {
             plugin.messages().send(player, "friends.now-friends", Messages.text("player", targetName));
-            if (targetOnline != null && alerts(targetOnline)) {
+            if (targetOnline != null && alerts(targetOnline) && firstNotice("mutual:", uuid, target.uuid(), now)) {
                 plugin.messages().send(targetOnline, "friends.now-friends", Messages.text("player", player.getName()));
             }
         } else {
             plugin.messages().send(player, "friends.followed", Messages.text("player", targetName));
-            if (targetOnline != null && alerts(targetOnline) && firstNotice(uuid, target.uuid(), now)) {
+            if (targetOnline != null && alerts(targetOnline) && firstNotice("", uuid, target.uuid(), now)) {
                 Component button = plugin.messages().get("friends.follow-back-button")
                     .hoverEvent(HoverEvent.showText(plugin.messages().get("friends.follow-back-hover",
                         Messages.text("player", player.getName()))))
@@ -356,6 +387,7 @@ public final class FriendService implements Listener {
         Graph g = graphs.get(uuid);
         if (me == null || g == null) {
             plugin.messages().send(player, "friends.loading");
+            ensureLoaded(player);
             return;
         }
         Person followed = g.following.remove(target);
@@ -366,13 +398,14 @@ public final class FriendService implements Listener {
             if (then != null) then.run();
             return;
         }
+        g.changes++;
         Person self = new Person(me.id(), uuid, player.getName(), System.currentTimeMillis());
         sync(uuid, self, target);
         int meId = me.id();
         int targetId = followed.id();
-        async(c -> FollowDao.unfollow(c, meId, targetId), removed -> sync(uuid, self, target), () -> {
+        ordered(c -> FollowDao.unfollow(c, meId, targetId), removed -> sync(uuid, self, target), () -> {
             Graph cur = graphs.get(uuid);
-            if (cur != null) cur.following.putIfAbsent(target, followed);
+            if (cur != null && cur.following.putIfAbsent(target, followed) == null) cur.changes++;
             sync(uuid, self, target);
             if (player.isOnline()) plugin.messages().send(player, "friends.error");
         });
@@ -385,6 +418,7 @@ public final class FriendService implements Listener {
         Graph g = graphs.get(player.getUniqueId());
         if (g == null) {
             plugin.messages().send(player, "friends.loading");
+            ensureLoaded(player);
             return;
         }
         for (Person p : g.following.values()) {
@@ -420,9 +454,10 @@ public final class FriendService implements Listener {
         return new Person(row.id(), row.uuid(), row.name(), System.currentTimeMillis());
     }
 
-    private boolean firstNotice(UUID from, UUID to, long now) {
+    /** True when no {@code kind} notice for this pair was sent within the cooldown (then remembers this one). */
+    private boolean firstNotice(String kind, UUID from, UUID to, long now) {
         if (noticed.size() > 512) noticed.values().removeIf(t -> now - t > NOTICE_COOLDOWN_MS);
-        String key = from + ">" + to;
+        String key = kind + from + ">" + to;
         Long last = noticed.get(key);
         if (last != null && now - last < NOTICE_COOLDOWN_MS) return false;
         noticed.put(key, now);
@@ -431,12 +466,24 @@ public final class FriendService implements Listener {
 
     /** Runs {@code work} on the DB thread, then {@code done} or {@code failed} on the main thread (Database logs errors). */
     private <T> void async(SqlWork<T> work, Consumer<T> done, Runnable failed) {
-        plugin.database().submit(work).whenComplete((result, error) -> {
-            if (!plugin.isEnabled()) return;
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                if (error == null) done.accept(result);
-                else failed.run();
-            });
+        plugin.database().submit(work).whenComplete((result, error) -> back(result, error, done, failed));
+    }
+
+    /** Like {@link #async}, but in order with the other follow writes and graph loads (callbacks too). */
+    private <T> void ordered(SqlWork<T> work, Consumer<T> done, Runnable failed) {
+        OrderedWrites queue = ordered;
+        if (queue == null) {
+            failed.run();
+            return;
+        }
+        queue.submit(work, (result, error) -> back(result, error, done, failed));
+    }
+
+    private <T> void back(@Nullable T result, @Nullable Throwable error, Consumer<T> done, Runnable failed) {
+        if (!plugin.isEnabled()) return;
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (error == null) done.accept(result);
+            else failed.run();
         });
     }
 

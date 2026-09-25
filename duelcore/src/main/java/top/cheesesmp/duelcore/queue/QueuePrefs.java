@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.db.Dialect;
+import top.cheesesmp.duelcore.db.OrderedWrites;
 import top.cheesesmp.duelcore.db.dao.FavoriteDao;
 import top.cheesesmp.duelcore.kit.Kit;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
@@ -26,9 +27,12 @@ public final class QueuePrefs {
     private final Map<UUID, Set<String>> favorites = new HashMap<>();
     private final Map<UUID, CompletableFuture<Set<String>>> loading = new HashMap<>();
     private final Map<UUID, String> tabs = new HashMap<>();
+    /** Stars, unstars and loads in the order they were made, also on the MySQL pool (a quick rejoin sees the last toggle). */
+    private final OrderedWrites ordered;
 
     QueuePrefs(DuelCorePlugin plugin) {
         this.plugin = plugin;
+        this.ordered = new OrderedWrites(plugin.database()::submit);
     }
 
     /** Favourite kit ids of an online player, or null while they are not loaded yet. */
@@ -49,7 +53,7 @@ public final class QueuePrefs {
         Map<Integer, String> keys = plugin.profiles().kitKeys();
         CompletableFuture<Set<String>> result = new CompletableFuture<>();
         loading.put(uuid, result);
-        plugin.database().submit(c -> FavoriteDao.load(c, playerId)).whenComplete((ids, error) ->
+        ordered.submit(c -> FavoriteDao.load(c, playerId)).whenComplete((ids, error) ->
             Bukkit.getScheduler().runTask(plugin, () -> {
                 loading.remove(uuid, result);
                 Set<String> set = new LinkedHashSet<>();
@@ -82,7 +86,7 @@ public final class QueuePrefs {
         }
         int playerId = profile.id();
         Dialect dialect = plugin.database().dialect();
-        plugin.database().submit(c -> {
+        ordered.submit(c -> {
             if (starred) FavoriteDao.add(c, dialect, playerId, kitId);
             else FavoriteDao.remove(c, playerId, kitId);
             return null;

@@ -224,6 +224,11 @@ public final class QueueService implements Listener, Runnable {
         return true;
     }
 
+    /** Forgets the queues a player chose (they left their match on purpose), so Keep Queuing won't re-join them. */
+    public void forget(UUID uuid) {
+        chosen.remove(uuid);
+    }
+
     @EventHandler(priority = EventPriority.LOWEST)
     public void onQuit(PlayerQuitEvent event) {
         UUID uuid = event.getPlayer().getUniqueId();
@@ -245,8 +250,10 @@ public final class QueueService implements Listener, Runnable {
         boolean requeue = (m.origin() == Match.Origin.QUEUE || m.origin() == Match.Origin.DUEL)
             && reason != Match.EndReason.CANCELLED && reason != Match.EndReason.NO_ARENA;
         for (Participant p : m.participants()) {
+            // gone early (forfeit or quit): what they chose since belongs to their next queue, not to this match
+            if (p.left() || plugin.matches().match(p.uuid()) != null || isQueued(p.uuid())) continue;
             List<Bucket> kits = chosen.remove(p.uuid());
-            if (!requeue || kits == null || kits.isEmpty() || p.left()) continue;
+            if (!requeue || kits == null || kits.isEmpty()) continue;
             PlayerProfile profile = plugin.profiles().get(p.uuid());
             if (profile == null || !profile.setting(Setting.KEEP_QUEUING)) continue;
             List<Bucket> copy = List.copyOf(kits);
@@ -261,9 +268,8 @@ public final class QueueService implements Listener, Runnable {
         List<Component> joined = new ArrayList<>();
         for (Bucket b : kits) {
             Kit kit = plugin.kits().get(b.kit());
-            QueueMode mode = kit == null ? null : modeFor(kit);
-            if (mode == null) continue;
-            JoinResult r = join(player, kit, mode);
+            if (kit == null) continue;
+            JoinResult r = join(player, kit, b.mode()); // the queue they chose; skipped when it has closed since
             if (r == JoinResult.OK || r == JoinResult.SWITCHED) joined.add(kit.sprite());
         }
         if (joined.isEmpty()) return;

@@ -62,7 +62,7 @@ public final class GuiConfig {
         if (hb != null) {
             for (String key : hb.getKeys(false)) {
                 ConfigurationSection s = hb.getConfigurationSection(key);
-                if (s == null) continue;
+                if (s == null || !s.getBoolean("enabled", true)) continue; // enabled: false hides the item
                 Material m = Material.matchMaterial(s.getString("item", "stone"));
                 hotbar.put(key, new HotbarItem(Math.clamp(s.getInt("slot", 0), 0, 8), m == null ? Material.STONE : m,
                     s.getString("name", key), s.getStringList("lore"), s.getString("action-bar", "")));
