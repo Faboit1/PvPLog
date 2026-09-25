@@ -4,7 +4,7 @@ const bot = L.createBot(process.argv[2] || 'dcbot_dlg')
 bot.once('spawn', async () => {
   try {
     await L.sleep(2500)
-    for (const [slot, re] of [[0, /Play/], [2, /Overall/], [4, /dcbot_dlg/], [6, /Settings/]]) {
+    for (const [slot, re] of [[0, /Queue/], [2, /Overall/], [4, /dcbot_dlg/], [6, /Settings/]]) {
       const d = await L.openFromHotbar(bot, slot, re)
       L.log('test', 'dialog', { slot, title: L.plain(d.title), buttons: L.buttons(d).length })
       await L.sleep(700)

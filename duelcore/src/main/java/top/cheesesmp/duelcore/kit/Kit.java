@@ -13,7 +13,25 @@ import org.jspecify.annotations.Nullable;
  */
 public final class Kit {
 
-    public enum Category { MAIN, EXTRA }
+    /** Queue menu tab of a kit. Old kit files used "main" (now weapons) and "extra" (now vanilla). */
+    public enum Category {
+        WEAPONS, VANILLA, SKILLS;
+
+        public String id() {
+            return name().toLowerCase(java.util.Locale.ROOT);
+        }
+
+        /** Parses a category id (also the old "main"/"extra"); null when unknown. */
+        public static @Nullable Category parse(@Nullable String raw) {
+            if (raw == null) return null;
+            return switch (raw.trim().toLowerCase(java.util.Locale.ROOT)) {
+                case "weapons", "main" -> WEAPONS;
+                case "vanilla", "extra" -> VANILLA;
+                case "skills" -> SKILLS;
+                default -> null;
+            };
+        }
+    }
 
     private final String id;
     private final String displayNameRaw;

@@ -22,7 +22,6 @@ import top.cheesesmp.duelcore.match.Match;
 import top.cheesesmp.duelcore.match.SpectateService;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.Setting;
-import top.cheesesmp.duelcore.queue.QueueMode;
 
 /**
  * Handles every {@code duelcore:*} custom click from dialogs and chat. Payloads come from the client and are
@@ -76,19 +75,8 @@ public final class ClickRouter implements Listener {
     }
 
     private void handle(Player player, String action, Map<String, String> data, @Nullable DialogResponseView view) {
+        // queue/* clicks are handled by QueueDialog (registered prefix "queue")
         switch (action) {
-            case "queue/join" -> {
-                Kit kit = plugin.kits().get(data.getOrDefault("kit", ""));
-                QueueMode mode = QueueMode.parse(data.get("mode"));
-                if (kit == null || mode == null) return;
-                plugin.commands().joinQueue(player, kit, mode);
-            }
-            case "queue/page" -> {
-                QueueMode mode = QueueMode.parse(data.get("mode"));
-                if (mode == null || mode == QueueMode.PARTY) mode = QueueMode.RANKED;
-                plugin.dialogs().queue(player, mode, Boolean.parseBoolean(data.get("extra")));
-            }
-            case "queue/leave" -> plugin.queue().leave(player, true);
             case "profile/view" -> plugin.commands().openProfile(player, data.getOrDefault("name", player.getName()), false);
             case "leaderboard/view" -> {
                 String region = data.getOrDefault("region", "");

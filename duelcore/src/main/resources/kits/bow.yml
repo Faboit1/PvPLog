@@ -3,7 +3,7 @@
 display-name: "Bow"
 description: "Power V bow, 64 arrows and iron armor. Nothing else: aim wins."
 icon: bow
-category: extra
+category: weapons
 order: 14
 enabled: true
 ranked: true

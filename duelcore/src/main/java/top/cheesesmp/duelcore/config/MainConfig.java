@@ -138,9 +138,9 @@ public final class MainConfig {
         hubVoidY = c.getInt("hub.void-y", 0);
         hubShowPlayers = c.getBoolean("hub.show-players", true);
 
-        queueAllowMultiple = c.getBoolean("queue.allow-multiple", false);
+        queueAllowMultiple = c.getBoolean("queue.allow-multiple", true);
         queueRanked = c.getBoolean("queue.ranked", true);
-        queueUnranked = c.getBoolean("queue.unranked", true);
+        queueUnranked = c.getBoolean("queue.unranked", false);
         queueSearchingActionBar = c.getBoolean("queue.searching-action-bar", true);
 
         mmIntervalTicks = Math.max(1, c.getInt("matchmaking.interval-ticks", 20));

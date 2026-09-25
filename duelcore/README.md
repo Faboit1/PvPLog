@@ -84,7 +84,7 @@ way to make a kit is to set up your inventory in game and run `/duelcore kit sav
 display-name: "Sword"
 description: "Diamond armor and a sword. Pure melee."
 icon: netherite_sword            # item shown in menus; `sprite:` overrides the atlas sprite
-category: main                   # main | extra (extra kits sit behind "More kits")
+category: weapons                # queue menu tab: weapons | vanilla | skills (old "main"/"extra" = weapons/vanilla)
 order: 1
 enabled: true
 ranked: true
@@ -159,7 +159,7 @@ Player commands (all players by default):
 
 | Command | Aliases | What it does |
 | --- | --- | --- |
-| `/queue [kit] [ranked\|unranked]` | `/play`, `/q` | Opens the queue menu, or joins a kit's queue directly |
+| `/queue [kit]` | `/play`, `/q` | Opens the queue menu, or joins a kit's (ranked) queue directly |
 | `/leave` | `/forfeit` | Leaves the queue, stops spectating, or forfeits (asks to confirm within 5 s) |
 | `/profile [player]` | `/stats` | Profile: overall tier and Elo, per-kit tier/rating/record, recent matches. `/profile <p> legacy` shows last season |
 | `/leaderboard [kit\|overall] [region]` | `/lb`, `/top` | Leaderboards, global or per region |
@@ -210,7 +210,7 @@ Every file is commented, and new keys are added to your files automatically on u
 | --- | --- |
 | `database` | `type: sqlite\|mysql`, connection and pool size |
 | `hub` | world, fixed `time`, `lock-weather`, `void-y`, `show-players` |
-| `queue` | multiple queues at once, ranked/unranked on/off, "searching" action bar |
+| `queue` | `allow-multiple` (several kit queues at once, default on), ranked on/off, `unranked` (off: no unranked queue; `/duel` is unaffected), "searching" action bar |
 | `matchmaking` | `interval-ticks`, rating window (`initial`, `growth-per-second`, `max`), region and ping penalties, `max-ranked-rematches-per-day`, `log-pairings` |
 | `match` | countdowns, `round-end-delay-ticks`, `return-delay-seconds`, `timeout-decision: health\|draw`, `max-rounds`, `allowed-commands`, `totem-pop`, `void-depth` |
 | `animations` | `respawn-throw` (+ `-height`), `death`, `round-win`, `match-win`, `fight-start`, `join-title` |
@@ -220,6 +220,13 @@ Every file is commented, and new keys are added to your files automatically on u
 | `leaderboard` | `refresh-seconds`, `size`, `regions` |
 | `display` | tier tags in chat, tab and above heads |
 | `debug` | `verbose` logging |
+
+**The queue menu** (Play item, `/queue`) lists the kits by tab: Favorites (kits starred with ☆, saved per
+player), Weapons, Vanilla and Skills (the kit's `category`). Clicking a kit joins or leaves its ranked queue, and a
+player can search in several kits at once; the first match found takes them out of all the others. Each kit shows
+how many players are searching or playing it, and the player's tier and Elo in it, or a progress bar while its
+placement matches aren't played yet. *Queue All* joins (or leaves) every kit of the tab; *Keep Queuing* puts the
+player back into the same queues after each match.
 
 **tiers.yml**
 
@@ -232,7 +239,8 @@ the overall Elo: the average rating of every kit a player has finished placement
 
 **gui.yml**
 
-- Hotbar items.
+- Hotbar items, each with an optional `action-bar` hint shown while it is held ("Right-click to play").
+- `queue-menu`: widths, tab icons and the placement progress bar of the queue menu.
 - Sidebar lines for hub, queue, match and spectate.
 - Tier tags (`tags`): the icon of a kit followed by the tier in it (`icon-tier: "<icon><tier>"`). In the hub a
   player shows their best kit (best tier, then highest rating), during a match the match's kit with the tier they had

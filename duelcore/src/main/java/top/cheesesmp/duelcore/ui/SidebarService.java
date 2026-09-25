@@ -30,7 +30,6 @@ import top.cheesesmp.duelcore.match.Participant;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.queue.QueueEntry;
-import top.cheesesmp.duelcore.queue.QueueService;
 
 /**
  * One scoreboard per player: the sidebar (blank numbers, one custom-named score per line) and the tier teams used
@@ -150,12 +149,8 @@ public final class SidebarService implements Listener, Runnable {
             tags.add(Messages.text("time", time(spectating)));
         } else if (queued != null) {
             template = gui.sidebarQueue;
-            Kit kit = plugin.kits().get(queued.kit());
-            if (kit != null) addKit(tags, kit, queued.mode().id());
-            long now = System.currentTimeMillis();
-            tags.add(Messages.text("wait", QueueService.formatWait(queued.waitSeconds(now))));
-            double range = plugin.queue().matchmaker().windowFor(queued, now);
-            tags.add(Messages.text("range", Double.isInfinite(range) ? "∞" : String.valueOf((int) range)));
+            // every kit searched for (several queues at once), wait and range of the oldest entry
+            tags.addAll(plugin.queue().searchTags(player.getUniqueId(), System.currentTimeMillis()));
         } else {
             template = gui.sidebarHub;
         }

@@ -36,10 +36,13 @@ hub:
   show-players: true
 
 queue:
-  # Allow being in queues for several kits at once. false = joining a new kit replaces the old queue.
-  allow-multiple: false
+  # Allow being in queues for several kits at once (the queue menu's "Queue All"). Being matched in one kit takes
+  # the player out of all the others. false = joining a new kit replaces the old queue.
+  allow-multiple: true
   ranked: true
-  unranked: true
+  # Unranked queue: only used by kits with "ranked: false" (the menu has no ranked/unranked switch; with this off
+  # those kits are hidden). /duel challenges are always unranked and not affected.
+  unranked: false
   # Send a "still searching" action bar while queued.
   searching-action-bar: true
 

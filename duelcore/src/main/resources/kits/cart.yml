@@ -4,7 +4,7 @@
 display-name: "Cart"
 description: "Rails, stacked TNT carts and a flame bow. Maxed netherite, two totems."
 icon: tnt_minecart
-category: extra
+category: vanilla
 order: 13
 enabled: true
 ranked: true

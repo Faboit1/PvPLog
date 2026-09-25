@@ -4,7 +4,7 @@
 display-name: "SMP"
 description: "Maxed netherite, shield, one totem and an inventory full of potions."
 icon: ender_pearl
-category: extra
+category: vanilla
 order: 11
 enabled: true
 ranked: true

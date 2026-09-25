@@ -3,7 +3,7 @@
 display-name: "Axe & Shield"
 description: "Unenchanted diamond: axe to break shields, sword, bow and crossbow."
 icon: diamond_axe
-category: main
+category: weapons
 order: 4
 enabled: true
 ranked: true

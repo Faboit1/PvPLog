@@ -5,6 +5,7 @@
 # ─────────────────────────────────────────────────────────────
 
 # Hub hotbar. Items can't be moved or dropped. "player_head" shows the player's own skin.
+# action-bar: hint shown in the action bar while the item is held ("" = none). Switching to an empty slot clears it.
 hotbar:
   queue:
     slot: 0
@@ -12,36 +13,42 @@ hotbar:
     name: "<text>Play</text>"
     lore:
       - "<muted>Pick a kit and find a match"
+    action-bar: "<muted>Right-click to</muted> <text>play</text> <muted>· pick the kits to queue for</muted>"
   leave-queue:
     slot: 0
     item: gray_dye
     name: "<bad>Leave queue</bad>"
     lore:
       - "<muted>Stop searching"
+    action-bar: "<muted>Right-click to</muted> <bad>leave every queue</bad>"
   leaderboard:
     slot: 2
     item: nether_star
     name: "<text>Leaderboards</text>"
     lore:
       - "<muted>Top players, overall and per kit"
+    action-bar: "<muted>Right-click to see the</muted> <text>leaderboards</text>"
   profile:
     slot: 4
     item: player_head
     name: "<text>Profile</text>"
     lore:
       - "<muted>Your tiers, stats and history"
+    action-bar: "<muted>Right-click to open your</muted> <text>profile</text>"
   settings:
     slot: 6
     item: comparator
     name: "<text>Settings</text>"
     lore:
       - "<muted>Region, ping, sidebar, requests"
+    action-bar: "<muted>Right-click to change your</muted> <text>settings</text>"
   spectate:
     slot: 8
     item: ender_eye
     name: "<text>Spectate</text>"
     lore:
       - "<muted>Watch a live match"
+    action-bar: "<muted>Right-click to</muted> <text>watch a live match</text>"
   # Given to spectators instead of the hub items.
   stop-spectating:
     slot: 8
@@ -49,6 +56,7 @@ hotbar:
     name: "<bad>Stop spectating</bad>"
     lore:
       - "<muted>Back to the hub"
+    action-bar: "<muted>Right-click to go</muted> <text>back to the hub</text>"
 
 # Server list entry. Placeholders: <online> <max> <live> (matches) <fighting> <queued> <kits>
 motd:
@@ -64,6 +72,26 @@ motd:
     - "<#8b9099>Fighting</#8b9099> <#d8dbe0><fighting></#d8dbe0>"
     - "<#8b9099>In queue</#8b9099> <#d8dbe0><queued></#d8dbe0>"
 
+# The queue menu (Play item, /queue). Texts are in messages.yml (dialog.queue).
+queue-menu:
+  # Width of the header rows, and of each kit's text next to its item.
+  width: 310
+  kit-width: 250
+  # Tab icons: an atlas sprite ("items:item/diamond_sword", "blocks:block/obsidian", optional #rrggbb tint)
+  # or "head" for the viewer's own head.
+  tab-icons:
+    favorites: head
+    weapons: "items:item/diamond_sword"
+    vanilla: "items:item/end_crystal"
+    skills: "items:item/dragon_breath#ff6e6e"
+  # Placement progress bar (shown until a kit's placement matches are played): number of segments and the
+  # textures.minecraft.net ids of solid-colour heads for the played / remaining part. "" = plain squares
+  # (dialog.queue.progress-done / progress-todo in messages.yml).
+  progress:
+    segments: 10
+    done: "366a5c98928fa5d4b5d5b8efb490155b4dda3956bcaa9371177814532cfc"
+    todo: "967a2f218a6e6e38f2b545f6c17733f4ef9bbb288e75402949c052189ee"
+
 sidebar:
   enabled: true
   title: "<accent>Duels</accent>"
@@ -77,7 +105,7 @@ sidebar:
     - "<muted>Live</muted>  <text><live></text>"
     - ""
     - "<muted>cheesesmp.top</muted>"
-  # Extra: <kit> <kit_icon> <mode> <wait> <range>
+  # Extra: <kit> ("3 kits" when searching several) <kit_icon> (every searched kit) <count> <mode> <wait> <range>
   queue:
     - ""
     - "<text><player></text>"

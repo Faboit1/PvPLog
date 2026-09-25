@@ -5,7 +5,7 @@
 display-name: "End Game"
 description: "Maxed netherite with crystals, anchors, a mace, elytra and eight totems."
 icon: end_crystal
-category: main
+category: vanilla
 order: 6
 enabled: true
 ranked: true

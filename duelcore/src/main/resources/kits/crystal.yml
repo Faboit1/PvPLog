@@ -6,7 +6,7 @@ display-name: "Crystal"
 description: "Netherite crystal PvP: crystals, anchors, obsidian and 14 totems."
 icon: obsidian
 sprite: "blocks:block/obsidian"
-category: extra
+category: vanilla
 order: 15
 enabled: true
 ranked: true

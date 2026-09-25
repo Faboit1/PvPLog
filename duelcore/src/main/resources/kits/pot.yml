@@ -3,7 +3,7 @@ display-name: "Pot"
 description: "Diamond gear, Sharpness V and 26 healing splash potions."
 icon: splash_potion
 sprite: "items:item/dragon_breath#ff6e6e"
-category: main
+category: skills
 order: 5
 enabled: true
 ranked: true

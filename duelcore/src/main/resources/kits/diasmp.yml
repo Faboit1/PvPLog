@@ -4,7 +4,7 @@
 display-name: "Diamond SMP"
 description: "Maxed diamond SMP: shield, cobwebs, buckets, a totem and potions."
 icon: diamond_sword
-category: extra
+category: vanilla
 order: 10
 enabled: true
 ranked: true

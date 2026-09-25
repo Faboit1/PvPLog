@@ -5,7 +5,7 @@
 display-name: "Late Game"
 description: "UHC-style diamond: shield, bow, crossbow, buckets, cobwebs and blocks."
 icon: diamond_chestplate
-category: main
+category: vanilla
 order: 8
 enabled: true
 ranked: true

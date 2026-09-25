@@ -4,7 +4,7 @@
 display-name: "Early Game"
 description: "Iron gear, shield, bow, crossbow, blocks and buckets. Early survival PvP."
 icon: iron_chestplate
-category: main
+category: vanilla
 order: 7
 enabled: true
 ranked: true

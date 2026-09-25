@@ -55,9 +55,9 @@ async function main () {
 
   ma = L.mark(a)
   mb = L.mark(b)
-  a.chat('/queue ' + kit + ' unranked')
+  a.chat('/queue ' + kit + ' ranked')
   await L.sleep(700)
-  b.chat('/queue ' + kit + ' unranked')
+  b.chat('/queue ' + kit + ' ranked')
   await Promise.all([L.waitTitle(a, /Match found/, 20000, ma.titles), L.waitTitle(b, /Match found/, 20000, mb.titles)])
   await L.sleep(2500)
   L.log('test', 'tab-match', tab)

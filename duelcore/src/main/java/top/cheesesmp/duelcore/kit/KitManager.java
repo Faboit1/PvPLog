@@ -103,7 +103,11 @@ public final class KitManager {
             icon = Material.IRON_SWORD;
         }
         String spriteSpec = y.getString("sprite", "items:item/" + icon.getKey().getKey());
-        Kit.Category category = "extra".equalsIgnoreCase(y.getString("category")) ? Kit.Category.EXTRA : Kit.Category.MAIN;
+        Kit.Category category = Kit.Category.parse(y.getString("category", "weapons"));
+        if (category == null) {
+            errors.add(where + ": unknown category '" + y.getString("category") + "' (weapons, vanilla or skills)");
+            category = Kit.Category.WEAPONS;
+        }
 
         ConfigurationSection r = y.getConfigurationSection("rules");
         if (r == null) r = new YamlConfiguration();
@@ -281,7 +285,7 @@ public final class KitManager {
         else {
             yml.set("display-name", id);
             yml.set("icon", "iron_sword");
-            yml.set("category", "extra");
+            yml.set("category", "vanilla");
             yml.set("first-to", 3);
         }
         PlayerInventory inv = player.getInventory();
