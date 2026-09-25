@@ -381,6 +381,37 @@ public final class TestKitPlugin extends JavaPlugin implements Listener {
 
     private static final List<String> EXEMPT = List.of("grim.exempt", "TotemGuard.Bypass", "sentry.bypass");
 
+    /** Teleports logged per bot in the current second (diagnostics for bots being set back while walking). */
+    private final Map<UUID, int[]> teleportLog = new ConcurrentHashMap<>();
+
+    /**
+     * Diagnostics: logs a bot's teleports (at most 3 per second per bot) with the cause and the first caller outside
+     * the server itself, to tell vanilla movement setbacks (cause UNKNOWN from the packet listener) from plugin
+     * teleports. Packet-level teleports (e.g. an anticheat) fire no event and don't show up here.
+     */
+    @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+    public void onBotTeleport(org.bukkit.event.player.PlayerTeleportEvent event) {
+        org.bukkit.entity.Player p = event.getPlayer();
+        if (!p.getName().toLowerCase().startsWith("dcbot")) return;
+        long second = System.currentTimeMillis() / 1000;
+        int[] slot = teleportLog.computeIfAbsent(p.getUniqueId(), k -> new int[2]);
+        if (slot[0] != (int) second) {
+            slot[0] = (int) second;
+            slot[1] = 0;
+        }
+        if (++slot[1] > 3) return;
+        String caller = StackWalker.getInstance().walk(frames -> frames
+            .map(f -> f.getClassName() + "." + f.getMethodName() + ":" + f.getLineNumber())
+            .filter(f -> !f.startsWith("org.bukkit") && !f.startsWith("io.papermc.paper.event") && !f.startsWith("java.")
+                && !f.startsWith("jdk.") && !f.startsWith("top.cheesesmp.duelcore.testkit") && !f.startsWith("co.aikar"))
+            .limit(3).toList()).toString();
+        org.bukkit.Location f = event.getFrom();
+        org.bukkit.Location t = event.getTo();
+        getLogger().info(String.format(java.util.Locale.ROOT, "[tp] %s %s%s (%.2f %.2f %.2f) -> (%.2f %.2f %.2f) by %s",
+            p.getName(), event.getCause(), event.isCancelled() ? " cancelled" : "", f.getX(), f.getY(), f.getZ(),
+            t.getX(), t.getY(), t.getZ(), caller));
+    }
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (command.getName().equalsIgnoreCase("tester")) return tester(sender, args);

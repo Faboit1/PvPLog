@@ -80,7 +80,7 @@ public final class ConfigManager {
     }
 
     /** The config-version this build writes; {@link #upgrade} brings older config.yml files up to it. */
-    static final int CONFIG_VERSION = 3;
+    static final int CONFIG_VERSION = 4;
 
     /** The {@code queue.music.tracks} default up to config-version 2 (replaced by version 3 when unchanged). */
     static final List<String> OLD_MUSIC_TRACKS = List.of(
@@ -90,6 +90,10 @@ public final class ConfigManager {
             "music_disc.far 174", "music_disc.mall 197", "music_disc.mellohi 96", "music_disc.stal 150",
             "music_disc.strad 188", "music_disc.ward 251", "music_disc.wait 238", "music_disc.5 178",
             "music_disc.13 178", "music_disc.11 71");
+
+    /** Switches that were true by default before config-version 4 and are off since (the classic start countdown). */
+    static final List<String> CLASSIC_COUNTDOWN = List.of(
+            "animations.countdown-pop", "animations.fight-sweep", "animations.match-point");
 
     /** The {@code queue.music.tracks} default since config-version 3 (same as the bundled config.yml). */
     static final List<String> MUSIC_TRACKS = List.of(
@@ -101,8 +105,9 @@ public final class ConfigManager {
      * Upgrades an existing config.yml whose defaults changed (missing keys are merged anyway). Version 2: the queue
      * menu queues several kits at once and has no unranked queue, so the old defaults {@code queue.allow-multiple:
      * false} and {@code queue.unranked: true} are switched. Version 3: the old default {@code queue.music.tracks}
-     * list becomes the new, shorter one (tears at 2x). Values changed by hand are left alone. Returns true when
-     * something changed.
+     * list becomes the new, shorter one (tears at 2x). Version 4: the classic start countdown is back, so the
+     * {@code animations.countdown-pop}, {@code fight-sweep} and {@code match-point} switches (true by default before)
+     * are turned off. Values changed by hand are left alone. Returns true when something changed.
      */
     static boolean upgrade(YamlConfiguration yml, java.util.logging.Logger log) {
         if (!yml.contains("config-version", true)) return false; // empty or broken file: defaults are merged in
@@ -122,6 +127,14 @@ public final class ConfigManager {
                 && normalized(yml.getStringList("queue.music.tracks")).equals(OLD_MUSIC_TRACKS)) {
             yml.set("queue.music.tracks", MUSIC_TRACKS);
             log.info("config.yml: queue.music.tracks is now the new default disc list (" + MUSIC_TRACKS.size() + " discs)");
+        }
+        if (version < 4) {
+            for (String key : CLASSIC_COUNTDOWN) {
+                if (yml.isBoolean(key) && yml.getBoolean(key)) {
+                    yml.set(key, false);
+                    log.info("config.yml: " + key + " is now false (the classic start countdown)");
+                }
+            }
         }
         yml.set("config-version", CONFIG_VERSION);
         return true;

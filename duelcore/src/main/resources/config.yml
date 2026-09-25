@@ -4,7 +4,7 @@
 #  kits in kits/*.yml and arenas in arenas/*.yml.
 #  Reload everything with /duelcore reload (running matches keep their kit).
 # ─────────────────────────────────────────────────────────────
-config-version: 3
+config-version: 4
 
 database:
   # sqlite (default, file in the plugin folder) or mysql (MySQL 8 / MariaDB 10.5+)
@@ -183,16 +183,18 @@ animations:
   # Ticks while the progress counts, the flourish and the demotion notes. Players can also turn sounds off in
   # their settings.
   progress-sounds: true
-  # In-match animations (texts in messages.yml match.fx, colours in gui.yml match-fx). Countdown numbers pop in
-  # (green, yellow, red by seconds left) with a tick that rises each second.
-  countdown-pop: true
-  # "FIGHT!" with a gradient sweep across the letters and a punch sound.
-  fight-sweep: true
+  # In-match animations (texts in messages.yml match.fx, colours in gui.yml match-fx).
+  # The start countdown is the classic one by default: plain numbers with a click each second, then "Fight".
+  # countdown-pop: the numbers pop in instead (green, yellow, red by seconds left) with a tick that rises each second.
+  countdown-pop: false
+  # fight-sweep: "FIGHT!" with a gradient sweep across the letters and a punch sound instead of the plain "Fight".
+  fight-sweep: false
   # When a round ends and the match goes on: "ROUND WON" / "ROUND LOST" types in and the score below it pops
   # (spectators see who took the round).
   round-banner: true
-  # The countdown subtitle pulses "Match point" when someone is one round from winning.
-  match-point: true
+  # The countdown subtitle says (and with countdown-pop pulses) "Match point" when someone is one round from
+  # winning; off = it always reads "Round N · first to N" like the classic countdown.
+  match-point: false
   # Action bar for the attacker: the hit combo counter pops on every hit from 2 hits on; "+1 kill" for a kill.
   combo-bar: true
   # A quiet heartbeat and a red pulse of the health in the action bar at or below heartbeat-hearts hearts; the

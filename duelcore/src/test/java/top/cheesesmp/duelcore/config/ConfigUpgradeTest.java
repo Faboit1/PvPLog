@@ -43,15 +43,16 @@ class ConfigUpgradeTest {
         assertTrue(ConfigManager.upgrade(y, LOG));
         assertTrue(y.getBoolean("queue.allow-multiple"));
         assertFalse(y.getBoolean("queue.unranked"));
-        assertEquals(3, y.getInt("config-version"));
+        assertEquals(ConfigManager.CONFIG_VERSION, y.getInt("config-version"));
     }
 
     @Test
     void emptyOrCurrentFilesAreLeftAlone() throws Exception {
         assertFalse(ConfigManager.upgrade(new YamlConfiguration(), LOG));
-        YamlConfiguration current = yml("config-version: 3\nqueue:\n  unranked: true\n");
+        YamlConfiguration current = yml("config-version: 4\nqueue:\n  unranked: true\nanimations:\n  countdown-pop: true\n");
         assertFalse(ConfigManager.upgrade(current, LOG));
         assertTrue(current.getBoolean("queue.unranked"));
+        assertTrue(current.getBoolean("animations.countdown-pop"));
     }
 
     private static String tracks(List<String> list) {
@@ -66,7 +67,7 @@ class ConfigUpgradeTest {
         YamlConfiguration y = yml("config-version: 2\n" + tracks(spaced));
         assertTrue(ConfigManager.upgrade(y, LOG));
         assertEquals(ConfigManager.MUSIC_TRACKS, y.getStringList("queue.music.tracks"));
-        assertEquals(3, y.getInt("config-version"));
+        assertEquals(ConfigManager.CONFIG_VERSION, y.getInt("config-version"));
     }
 
     @Test
@@ -76,14 +77,36 @@ class ConfigUpgradeTest {
         assertTrue(ConfigManager.upgrade(y, LOG));
         assertEquals(custom, y.getStringList("queue.music.tracks"));
         assertTrue(y.getBoolean("queue.unranked")); // the version 2 step does not run again
-        assertEquals(3, y.getInt("config-version"));
+        assertEquals(ConfigManager.CONFIG_VERSION, y.getInt("config-version"));
     }
 
     @Test
     void version3MusicListIsLeftAlone() throws Exception {
         YamlConfiguration y = yml("config-version: 3\n" + tracks(ConfigManager.OLD_MUSIC_TRACKS));
-        assertFalse(ConfigManager.upgrade(y, LOG));
+        assertTrue(ConfigManager.upgrade(y, LOG)); // only the version 4 step runs
         assertEquals(ConfigManager.OLD_MUSIC_TRACKS, y.getStringList("queue.music.tracks"));
+        assertEquals(ConfigManager.CONFIG_VERSION, y.getInt("config-version"));
+    }
+
+    @Test
+    void classicCountdownIsRestoredOnce() throws Exception {
+        YamlConfiguration y = yml("config-version: 3\nanimations:\n  countdown-pop: true\n  fight-sweep: true\n"
+            + "  match-point: false\n  round-banner: true\n");
+        assertTrue(ConfigManager.upgrade(y, LOG));
+        for (String key : ConfigManager.CLASSIC_COUNTDOWN) assertFalse(y.getBoolean(key, true), key);
+        assertTrue(y.getBoolean("animations.round-banner")); // other animations are untouched
+        assertEquals(4, y.getInt("config-version"));
+        // turned back on by hand afterwards: stays on
+        y.set("animations.fight-sweep", true);
+        assertFalse(ConfigManager.upgrade(y, LOG));
+        assertTrue(y.getBoolean("animations.fight-sweep"));
+    }
+
+    @Test
+    void classicCountdownStepSkipsMissingKeys() throws Exception {
+        YamlConfiguration y = yml("config-version: 3\nanimations:\n  heartbeat: true\n");
+        assertTrue(ConfigManager.upgrade(y, LOG));
+        for (String key : ConfigManager.CLASSIC_COUNTDOWN) assertFalse(y.contains(key), key); // defaults fill them in
     }
 
     @Test
@@ -92,6 +115,10 @@ class ConfigUpgradeTest {
             YamlConfiguration bundled = YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
             assertEquals(ConfigManager.CONFIG_VERSION, bundled.getInt("config-version"));
             assertEquals(ConfigManager.MUSIC_TRACKS, bundled.getStringList("queue.music.tracks"));
+            for (String key : ConfigManager.CLASSIC_COUNTDOWN) {
+                assertTrue(bundled.isBoolean(key), key);
+                assertFalse(bundled.getBoolean(key), key);
+            }
         }
     }
 

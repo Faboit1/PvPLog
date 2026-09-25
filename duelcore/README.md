@@ -335,10 +335,10 @@ setting. Texts are in `messages.yml` (`progress`, `animtest`), colours and the b
 | `searching-bar` | The "searching" action bar with a spinner, pulsing dots and slowly cycling colours (gui.yml `searching`); off = the plain bar |
 | `match-found-reveal` | "MATCH FOUND" brightens with a shimmer, then the opponent and their tier are typed out (the totem pop and `match-found-sounds` stay) |
 | `queue-sounds` | The queue menu's ticks and flourish, the match found whoosh and chime |
-| `countdown-pop` | Countdown numbers pop in (white and bold, then green / yellow / red by seconds left) with a tick that rises each second |
-| `fight-sweep` | `FIGHT!` with a gradient sweep across the letters and a punch sound |
+| `countdown-pop` | Off by default (the classic countdown: plain numbers, a click each second). On: the numbers pop in (white and bold, then green / yellow / red by seconds left) with a tick that rises each second |
+| `fight-sweep` | Off by default (the classic `Fight` title). On: `FIGHT!` with a gradient sweep across the letters and a punch sound |
 | `round-banner` | Round over, match goes on: `ROUND WON` / `ROUND LOST` types in, the score below pops (`2 — 1`); spectators see who took the round |
-| `match-point` | The countdown subtitle pulses `Match point` (or `Final round`) when a side is one round from winning |
+| `match-point` | Off by default (the subtitle always reads `Round N · first to N`). On: the countdown subtitle says `Match point` (or `Final round`) when a side is one round from winning, pulsing with `countdown-pop` |
 | `combo-bar` | Attacker's action bar: the hit combo counter pops from 2 hits on; `+1 kill · 3 hit combo` when a kill doesn't end the round |
 | `heartbeat` (+ `-hearts`) | At or below 3 hearts: a quiet heartbeat and a red pulse of the health in the action bar, faster when lower |
 | `victory-title`, `defeat-title` | Match won: victory jingle and a shimmer over `Victory` (spectators: the winner's name). Lost: three quiet falling notes, the title greys a little |

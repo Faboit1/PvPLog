@@ -274,10 +274,10 @@ public final class MainConfig {
         animSearchingBar = c.getBoolean("animations.searching-bar", true);
         animMatchFound = c.getBoolean("animations.match-found-reveal", true);
         animQueueSounds = c.getBoolean("animations.queue-sounds", true);
-        animCountdownPop = c.getBoolean("animations.countdown-pop", true);
-        animFightSweep = c.getBoolean("animations.fight-sweep", true);
+        animCountdownPop = c.getBoolean("animations.countdown-pop", false);
+        animFightSweep = c.getBoolean("animations.fight-sweep", false);
         animRoundBanner = c.getBoolean("animations.round-banner", true);
-        animMatchPoint = c.getBoolean("animations.match-point", true);
+        animMatchPoint = c.getBoolean("animations.match-point", false);
         animComboBar = c.getBoolean("animations.combo-bar", true);
         animHeartbeat = c.getBoolean("animations.heartbeat", true);
         animHeartbeatHearts = Math.clamp(c.getDouble("animations.heartbeat-hearts", 3), 0.5, 10);
