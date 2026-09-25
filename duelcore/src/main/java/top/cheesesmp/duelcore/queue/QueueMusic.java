@@ -70,11 +70,15 @@ public final class QueueMusic implements Listener, Runnable {
         return p == null ? null : p.track().key();
     }
 
-    /** Checks every queued player: starts the next track when one ended, stops it for anyone no longer searching. */
-    /** Ticks between two "stop the game's background music" packets to everyone (the client starts a new song now and then). */
+    /**
+     * Ticks between two "stop the game's background music" packets to everyone (the client starts a new song now and
+     * then). A stop only ends a song that is playing: with Music Frequency "Constant" the client starts the next one
+     * 100 ticks later whatever we send, so a shorter interval would only trade longer snippets for more of them.
+     */
     private static final int CLIENT_MUSIC_EVERY = 200;
     private int clientMusicTicks;
 
+    /** Checks every queued player: starts the next track when one ended, stops it for anyone no longer searching. */
     @Override
     public void run() {
         // the timer runs every 10 ticks

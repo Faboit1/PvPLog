@@ -79,28 +79,55 @@ public final class ConfigManager {
     }
 
     /** The config-version this build writes; {@link #upgrade} brings older config.yml files up to it. */
-    static final int CONFIG_VERSION = 2;
+    static final int CONFIG_VERSION = 3;
+
+    /** The {@code queue.music.tracks} default up to config-version 2 (replaced by version 3 when unchanged). */
+    static final List<String> OLD_MUSIC_TRACKS = List.of(
+            "music_disc.pigstep 148", "music_disc.otherside 195", "music_disc.relic 218", "music_disc.creator 176",
+            "music_disc.creator_music_box 73", "music_disc.precipice 299", "music_disc.tears 175",
+            "music_disc.lava_chicken 134", "music_disc.cat 185", "music_disc.blocks 345", "music_disc.chirp 185",
+            "music_disc.far 174", "music_disc.mall 197", "music_disc.mellohi 96", "music_disc.stal 150",
+            "music_disc.strad 188", "music_disc.ward 251", "music_disc.wait 238", "music_disc.5 178",
+            "music_disc.13 178", "music_disc.11 71");
+
+    /** The {@code queue.music.tracks} default since config-version 3 (same as the bundled config.yml). */
+    static final List<String> MUSIC_TRACKS = List.of(
+            "music_disc.cat 185", "music_disc.blocks 345", "music_disc.chirp 185", "music_disc.mellohi 96",
+            "music_disc.stal 150", "music_disc.strad 188", "music_disc.pigstep 148", "music_disc.otherside 195",
+            "music_disc.creator 176", "music_disc.tears 175 2x", "music_disc.lava_chicken 134");
 
     /**
      * Upgrades an existing config.yml whose defaults changed (missing keys are merged anyway). Version 2: the queue
      * menu queues several kits at once and has no unranked queue, so the old defaults {@code queue.allow-multiple:
-     * false} and {@code queue.unranked: true} are switched (values changed by hand are left alone). Returns true when
+     * false} and {@code queue.unranked: true} are switched. Version 3: the old default {@code queue.music.tracks}
+     * list becomes the new, shorter one (tears at 2x). Values changed by hand are left alone. Returns true when
      * something changed.
      */
     static boolean upgrade(YamlConfiguration yml, java.util.logging.Logger log) {
         if (!yml.contains("config-version", true)) return false; // empty or broken file: defaults are merged in
         int version = yml.getInt("config-version", 1);
         if (version >= CONFIG_VERSION) return false;
-        if (yml.isBoolean("queue.allow-multiple") && !yml.getBoolean("queue.allow-multiple")) {
-            yml.set("queue.allow-multiple", true);
-            log.info("config.yml: queue.allow-multiple is now true (the queue menu's Queue All)");
+        if (version < 2) {
+            if (yml.isBoolean("queue.allow-multiple") && !yml.getBoolean("queue.allow-multiple")) {
+                yml.set("queue.allow-multiple", true);
+                log.info("config.yml: queue.allow-multiple is now true (the queue menu's Queue All)");
+            }
+            if (yml.isBoolean("queue.unranked") && yml.getBoolean("queue.unranked")) {
+                yml.set("queue.unranked", false);
+                log.info("config.yml: queue.unranked is now false (only kits with ranked: false use it)");
+            }
         }
-        if (yml.isBoolean("queue.unranked") && yml.getBoolean("queue.unranked")) {
-            yml.set("queue.unranked", false);
-            log.info("config.yml: queue.unranked is now false (only kits with ranked: false use it)");
+        if (version < 3 && yml.isList("queue.music.tracks")
+                && normalized(yml.getStringList("queue.music.tracks")).equals(OLD_MUSIC_TRACKS)) {
+            yml.set("queue.music.tracks", MUSIC_TRACKS);
+            log.info("config.yml: queue.music.tracks is now the new default disc list (" + MUSIC_TRACKS.size() + " discs)");
         }
         yml.set("config-version", CONFIG_VERSION);
         return true;
+    }
+
+    private static List<String> normalized(List<String> list) {
+        return list.stream().map(s -> s.trim().replaceAll("\\s+", " ")).toList();
     }
 
     /** Sections the user owns completely (don't re-add keys they deleted on purpose). */

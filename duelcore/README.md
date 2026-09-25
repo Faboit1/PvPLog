@@ -217,7 +217,9 @@ arrives after the join).
 
 Every file is commented, and new keys are added to your files automatically on update. When a default changes,
 `config-version` upgrades the old value once: version 2 switches `queue.allow-multiple` to true and `queue.unranked`
-to false when they still have the old defaults (false / true). Main settings:
+to false when they still have the old defaults (false / true); version 3 replaces `queue.music.tracks` with the new
+11-disc list when it is still the old 21-disc default (a list you edited is kept; delete the key to get the new
+default). Main settings:
 
 **config.yml**
 
@@ -225,7 +227,7 @@ to false when they still have the old defaults (false / true). Main settings:
 | --- | --- |
 | `database` | `type: sqlite\|mysql`, connection and pool size |
 | `hub` | world, fixed `time`, `lock-weather`, `void-y`, `show-players`, `allow-flight` (everyone flies in the hub, default on) |
-| `queue` | `allow-multiple` (several kit queues at once, default on), ranked on/off, `unranked` (off: no unranked queue; `/duel` is unaffected), "searching" action bar, `music` (`enabled`, `volume`, `tracks`: `"<sound id> <seconds>"` music discs played to a player while searching; players can turn it off in their settings) |
+| `queue` | `allow-multiple` (several kit queues at once, default on), ranked on/off, `unranked` (off: no unranked queue; `/duel` is unaffected), "searching" action bar, `music` (`enabled`, `volume`, `tracks`: `"<sound id> <seconds> [speed]"` music discs played to a player while searching; players can turn it off in their settings; `stop-client-music` stops the game's own background music every 10 s, players with Music Frequency "Constant" still hear short snippets of it) |
 | `matchmaking` | `interval-ticks`, rating window (`initial`, `growth-per-second`, `max`), region and ping penalties, `max-ranked-rematches-per-day`, `log-pairings` |
 | `match` | countdowns, `round-end-delay-ticks`, `return-delay-seconds`, `timeout-decision: health\|draw`, `max-rounds`, `allowed-commands`, `totem-pop`, `void-depth` |
 | `animations` | see *Animations* below |

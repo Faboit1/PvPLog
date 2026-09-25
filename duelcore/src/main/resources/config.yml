@@ -4,7 +4,7 @@
 #  kits in kits/*.yml and arenas in arenas/*.yml.
 #  Reload everything with /duelcore reload (running matches keep their kit).
 # ─────────────────────────────────────────────────────────────
-config-version: 2
+config-version: 3
 
 database:
   # sqlite (default, file in the plugin folder) or mysql (MySQL 8 / MariaDB 10.5+)
@@ -69,7 +69,9 @@ queue:
       - "music_disc.creator 176"
       - "music_disc.tears 175 2x"
       - "music_disc.lava_chicken 134"
-    # Stop Minecraft's own background music for everyone (on join and every 10 s), so it never plays over this.
+    # Stop Minecraft's own background music for everyone (on join and every 10 s). Players whose Music Frequency
+    # (Options > Music & Sounds) is "Constant" still hear a few seconds of it now and then: their game starts the
+    # next song 5 s after a stop. Removing it completely needs a datapack (background_music of the hub).
     stop-client-music: true
 
 matchmaking:

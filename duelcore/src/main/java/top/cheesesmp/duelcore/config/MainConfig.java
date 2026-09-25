@@ -38,7 +38,7 @@ public final class MainConfig {
     public final boolean queueUnranked;
     public final boolean queueSearchingActionBar;
     public final boolean queueMusicEnabled;
-    /** Keep Minecraft's own background music (the MUSIC sound source) off for everyone. */
+    /** Stop Minecraft's own background music (the MUSIC sound source) for everyone every 10 s (Constant frequency still gets snippets). */
     public final boolean stopClientMusic;
     public final float queueMusicVolume;
     public final top.cheesesmp.duelcore.queue.MusicTracks queueMusicTracks;
