@@ -11,7 +11,7 @@ import java.util.List;
 /** Versioned schema. Append new versions; never edit a released one. */
 public final class Migrations {
 
-    public static final int LATEST = 3;
+    public static final int LATEST = 4;
 
     private Migrations() {
     }
@@ -155,6 +155,31 @@ public final class Migrations {
                 s.add(d == Dialect.SQLITE
                     ? "ALTER TABLE dc_standings RENAME COLUMN points TO elo"
                     : "ALTER TABLE dc_standings CHANGE points elo SMALLINT NOT NULL");
+            }
+            case 4 -> {
+                // social: follows (friends = mutual follows), persistent parties, favourite kits
+                s.add("CREATE TABLE IF NOT EXISTS dc_follows ("
+                    + "follower_id INT NOT NULL, "
+                    + "followed_id INT NOT NULL, "
+                    + "created_at BIGINT NOT NULL, "
+                    + "PRIMARY KEY (follower_id, followed_id))" + d.clustered());
+                s.add("CREATE INDEX " + ifNotExists(d) + "dc_follows_followed ON dc_follows (followed_id, follower_id)");
+                s.add("CREATE TABLE IF NOT EXISTS dc_parties ("
+                    + "id VARCHAR(36) NOT NULL PRIMARY KEY, "
+                    + "leader_id INT NOT NULL, "
+                    + "open TINYINT NOT NULL DEFAULT 0, "
+                    + "password VARCHAR(64) NULL, "
+                    + "created_at BIGINT NOT NULL)" + d.tableSuffix());
+                s.add("CREATE TABLE IF NOT EXISTS dc_party_members ("
+                    + "player_id INT NOT NULL PRIMARY KEY, "
+                    + "party_id VARCHAR(36) NOT NULL, "
+                    + "joined_at BIGINT NOT NULL, "
+                    + "chat TINYINT NOT NULL DEFAULT 0)" + d.tableSuffix());
+                s.add("CREATE INDEX " + ifNotExists(d) + "dc_party_members_party ON dc_party_members (party_id)");
+                s.add("CREATE TABLE IF NOT EXISTS dc_favorites ("
+                    + "player_id INT NOT NULL, "
+                    + "kit_id SMALLINT NOT NULL, "
+                    + "PRIMARY KEY (player_id, kit_id))" + d.clustered());
             }
             default -> throw new IllegalStateException("unknown schema version " + version);
         }

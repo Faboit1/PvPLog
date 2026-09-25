@@ -7,7 +7,13 @@ public enum Setting {
     SOUNDS(2, true),
     CHAT_TAGS(3, true),
     HIDE_HUB_PLAYERS(4, false),
-    ALLOW_SPECTATORS(5, true);
+    ALLOW_SPECTATORS(5, true),
+    /** Re-join the same queues automatically after a match ("Keep Queuing" in the queue menu). */
+    KEEP_QUEUING(6, false),
+    /** Chat notices when a friend comes online or someone follows you. */
+    FRIEND_ALERTS(7, true),
+    /** Accept party invites from anyone (off: friends only). */
+    PARTY_INVITES(8, true);
 
     private final int bit;
     private final boolean defaultValue;

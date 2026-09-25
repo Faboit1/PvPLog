@@ -33,11 +33,26 @@ public final class ClickRouter implements Listener {
     private static final Pattern PAIR = Pattern.compile(
         "([A-Za-z0-9_]+)\\s*:\\s*(?:\"((?:[^\"\\\\]|\\\\.)*)\"|'((?:[^'\\\\]|\\\\.)*)')");
 
+    /** Handles the clicks of one feature ({@code duelcore:<prefix>/...}). The data map is untrusted client input. */
+    @FunctionalInterface
+    public interface Handler {
+        void handle(Player player, String action, Map<String, String> data, @Nullable DialogResponseView view);
+    }
+
     private final DuelCorePlugin plugin;
     private final Map<UUID, Long> lastClick = new HashMap<>();
+    private final Map<String, Handler> handlers = new HashMap<>();
 
     public ClickRouter(DuelCorePlugin plugin) {
         this.plugin = plugin;
+    }
+
+    /**
+     * Routes every {@code duelcore:<prefix>/<rest>} click to {@code handler} (e.g. prefix "friend" for
+     * "friend/follow"). Features register their own prefix so they don't have to touch the switch below.
+     */
+    public void register(String prefix, Handler handler) {
+        handlers.put(prefix, handler);
     }
 
     @EventHandler
@@ -126,6 +141,9 @@ public final class ClickRouter implements Listener {
                 if (from != null) plugin.duels().deny(player, from);
             }
             default -> {
+                int slash = action.indexOf('/');
+                Handler handler = slash < 0 ? null : handlers.get(action.substring(0, slash));
+                if (handler != null) handler.handle(player, action, data, view);
             }
         }
     }
