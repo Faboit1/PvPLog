@@ -79,6 +79,7 @@ identical run is the way to confirm a flat heap. Not done yet.
 | Bot run (FFA) | Rising platform: in the tick before the real blocks came back the client fell ~0.08 blocks and ended with its feet inside the top block, sinking one block (bots stuck in the ground for a whole FFA round) | The rise always ends with an exact teleport onto the spawn, sent after the block changes |
 | Review workflow | 25 findings from 5 adversarial reviewers, 23 fixed (2 partly) — e.g. offline party leader never replaced, follow/unfollow alert spam, writes reordered on MySQL, rise into walls on slopes, Keep Queuing edge cases, old config defaults kept on existing servers | See the fix commit; unit tests added (65 total) |
 | Live report | Long respawn throws (47–63 blocks) never moved high-ping players server-side, then snapped and got flagged by Grim AntiKB | Throw gated by ping (teleport above 350 ms), settle wait scales with ping, stall watchdog, clearance-checked arc, zero velocity flushed before the final teleport |
+| Review workflow | A config file with a YAML error (config.yml, messages.yml, …) was replaced by the bundled defaults on the next start or `/duelcore reload`, wiping the admin's settings | A file that doesn't parse is never written back; the plugin runs on the defaults and logs the error |
 | Deploy | Test-kit edit dropped the login guard (about 1 min, only Faboit joined) | Guard restored, fails closed, covered by `guard.js` |
 
 ## Environment notes (not DuelCore)
@@ -110,7 +111,11 @@ identical run is the way to confirm a flat heap. Not done yet.
 
 - mineflayer scales 1.21.9+ `lpVec3` velocity by 1/8000, so knockback and thrown velocity arrived about 8000× too
   weak. The harness re-applies the decoded value.
-- Bots sometimes stop at 1-block terrain steps (the server corrects the move and mineflayer stops simulating). Real
-  players don't see this: humans played terrain matches all afternoon. `load.js` forfeits a pair that makes no
-  round progress for 60 s, so the lifecycle keeps cycling.
+- Bots used to freeze in matches (Party FFA ran into the 210 s draw, duels took ~8 min). `posprobe.js` found the
+  cause: every move that left a bot's box exactly flush with a block face was set back by the server, 14–20 times a
+  second. The position arrives a hair past the face (bots join through ViaBackwards), which counts as moving into the
+  block, and each setback cleared mineflayer's `onGround`, so the bot could never jump free. It wasn't Grim (same
+  with Grim unloaded) or DuelCore (no teleport events). Bots now stop a thousandth short of the face: 0 setbacks,
+  Party FFA decided in 21 s, a first-to-3 duel in 88 s. Players on old clients through ViaBackwards could in theory
+  feel the same at walls; this hasn't been seen with a real client.
 - Bots can't use spears (26.x jab attack), so spear matches were only played by humans.
