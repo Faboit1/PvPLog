@@ -3,7 +3,7 @@
 display-name: "SMP"
 description: "Maxed netherite SMP gear: pearls, gapples, a totem and potions."
 icon: ender_pearl
-category: extra
+category: vanilla
 order: 11
 enabled: true
 ranked: true

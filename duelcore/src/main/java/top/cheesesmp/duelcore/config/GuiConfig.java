@@ -39,6 +39,13 @@ public final class GuiConfig {
     public final java.util.List<String> motdLines;
     public final java.util.List<String> motdHover;
     public final int historyLines;
+    /** Queue menu: row width, kit description width, tab icons, placement bar (segments + head textures). */
+    public final int queueWidth;
+    public final int queueKitWidth;
+    public final Map<String, String> queueTabIcons = new HashMap<>();
+    public final int queueProgressSegments;
+    public final String queueProgressDone;
+    public final String queueProgressTodo;
 
     public GuiConfig(YamlConfiguration y) {
         ConfigurationSection hb = y.getConfigurationSection("hotbar");
@@ -74,6 +81,13 @@ public final class GuiConfig {
         motdLines = y.getStringList("motd.lines");
         motdHover = y.getStringList("motd.hover");
         historyLines = Math.clamp(y.getInt("dialogs.history-lines", 5), 0, 20);
+        queueWidth = Math.clamp(y.getInt("queue-menu.width", 310), 100, 1024);
+        queueKitWidth = Math.clamp(y.getInt("queue-menu.kit-width", 250), 50, 1024);
+        ConfigurationSection icons = y.getConfigurationSection("queue-menu.tab-icons");
+        if (icons != null) for (String key : icons.getKeys(false)) queueTabIcons.put(key, icons.getString(key, ""));
+        queueProgressSegments = Math.clamp(y.getInt("queue-menu.progress.segments", 10), 1, 30);
+        queueProgressDone = y.getString("queue-menu.progress.done", "");
+        queueProgressTodo = y.getString("queue-menu.progress.todo", "");
     }
 
     public @Nullable HotbarItem item(String key) {

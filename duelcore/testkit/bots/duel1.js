@@ -1,5 +1,5 @@
 // Full first-to-N ranked match between two bots, driving the real UI:
-// bot A opens the queue dialog from the hotbar and clicks a kit button; bot B uses /queue.
+// bot A opens the queue menu from the hotbar and clicks a kit's row; bot B uses /queue.
 // Both fight until the match ends, then check that they are back in the hub with the hub hotbar,
 // and open the results dialog "Play again" button is present. Exit code 0 = pass.
 const L = require('./lib')
@@ -15,14 +15,10 @@ async function main () {
   await L.sleep(3000)
   L.log('test', 'hub-hotbar', { a: [0, 2, 4, 6, 8].map(s => L.heldName(a, s)), gm: a.game.gameMode })
 
-  // A: hotbar slot 0 → queue dialog → click the kit button
-  const qd = await L.openFromHotbar(a, 0, /Play/)
-  const btn = L.buttons(qd).find(x => x.id === 'duelcore:queue/join' && x.additions && x.additions.kit === kit)
-  if (!btn) throw new Error('no queue button for ' + kit + ': ' + JSON.stringify(L.buttons(qd)))
+  // A: hotbar slot 0 → queue menu → click the kit's row (the menu re-opens showing "Searching")
   const ma = L.mark(a)
   const mb = L.mark(b)
-  L.click(a, btn)
-  await L.waitChat(a, /Searching/, 5000, ma.chat)
+  await L.queueViaMenu(a, kit)
   L.log('test', 'a-queued-via-dialog')
   await L.sleep(500)
   b.chat('/queue ' + kit + ' ranked')

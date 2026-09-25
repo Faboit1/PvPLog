@@ -3,7 +3,7 @@
 display-name: "Mace"
 description: "Density and Breach maces, wind charges, elytra and totems."
 icon: mace
-category: main
+category: weapons
 order: 3
 enabled: true
 ranked: true

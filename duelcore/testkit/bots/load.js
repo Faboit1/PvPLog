@@ -22,10 +22,7 @@ async function runBot (i) {
     const m = L.mark(bot)
     if (perBot[name] === 0) {
       if (viaDialog) {
-        const qd = await L.openFromHotbar(bot, 0, /Play/)
-        const btn = L.buttons(qd).find(x => x.id === 'duelcore:queue/join' && x.additions && x.additions.kit === kit)
-        if (!btn) throw new Error('no button for ' + kit)
-        L.click(bot, btn)
+        await L.queueViaMenu(bot, kit)
       } else {
         bot.chat('/queue ' + kit + ' ranked')
       }

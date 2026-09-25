@@ -33,7 +33,11 @@ queue:
   switched: "<muted>Switched to</muted> <kit_icon> <text><kit></text> <muted>· <mode></muted>"
   left: "<muted>Left the queue.</muted>"
   not-queued: "<muted>You're not in a queue.</muted>"
-  searching: "<kit_icon> <text><kit></text> <muted><mode> · <wait> · ±<range></muted>"
+  # Action bar while queued. <kit> is "<count> kits" (kit-count) when searching several; <kit_icon> shows them all.
+  searching: "<kit_icon> <text><kit></text> <muted>· <wait> · ±<range></muted>"
+  kit-count: "<count> kits"
+  # Keep Queuing re-joined the kits a player searched for before their match.
+  requeued: "<muted>Searching again:</muted> <kit_icon>"
   result:
     ok: ""
     switched: ""
@@ -192,17 +196,52 @@ kit:
 
 dialog:
   close: "<muted>Close</muted>"
+  # The queue menu (Play item, /queue). Layout knobs are in gui.yml (queue-menu).
   queue:
-    title: "Play <muted>· <mode></muted>"
-    body: "<muted><category> kits · <text><queued></text> searching · <text><live></text> live</muted>"
-    category-main: "Main"
-    category-extra: "Extra"
-    kit-button: "<kit_icon> <text><kit></text>"
-    kit-tooltip: "<text><kit></text><newline><muted><description></muted><newline><newline><muted>Searching</muted> <text><queued></text>  <muted>Live</muted> <text><live></text><newline><muted>Your tier</muted> <tier> <muted>· <rating></muted><newline><muted>First to <first_to></muted>"
-    main-kits: "<muted>Main kits</muted>"
-    extra-kits: "<muted>Extra kits</muted>"
-    switch-mode: "<muted>Switch to <mode></muted>"
-    leave: "<bad>Leave queue</bad>"
+    menu-title: "Queue"
+    header: "<accent>Click a kit to join or leave its queue.</accent>"
+    # <selected> = kits you're searching in
+    header-hover: "<text>You can queue for several kits at once!</text><newline><muted><selected> selected.</muted>"
+    header-hover-single: "<text>Joining a kit leaves your other queue.</text><newline><muted><selected> selected.</muted>"
+    tab: "<icon> <muted><name></muted>"
+    tab-selected: "<icon> <accent><u><name></u></accent>"
+    tab-separator: "  <dark_gray>-</dark_gray>  "
+    tabs:
+      favorites: "Favorites"
+      weapons: "Weapons"
+      vanilla: "Vanilla"
+      skills: "Skills"
+    tab-hover:
+      favorites: "<text>Your favorite kits.</text><newline><muted>Click ☆ next to a kit to add it here.</muted>"
+      weapons: "<text>Simple kits to test one skill, no building or breaking.</text>"
+      vanilla: "<text>Survival gear on natural maps: building, breaking and every item are on.</text>"
+      skills: "<text>Potion kits: healing, timing and managing your resources.</text>"
+    toggle-on: "<good>☑ <label></good>"
+    toggle-off: "<muted>☐ <label></muted>"
+    toggle-separator: "    "
+    queue-all: "Queue All"
+    queue-all-hover: "<text>Join every kit in this tab.</text><newline><muted>Click again to leave them.</muted>"
+    keep-queuing: "Keep Queuing"
+    keep-queuing-hover: "<text>After a match, search again in the same kits.</text>"
+    no-favorites: "<muted>No favorites yet. Click ☆ next to a kit to add it here.</muted>"
+    no-kits: "<muted>No kits here right now.</muted>"
+    # One row per kit. <players> = searching + playing, <wait> = time searching, <star> = the favorite toggle.
+    kit: "<text><kit></text> <muted>- <players> players</muted>  <star>"
+    kit-queued: "<good><kit></good> <muted>- Searching</muted> <good><wait></good> <muted>· <players> players</muted>  <star>"
+    kit-hover: "<text><description></text><newline><muted>First to <first_to> · <queued> searching · <playing> playing</muted><newline><newline><muted>Click to join or leave this queue.</muted>"
+    # Once placement is done: the kit tier and rating. Before: the progress bar (hover: progress-hover).
+    kit-rank: "<tier> <muted>· <rating> Elo</muted>"
+    progress-hover: "<text>Play <remaining> more matches to get a tier.</text><newline><muted><games>/<placement> placement matches played</muted>"
+    progress-done: "<#5bd46a>■</#5bd46a>"
+    progress-todo: "<#26282c>■</#26282c>"
+    star-on: "<accent>★</accent>"
+    star-off: "<muted>☆</muted>"
+    star-hover: "<muted>Add to favorites</muted>"
+    unstar-hover: "<muted>Remove from favorites</muted>"
+    # Name and lore of the kit item on the left.
+    item-name: "<text><kit></text>"
+    item-name-queued: "<good><kit></good>"
+    item-lore: "<muted><queued> searching · <playing> playing</muted>"
   profile:
     title: "<player>"
     header: "<head> <text><player></text>  <tier> <muted>· <elo> Elo · <region> <country></muted>"

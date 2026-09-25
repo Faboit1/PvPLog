@@ -3,7 +3,7 @@
 display-name: "Late Game"
 description: "Maxed diamond survival gear: shield, bow, buckets and a totem."
 icon: diamond_chestplate
-category: main
+category: vanilla
 order: 8
 enabled: true
 ranked: true

@@ -4,7 +4,7 @@
 display-name: "Sword"
 description: "Diamond armor and a sword. Pure melee."
 icon: netherite_sword
-category: main
+category: weapons
 order: 1
 enabled: true
 ranked: true

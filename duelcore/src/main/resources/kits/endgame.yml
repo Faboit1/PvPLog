@@ -3,7 +3,7 @@
 display-name: "End Game"
 description: "Maxed netherite, crystals, anchors, elytra and totems."
 icon: end_crystal
-category: main
+category: vanilla
 order: 6
 enabled: true
 ranked: true

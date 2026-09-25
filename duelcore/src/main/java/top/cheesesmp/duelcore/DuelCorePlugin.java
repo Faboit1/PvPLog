@@ -62,6 +62,7 @@ public final class DuelCorePlugin extends JavaPlugin {
     private top.cheesesmp.duelcore.ui.RespawnPull respawnPull;
     private top.cheesesmp.duelcore.ui.Animations animations;
     private DialogService dialogs;
+    private top.cheesesmp.duelcore.hub.HotbarHints hints;
     private ClickRouter clicks;
     private LeaderboardService leaderboards;
     private CommandService commands;
@@ -102,6 +103,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         respawnPull = new top.cheesesmp.duelcore.ui.RespawnPull(this);
         animations = new top.cheesesmp.duelcore.ui.Animations(this);
         dialogs = new DialogService(this);
+        hints = new top.cheesesmp.duelcore.hub.HotbarHints(this);
         leaderboards = new LeaderboardService(this, database);
         arenas = new ArenaManager(this);
         editor = new ArenaEditor(this, arenas);
@@ -123,6 +125,8 @@ public final class DuelCorePlugin extends JavaPlugin {
         pm.registerEvents(new top.cheesesmp.duelcore.chat.ChatFilterListener(this), this);
         clicks = new ClickRouter(this);
         pm.registerEvents(clicks, this);
+        clicks.register("queue", dialogs.queueMenu()::click);
+        pm.registerEvents(hints, this);
         pm.registerEvents(results, this);
         pm.registerEvents(respawnPull, this);
         pm.registerEvents(new top.cheesesmp.duelcore.ui.MotdService(this), this);
@@ -134,6 +138,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         scheduler.runTaskTimer(this, arenas.queue(), 1L, 1L);
         scheduler.runTaskTimer(this, queue, 20L, cfg.mmIntervalTicks);
         scheduler.runTaskTimer(this, sidebar, 20L, 20L);
+        scheduler.runTaskTimer(this, hints, 20L, 20L);
         scheduler.runTaskTimer(this, tags, 40L, 40L);
         scheduler.runTaskTimer(this, duels, 20L, 20L);
         scheduler.runTaskTimer(this, leaderboards, 200L, 200L);
@@ -302,6 +307,11 @@ public final class DuelCorePlugin extends JavaPlugin {
 
     public DialogService dialogs() {
         return dialogs;
+    }
+
+    /** Action bar hints of the held hub hotbar item. */
+    public top.cheesesmp.duelcore.hub.HotbarHints hints() {
+        return hints;
     }
 
     public LeaderboardService leaderboards() {

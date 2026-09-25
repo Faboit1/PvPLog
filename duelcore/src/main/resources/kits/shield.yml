@@ -3,7 +3,7 @@
 display-name: "Shield"
 description: "Unenchanted diamond, axe, sword, shield, bow and crossbow."
 icon: diamond_axe
-category: main
+category: weapons
 order: 4
 enabled: true
 ranked: true

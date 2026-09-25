@@ -1,11 +1,15 @@
 package top.cheesesmp.duelcore.queue;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -14,14 +18,20 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
+import top.cheesesmp.duelcore.api.event.MatchStartEvent;
 import top.cheesesmp.duelcore.config.MainConfig;
 import top.cheesesmp.duelcore.config.Messages;
 import top.cheesesmp.duelcore.kit.Kit;
 import top.cheesesmp.duelcore.match.Match;
+import top.cheesesmp.duelcore.match.Participant;
 import top.cheesesmp.duelcore.profile.KitStats;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
+import top.cheesesmp.duelcore.profile.Setting;
 
-/** Ranked/unranked queues per kit and the matchmaking tick. Main thread only. */
+/**
+ * Queues per kit and the matchmaking tick. A player can search in several kit queues at once
+ * ({@code queue.allow-multiple}); being matched in one takes them out of all others. Main thread only.
+ */
 public final class QueueService implements Listener, Runnable {
 
     public enum JoinResult { OK, SWITCHED, ALREADY, IN_MATCH, SPECTATING, KIT_DISABLED, MODE_DISABLED, NOT_LOADED, PARTY }
@@ -32,6 +42,12 @@ public final class QueueService implements Listener, Runnable {
     private final DuelCorePlugin plugin;
     private final Map<Bucket, List<QueueEntry>> buckets = new HashMap<>();
     private final Map<UUID, List<QueueEntry>> byPlayer = new HashMap<>();
+    /**
+     * The solo queues each player chose. Unlike {@link #byPlayer} this survives the removal when a match starts, so
+     * Keep Queuing can re-join them after it; only leaving on purpose (or quitting) forgets them.
+     */
+    private final Map<UUID, List<Bucket>> chosen = new HashMap<>();
+    private final QueuePrefs prefs;
     private final RematchLimiter rematches;
     private Matchmaker matchmaker;
     private MatchPolicy customPolicy;
@@ -41,6 +57,7 @@ public final class QueueService implements Listener, Runnable {
     public QueueService(DuelCorePlugin plugin) {
         this.plugin = plugin;
         this.rematches = new RematchLimiter(plugin.settings().mmMaxRankedRematchesPerDay);
+        this.prefs = new QueuePrefs(plugin);
         reload();
     }
 
@@ -69,6 +86,22 @@ public final class QueueService implements Listener, Runnable {
         return rematches;
     }
 
+    /** Favourite kits and the last queue menu tab of each player. */
+    public QueuePrefs prefs() {
+        return prefs;
+    }
+
+    /**
+     * The queue a kit is played in from the menu: ranked, or unranked for kits with {@code ranked: false} when the
+     * unranked queue is open. Null when neither is available.
+     */
+    public @Nullable QueueMode modeFor(Kit kit) {
+        MainConfig c = plugin.settings();
+        if (c.queueRanked && kit.ranked()) return QueueMode.RANKED;
+        if (c.queueUnranked) return QueueMode.UNRANKED;
+        return null;
+    }
+
     // ------------------------------------------------------------------ join / leave
 
     public JoinResult join(Player player, Kit kit, QueueMode mode) {
@@ -88,6 +121,7 @@ public final class QueueService implements Listener, Runnable {
         boolean switched = false;
         if (!c.queueAllowMultiple && !current.isEmpty()) {
             removeAll(uuid);
+            chosen.remove(uuid);
             switched = true;
         }
         if (plugin.spectate().spectating(uuid) != null) plugin.spectate().leave(player, false);
@@ -95,6 +129,9 @@ public final class QueueService implements Listener, Runnable {
         QueueEntry entry = new QueueEntry(uuid, player.getName(), kit.id(), mode, stats.rating, System.currentTimeMillis(),
             profile.region(), player.getPing(), profile.maxPing(), List.of());
         add(entry);
+        List<Bucket> kits = chosen.computeIfAbsent(uuid, k -> new ArrayList<>());
+        Bucket bucket = new Bucket(kit.id(), mode);
+        if (!kits.contains(bucket)) kits.add(bucket);
         plugin.hub().giveItems(player);
         plugin.sidebar().refresh(player);
         return switched ? JoinResult.SWITCHED : JoinResult.OK;
@@ -106,8 +143,12 @@ public final class QueueService implements Listener, Runnable {
             if (plugin.matches().match(p.getUniqueId()) != null) return JoinResult.IN_MATCH;
         }
         if (!kit.enabled()) return JoinResult.KIT_DISABLED;
-        for (Player p : members) removeAll(p.getUniqueId());
+        for (Player p : members) {
+            removeAll(p.getUniqueId());
+            chosen.remove(p.getUniqueId());
+        }
         removeAll(leader.getUniqueId());
+        chosen.remove(leader.getUniqueId());
         List<UUID> others = new ArrayList<>();
         for (Player p : members) if (!p.equals(leader)) others.add(p.getUniqueId());
         QueueEntry entry = new QueueEntry(leader.getUniqueId(), leader.getName(), kit.id(), QueueMode.PARTY, 1000,
@@ -128,6 +169,7 @@ public final class QueueService implements Listener, Runnable {
 
     /** Leaves every queue. Returns true if the player was queued. */
     public boolean leave(Player player, boolean notify) {
+        chosen.remove(player.getUniqueId());
         boolean was = removeAll(player.getUniqueId());
         if (notify) {
             plugin.messages().send(player, was ? "queue.left" : "queue.not-queued");
@@ -139,6 +181,34 @@ public final class QueueService implements Listener, Runnable {
         return was;
     }
 
+    /** Leaves the solo queue(s) of one kit. Returns true if the player was in it. */
+    public boolean leave(Player player, Kit kit) {
+        UUID uuid = player.getUniqueId();
+        List<Bucket> kits = chosen.get(uuid);
+        if (kits != null) {
+            kits.removeIf(b -> b.kit().equals(kit.id()));
+            if (kits.isEmpty()) chosen.remove(uuid);
+        }
+        List<QueueEntry> entries = byPlayer.get(uuid);
+        if (entries == null) return false;
+        boolean removed = false;
+        for (Iterator<QueueEntry> it = entries.iterator(); it.hasNext(); ) {
+            QueueEntry e = it.next();
+            if (e.mode() == QueueMode.PARTY || !e.kit().equals(kit.id())) continue;
+            it.remove();
+            List<QueueEntry> bucket = buckets.get(new Bucket(e.kit(), e.mode()));
+            if (bucket != null) bucket.remove(e);
+            removed = true;
+        }
+        if (entries.isEmpty()) byPlayer.remove(uuid);
+        if (removed && plugin.matches().match(uuid) == null) {
+            plugin.hub().giveItems(player);
+            plugin.sidebar().refresh(player);
+        }
+        return removed;
+    }
+
+    /** Removes every queue entry of a player (a match starts, they quit, …). Their chosen kits are kept. */
     public boolean removeAll(UUID uuid) {
         List<QueueEntry> entries = byPlayer.remove(uuid);
         if (entries == null || entries.isEmpty()) return false;
@@ -156,7 +226,50 @@ public final class QueueService implements Listener, Runnable {
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onQuit(PlayerQuitEvent event) {
-        removeAll(event.getPlayer().getUniqueId());
+        UUID uuid = event.getPlayer().getUniqueId();
+        removeAll(uuid);
+        chosen.remove(uuid);
+        prefs.forget(uuid);
+    }
+
+    // ------------------------------------------------------------------ keep queuing
+
+    @EventHandler
+    public void onMatchStart(MatchStartEvent event) {
+        event.getMatch().onEnd(this::afterMatch);
+    }
+
+    /** Back in the hub after a match: players with Keep Queuing re-join the kits they were searching for. */
+    private void afterMatch(Match m) {
+        Match.EndReason reason = m.endReason();
+        boolean requeue = (m.origin() == Match.Origin.QUEUE || m.origin() == Match.Origin.DUEL)
+            && reason != Match.EndReason.CANCELLED && reason != Match.EndReason.NO_ARENA;
+        for (Participant p : m.participants()) {
+            List<Bucket> kits = chosen.remove(p.uuid());
+            if (!requeue || kits == null || kits.isEmpty() || p.left()) continue;
+            PlayerProfile profile = plugin.profiles().get(p.uuid());
+            if (profile == null || !profile.setting(Setting.KEEP_QUEUING)) continue;
+            List<Bucket> copy = List.copyOf(kits);
+            // once the hub teleport has settled; the player may have queued, left or joined another match since
+            Bukkit.getScheduler().runTaskLater(plugin, () -> requeue(p.uuid(), copy), 20L);
+        }
+    }
+
+    private void requeue(UUID uuid, List<Bucket> kits) {
+        Player player = Bukkit.getPlayer(uuid);
+        if (player == null || isQueued(uuid) || plugin.matches().match(uuid) != null) return;
+        List<Component> joined = new ArrayList<>();
+        for (Bucket b : kits) {
+            Kit kit = plugin.kits().get(b.kit());
+            QueueMode mode = kit == null ? null : modeFor(kit);
+            if (mode == null) continue;
+            JoinResult r = join(player, kit, mode);
+            if (r == JoinResult.OK || r == JoinResult.SWITCHED) joined.add(kit.sprite());
+        }
+        if (joined.isEmpty()) return;
+        plugin.messages().send(player, "queue.requeued",
+            Messages.comp("kit_icon", Component.join(JoinConfiguration.noSeparators(), joined)),
+            Messages.num("count", joined.size()));
     }
 
     // ------------------------------------------------------------------ queries
@@ -168,6 +281,19 @@ public final class QueueService implements Listener, Runnable {
 
     public List<QueueEntry> entries(UUID uuid) {
         return byPlayer.getOrDefault(uuid, List.of());
+    }
+
+    /** True when the player is in a solo queue for this kit. */
+    public boolean isQueued(UUID uuid, String kit) {
+        return entry(uuid, kit) != null;
+    }
+
+    /** The solo queue entry of a player for a kit, or null. */
+    public @Nullable QueueEntry entry(UUID uuid, String kit) {
+        for (QueueEntry e : byPlayer.getOrDefault(uuid, List.of())) {
+            if (e.mode() != QueueMode.PARTY && e.kit().equals(kit)) return e;
+        }
+        return null;
     }
 
     public @Nullable QueueEntry firstEntry(UUID uuid) {
@@ -233,17 +359,38 @@ public final class QueueService implements Listener, Runnable {
             for (Map.Entry<UUID, List<QueueEntry>> e : byPlayer.entrySet()) {
                 if (e.getValue().isEmpty()) continue;
                 Player p = Bukkit.getPlayer(e.getKey());
-                QueueEntry q = e.getValue().getFirst();
-                Kit kit = plugin.kits().get(q.kit());
-                if (p == null || kit == null) continue;
-                double range = matchmaker.windowFor(q, now);
-                plugin.messages().actionBar(p, "queue.searching",
-                    Messages.comp("kit_icon", kit.sprite()), Messages.comp("kit", kit.displayName()),
-                    Messages.text("mode", plugin.messages().raw("mode." + q.mode().id())),
-                    Messages.text("wait", formatWait(q.waitSeconds(now))),
-                    Messages.text("range", Double.isInfinite(range) ? "∞" : String.valueOf((int) range)));
+                if (p == null || plugin.hints().recent(p.getUniqueId())) continue; // a hotbar hint is showing
+                plugin.messages().actionBar(p, "queue.searching", searchTags(e.getKey(), now).toArray(TagResolver[]::new));
             }
         }
+    }
+
+    /**
+     * Placeholders describing what a player searches for, for the action bar and the sidebar: {@code <kit>} (the
+     * kit, or "N kits"), {@code <kit_icon>} (the icons of every kit), {@code <count>}, {@code <mode>},
+     * {@code <wait>} and {@code <range>} (of the longest-waiting entry). Empty when not queued.
+     */
+    public List<TagResolver> searchTags(UUID uuid, long now) {
+        List<TagResolver> tags = new ArrayList<>();
+        List<QueueEntry> list = entries(uuid);
+        if (list.isEmpty()) return tags;
+        QueueEntry oldest = list.stream().min(Comparator.comparingLong(QueueEntry::joinedAt)).orElseThrow();
+        List<Kit> kits = new ArrayList<>();
+        for (QueueEntry q : list) {
+            Kit kit = plugin.kits().get(q.kit());
+            if (kit != null && !kits.contains(kit)) kits.add(kit);
+        }
+        List<Component> icons = new ArrayList<>();
+        for (Kit kit : kits.subList(0, Math.min(kits.size(), 6))) icons.add(kit.sprite());
+        tags.add(Messages.comp("kit_icon", Component.join(JoinConfiguration.noSeparators(), icons)));
+        tags.add(Messages.comp("kit", kits.size() == 1 ? kits.getFirst().displayName()
+            : plugin.messages().get("queue.kit-count", Messages.num("count", kits.size()))));
+        tags.add(Messages.num("count", kits.size()));
+        tags.add(Messages.text("mode", plugin.messages().raw("mode." + oldest.mode().id())));
+        tags.add(Messages.text("wait", formatWait(oldest.waitSeconds(now))));
+        double range = matchmaker.windowFor(oldest, now);
+        tags.add(Messages.text("range", Double.isInfinite(range) ? "∞" : String.valueOf((int) range)));
+        return tags;
     }
 
     private void start(Kit kit, QueueMode mode, Matchmaker.Pair pair, long now) {

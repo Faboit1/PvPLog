@@ -23,7 +23,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
-import top.cheesesmp.duelcore.config.GuiConfig;
 import top.cheesesmp.duelcore.config.Messages;
 import top.cheesesmp.duelcore.db.dao.LeaderboardDao;
 import top.cheesesmp.duelcore.db.dao.MatchDao;
@@ -48,9 +47,11 @@ public final class DialogService {
     public static final String NS = "duelcore";
 
     private final DuelCorePlugin plugin;
+    private final QueueDialog queueMenu;
 
     public DialogService(DuelCorePlugin plugin) {
         this.plugin = plugin;
+        this.queueMenu = new QueueDialog(plugin);
     }
 
     private Messages msg() {
@@ -112,48 +113,19 @@ public final class DialogService {
         return Component.join(JoinConfiguration.newlines(), lines);
     }
 
-    private String modeLabel(QueueMode mode) {
-        return msg().raw("mode." + mode.id());
-    }
-
     // ------------------------------------------------------------------ queue
 
+    /**
+     * Opens the queue menu ({@link QueueDialog}) on the player's last tab. There is no ranked/unranked or page
+     * switch any more: {@code mode} and {@code extra} are ignored and only kept for existing callers.
+     */
     public void queue(Player player, QueueMode mode, boolean extra) {
-        GuiConfig gui = plugin.gui();
-        PlayerProfile profile = plugin.profiles().get(player);
-        Kit.Category category = extra ? Kit.Category.EXTRA : Kit.Category.MAIN;
-        List<ActionButton> buttons = new ArrayList<>();
-        for (Kit kit : plugin.kits().enabled(category)) {
-            if (mode == QueueMode.RANKED && !kit.ranked()) continue;
-            KitStats stats = profile == null ? null : profile.stats(kit.id());
-            Tier tier = plugin.tiers().kitTier(kit.id(), stats);
-            Component label = msg().get("dialog.queue.kit-button", Messages.comp("kit_icon", kit.sprite()),
-                Messages.comp("kit", kit.displayName()), Messages.num("queued", plugin.queue().size(kit.id(), mode)));
-            Component tooltip = msg().get("dialog.queue.kit-tooltip",
-                Messages.comp("kit", kit.displayName()),
-                Messages.text("description", kit.description()),
-                Messages.num("queued", plugin.queue().size(kit.id(), mode)),
-                Messages.num("live", plugin.matches().count(kit.id())),
-                Messages.comp("tier", plugin.tiers().format(tier)),
-                Messages.num("rating", stats == null ? (int) plugin.settings().ratingDefault : (int) Math.round(stats.rating)),
-                Messages.num("first_to", kit.firstTo()));
-            buttons.add(button(label, tooltip, gui.kitButtonWidth, "queue/join", payload("kit", kit.id(), "mode", mode.id())));
-        }
-        int width = gui.kitButtonWidth;
-        buttons.add(button(msg().get(extra ? "dialog.queue.main-kits" : "dialog.queue.extra-kits"), null, width,
-            "queue/page", payload("mode", mode.id(), "extra", String.valueOf(!extra))));
-        QueueMode other = mode == QueueMode.RANKED ? QueueMode.UNRANKED : QueueMode.RANKED;
-        buttons.add(button(msg().get("dialog.queue.switch-mode", Messages.text("mode", modeLabel(other))), null, width,
-            "queue/page", payload("mode", other.id(), "extra", String.valueOf(extra))));
-        if (plugin.queue().isQueued(player.getUniqueId())) {
-            buttons.add(button(msg().get("dialog.queue.leave"), null, width, "queue/leave", Map.of()));
-        }
-        Component body = msg().get("dialog.queue.body", Messages.text("mode", modeLabel(mode)),
-            Messages.num("queued", plugin.queue().totalQueued()), Messages.num("live", plugin.matches().count()),
-            Messages.text("category", msg().raw(extra ? "dialog.queue.category-extra" : "dialog.queue.category-main")));
-        Dialog d = dialog(msg().get("dialog.queue.title", Messages.text("mode", modeLabel(mode))), List.of(text(body)), List.of(),
-            DialogType.multiAction(buttons).columns(gui.kitColumns).exitAction(close()).build());
-        player.showDialog(d);
+        queueMenu.open(player, null);
+    }
+
+    /** The queue menu; also handles every {@code duelcore:queue/*} click. */
+    public QueueDialog queueMenu() {
+        return queueMenu;
     }
 
     // ------------------------------------------------------------------ profile
@@ -451,12 +423,19 @@ public final class DialogService {
 
     // ------------------------------------------------------------------ results
 
-    /** Results screen after a match (shown once the player is back in the hub). */
+    /**
+     * Results screen after a match (shown once the player is back in the hub). "Play again" (queue matches only)
+     * joins the kit's menu queue, which is ranked (there is no unranked option in the menu). Hidden with Keep
+     * Queuing on, since those players are put back into their queues anyway.
+     */
     public void results(Player player, List<Component> lines, Component title, @Nullable Kit kit, @Nullable QueueMode mode) {
         List<ActionButton> buttons = new ArrayList<>();
-        if (kit != null && mode != null && mode != QueueMode.PARTY) {
+        PlayerProfile profile = plugin.profiles().get(player);
+        boolean keepQueuing = profile != null && profile.setting(Setting.KEEP_QUEUING); // re-queued automatically
+        QueueMode again = kit == null || mode == null || mode == QueueMode.PARTY || keepQueuing ? null : plugin.queue().modeFor(kit);
+        if (again != null) {
             buttons.add(button(msg().get("dialog.results.again", Messages.comp("kit_icon", kit.sprite()),
-                Messages.comp("kit", kit.displayName())), null, 150, "queue/join", payload("kit", kit.id(), "mode", mode.id())));
+                Messages.comp("kit", kit.displayName())), null, 150, "queue/join", payload("kit", kit.id(), "mode", again.id())));
         }
         buttons.add(button(msg().get("dialog.results.profile"), null, 150, "profile/view", payload("name", player.getName())));
         player.showDialog(dialog(title, List.of(text(lines(lines))), List.of(),

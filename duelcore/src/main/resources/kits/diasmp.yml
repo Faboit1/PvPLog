@@ -3,7 +3,7 @@
 display-name: "Diamond SMP"
 description: "Maxed diamond SMP gear: shield, cobwebs, pearls, a totem and potions."
 icon: diamond_sword
-category: extra
+category: vanilla
 order: 10
 enabled: true
 ranked: true

@@ -115,6 +115,64 @@ function buttons (d) {
   return list
 }
 
+/** Flat SNBT string payload ({kit:"sword",tab:"weapons"}) to an object. */
+function snbt (s) {
+  const out = {}
+  const re = /([A-Za-z0-9_]+)\s*:\s*"((?:[^"\\]|\\.)*)"/g
+  let m
+  while ((m = re.exec(s)) !== null) out[m[1]] = m[2]
+  return out
+}
+
+/**
+ * Custom click events inside a dialog's body text (the queue menu's tabs, toggles and kit rows), as
+ * { label, id, additions } like buttons(), so they can be sent with click().
+ */
+function bodyClicks (d) {
+  const list = []
+  const walk = x => {
+    x = unwrap(x)
+    if (!x || typeof x !== 'object') return
+    if (Array.isArray(x)) { x.forEach(walk); return }
+    const ce = x.click_event || x.clickEvent
+    if (ce && ce.action === 'custom' && ce.id) {
+      const payload = unwrap(ce.payload)
+      list.push({ label: plain(x), id: ce.id, additions: typeof payload === 'string' ? snbt(payload) : (payload || {}) })
+    }
+    for (const [k, v] of Object.entries(x)) if (k !== 'click_event' && v && typeof v === 'object') walk(v)
+  }
+  walk(d && d.body)
+  return list
+}
+
+/** All text of a dialog as one string (for regex checks on body contents). */
+function dialogText (d) {
+  return JSON.stringify(d, (k, v) => typeof v === 'bigint' ? v.toString() : v)
+}
+
+/**
+ * Joins a kit's queue through the queue menu: opens it from hotbar slot 0, switches tabs until the kit is listed,
+ * clicks its row and waits for the re-opened menu showing "Searching". Returns that dialog.
+ */
+async function queueViaMenu (bot, kit, timeoutMs = 8000) {
+  let d = await openFromHotbar(bot, 0, /Queue/, timeoutMs)
+  const find = dlg => bodyClicks(dlg).find(x => x.id === 'duelcore:queue/toggle' && x.additions.kit === kit)
+  let row = find(d)
+  for (const tab of bodyClicks(d).filter(x => x.id === 'duelcore:queue/tab')) {
+    if (row) break
+    const m = bot.dc.dialogs.length
+    await sleep(250) // server click spam guard
+    click(bot, tab)
+    d = await waitDialog(bot, /Queue/, timeoutMs, m)
+    row = find(d)
+  }
+  if (!row) throw new Error('kit ' + kit + ' not in the queue menu: ' + JSON.stringify(bodyClicks(d).map(x => x.additions)))
+  const m = bot.dc.dialogs.length
+  await sleep(250)
+  click(bot, row)
+  return waitFor(() => bot.dc.dialogs.slice(m).find(x => /Searching/.test(dialogText(x))), timeoutMs, 'queued menu for ' + kit)
+}
+
 function varint (n) {
   const out = []
   do {
@@ -314,4 +372,4 @@ function fighter (bot, opts = {}) {
   return { stop: () => { running = false } }
 }
 
-module.exports = { openFromHotbar, mark, createBot, log, sleep, plain, buttons, click, waitFor, waitDialog, waitChat, waitTitle, useHotbar, heldName, fighter, nbt }
+module.exports = { openFromHotbar, mark, createBot, log, sleep, plain, buttons, bodyClicks, dialogText, queueViaMenu, click, waitFor, waitDialog, waitChat, waitTitle, useHotbar, heldName, fighter, nbt }

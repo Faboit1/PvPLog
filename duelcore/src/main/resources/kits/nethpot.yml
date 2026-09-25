@@ -2,7 +2,7 @@
 display-name: "Netherite Pot"
 description: "Maxed netherite, healing pots, gapples and three totems."
 icon: netherite_chestplate
-category: extra
+category: skills
 order: 9
 enabled: true
 ranked: true

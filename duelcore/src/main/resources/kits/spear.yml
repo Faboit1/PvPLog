@@ -3,7 +3,7 @@
 display-name: "Spear"
 description: "Maxed netherite spear with Lunge, sword backup and a totem."
 icon: netherite_spear
-category: main
+category: weapons
 order: 2
 enabled: true
 ranked: true
