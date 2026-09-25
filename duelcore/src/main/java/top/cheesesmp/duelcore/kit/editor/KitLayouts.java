@@ -34,9 +34,25 @@ public final class KitLayouts implements Listener {
     record Saved(int[] map, int kitHash) {
     }
 
+    /** A failed load: no new attempt before {@code after} (epoch ms); {@code failures} in a row so far. */
+    record Retry(long after, int failures) {
+    }
+
+    /** Wait after the first failed load; it doubles with every further failure up to {@link #MAX_BACKOFF_MS}. */
+    static final long FIRST_BACKOFF_MS = 30_000;
+    static final long MAX_BACKOFF_MS = 300_000;
+
+    /** How long to wait after {@code failures} failed loads in a row (30 s, 60 s, 120 s, 240 s, then 5 min). */
+    static long backoff(int failures) {
+        int doublings = Math.clamp(failures - 1, 0, 10);
+        return Math.min(MAX_BACKOFF_MS, FIRST_BACKOFF_MS << doublings);
+    }
+
     private final DuelCorePlugin plugin;
     private final Map<UUID, Map<String, Saved>> cache = new HashMap<>();
     private final Map<UUID, CompletableFuture<Void>> loading = new HashMap<>();
+    /** Players whose last load failed: when to try again (backing off) and how many loads failed in a row. */
+    private final Map<UUID, Retry> retries = new HashMap<>();
     private @Nullable OrderedWrites ordered;
     private @Nullable BukkitTask loader;
 
@@ -57,6 +73,7 @@ public final class KitLayouts implements Listener {
         if (loader != null) loader.cancel();
         cache.clear();
         loading.clear();
+        retries.clear();
     }
 
     // ------------------------------------------------------------------ loading
@@ -66,15 +83,23 @@ public final class KitLayouts implements Listener {
         return cache.containsKey(uuid);
     }
 
+    /** True while the player's layouts are being loaded, or can't be loaded (the last load failed). */
+    public boolean pending(UUID uuid) {
+        return !cache.containsKey(uuid) && (loading.containsKey(uuid) || retries.containsKey(uuid));
+    }
+
     /**
      * Loads the player's layouts once (async); the future completes on the main thread. Stale layouts (the kit
-     * changed) are dropped with a message. Completes right away when they are loaded already.
+     * changed) are dropped with a message. Completes right away when they are loaded already, and (without loading)
+     * while a failed load is backing off.
      */
     public CompletableFuture<Void> load(Player player) {
         UUID uuid = player.getUniqueId();
         if (cache.containsKey(uuid)) return CompletableFuture.completedFuture(null);
         CompletableFuture<Void> running = loading.get(uuid);
         if (running != null) return running;
+        Retry retry = retries.get(uuid);
+        if (retry != null && System.currentTimeMillis() < retry.after()) return CompletableFuture.completedFuture(null);
         PlayerProfile profile = plugin.profiles().get(player);
         OrderedWrites writes = ordered;
         if (profile == null || writes == null || !plugin.profiles().ready()) return CompletableFuture.completedFuture(null);
@@ -87,8 +112,9 @@ public final class KitLayouts implements Listener {
             Bukkit.getScheduler().runTask(plugin, () -> {
                 loading.remove(uuid, result);
                 if (error != null) {
-                    plugin.getLogger().log(Level.WARNING, "Could not load the kit layouts of " + player.getName(), error);
+                    failed(player, error);
                 } else if (player.isOnline() && plugin.profiles().get(uuid) == profile) {
+                    retries.remove(uuid);
                     Map<String, Saved> mine = new HashMap<>();
                     for (KitLayoutDao.Row row : rows) {
                         String key = keys.get(row.kitId());
@@ -104,10 +130,28 @@ public final class KitLayouts implements Listener {
         return result;
     }
 
+    /**
+     * A load failed (the database is down, the table broken): back off before the next attempt, and log the stack
+     * trace only for the first failure in a row (the next ones as one line) so an outage doesn't flood the console.
+     */
+    private void failed(Player player, Throwable error) {
+        UUID uuid = player.getUniqueId();
+        if (!player.isOnline()) return; // (onQuit forgot them already)
+        Retry last = retries.get(uuid);
+        int failures = last == null ? 1 : last.failures() + 1;
+        long wait = backoff(failures);
+        retries.put(uuid, new Retry(System.currentTimeMillis() + wait, failures));
+        String what = "Could not load the kit layouts of " + player.getName() + " (attempt " + failures
+            + ", next in " + wait / 1000 + " s)";
+        if (failures == 1) plugin.getLogger().log(Level.WARNING, what, error);
+        else plugin.getLogger().warning(what + ": " + error);
+    }
+
     private void loadMissing() {
         if (!plugin.profiles().ready()) return;
         for (Player p : Bukkit.getOnlinePlayers()) {
             UUID uuid = p.getUniqueId();
+            // (load() itself skips players whose failed load is still backing off)
             if (!cache.containsKey(uuid) && !loading.containsKey(uuid) && plugin.profiles().get(p) != null) load(p);
         }
     }
@@ -121,6 +165,7 @@ public final class KitLayouts implements Listener {
     public void onQuit(PlayerQuitEvent event) {
         cache.remove(event.getPlayer().getUniqueId());
         loading.remove(event.getPlayer().getUniqueId());
+        retries.remove(event.getPlayer().getUniqueId());
     }
 
     // ------------------------------------------------------------------ reading

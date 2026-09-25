@@ -120,13 +120,23 @@ public final class KitLayout {
 
     // ------------------------------------------------------------------ kit fingerprint
 
-    /**
-     * One source position's part of the kit fingerprint: item type and amount ({@code "minecraft:diamond_sword*1"}),
-     * or "" when the kit leaves it empty. Enchantments, names and other components don't count, so tuning an item
-     * keeps players' layouts; adding, removing, moving or re-counting items resets them.
-     */
+    /** {@link #part(String, int, String)} of an item without components. */
     public static String part(@Nullable String typeKey, int amount) {
-        return typeKey == null || amount <= 0 ? "" : typeKey + "*" + amount;
+        return part(typeKey, amount, null);
+    }
+
+    /**
+     * One source position's part of the kit fingerprint: item type, amount and components
+     * ({@code "minecraft:splash_potion*1[minecraft:potion_contents={potion:\"minecraft:healing\"}]"}), or "" when the
+     * kit leaves it empty. The components count so that two items of the same type (a Healing and a Strength potion,
+     * two differently enchanted swords) swapped in the kit file reset the layouts instead of silently handing players
+     * the other item in their slot; adding, removing, moving, re-counting or changing items resets them too. An item
+     * without components ({@code components} null, empty or "[]") gives just {@code "type*amount"}.
+     */
+    public static String part(@Nullable String typeKey, int amount, @Nullable String components) {
+        if (typeKey == null || amount <= 0) return "";
+        String base = typeKey + "*" + amount;
+        return components == null || components.isEmpty() || "[]".equals(components) ? base : base + components;
     }
 
     /**

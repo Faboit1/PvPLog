@@ -13,7 +13,6 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -38,7 +37,9 @@ import org.bukkit.scheduler.BukkitTask;
 import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.api.event.MatchStartEvent;
+import top.cheesesmp.duelcore.config.GuiConfig;
 import top.cheesesmp.duelcore.config.Messages;
+import top.cheesesmp.duelcore.hub.HubService;
 import top.cheesesmp.duelcore.kit.Kit;
 import top.cheesesmp.duelcore.kit.KitManager;
 import top.cheesesmp.duelcore.match.Participant;
@@ -78,9 +79,6 @@ public final class KitEditor implements Listener {
     /** Editable positions in the order a returned cursor item looks for an empty one: hotbar, inventory, offhand. */
     private static final int[] RETURN_ORDER = returnOrder();
 
-    private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.builder()
-        .character(LegacyComponentSerializer.SECTION_CHAR).hexColors().useUnusualXRepeatedCharacterHexFormat().build();
-
     /** Identifies the editor's inventory. */
     static final class Holder implements InventoryHolder {
         private @Nullable Inventory inventory;
@@ -106,7 +104,7 @@ public final class KitEditor implements Listener {
         int[] saved;
         /** Editor slot the item on the cursor was picked up from (it goes back there on close when still free). */
         int pickedFrom = -1;
-        /** The unsaved-changes state the title (and Save button) shows. */
+        /** The unsaved-changes state the Save button shows (its glint). */
         boolean shownDirty;
         boolean refreshQueued;
         /** Save/Cancel pressed: the editor closes next tick and ignores clicks until then. */
@@ -154,7 +152,15 @@ public final class KitEditor implements Listener {
             if (player.hasPermission(PERMISSION)) picker.open(player);
             else plugin.messages().send(player, "command.no-permission");
         });
-        KitManager.layouts(layouts::layout);
+        KitManager.layouts((player, kit) -> {
+            int[] layout = layouts.layout(player, kit);
+            if (layout == null && layouts.pending(player.getUniqueId())) {
+                // (asked once per match: KitManager.apply keeps the choice for the later rounds)
+                plugin.messages().send(player, "kit-editor.layout-not-loaded", Messages.comp("kit", kit.displayName()),
+                    Messages.comp("kit_icon", kit.sprite()));
+            }
+            return layout;
+        });
         watchdog = Bukkit.getScheduler().runTaskTimer(plugin, this::watch, 20L, 20L);
         // /animtest play kit-editor-save | kit-editor-pick: the editor's feedback sounds
         plugin.tester().preview("kit-editor-save", p -> sound(p, "save"));
@@ -252,7 +258,7 @@ public final class KitEditor implements Listener {
         if (start == null) start = KitLayout.identity(filled);
 
         Holder holder = new Holder();
-        Inventory inv = Bukkit.createInventory(holder, SIZE, title(kit, false));
+        Inventory inv = Bukkit.createInventory(holder, SIZE, title(kit));
         holder.inventory = inv;
         decorate(inv, kit, player);
         place(inv, kit, start);
@@ -284,8 +290,13 @@ public final class KitEditor implements Listener {
         return plugin.messages();
     }
 
-    private Component title(Kit kit, boolean dirty) {
-        return msg().get(dirty ? "kit-editor.title-unsaved" : "kit-editor.title", Messages.comp("kit", kit.displayName()));
+    /**
+     * The chest title. It never changes while the editor is open: a new title re-sends the window (a new open-screen
+     * packet), and the client's new screen swallows the next mouse release, i.e. the put-down click of an item on the
+     * cursor. The unsaved state is shown by the Save button's glint instead (a plain slot update).
+     */
+    private Component title(Kit kit) {
+        return msg().get("kit-editor.title", Messages.comp("kit", kit.displayName()));
     }
 
     /** The fixed slots: armour (locked), offhand label, info, the buttons and fillers. */
@@ -463,7 +474,7 @@ public final class KitEditor implements Listener {
         if (event.getView().getTopInventory().getHolder(false) instanceof Holder) event.setCancelled(true);
     }
 
-    /** After a move: the title and Save button follow the unsaved state (next tick, once per tick). */
+    /** After a move: the Save button's glint follows the unsaved state (next tick, once per tick; never the title). */
     private void changed(Player player, Session s) {
         if (s.refreshQueued) return;
         s.refreshQueued = true;
@@ -478,14 +489,7 @@ public final class KitEditor implements Listener {
                 save.setData(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, dirty);
                 s.inv.setItem(SAVE, save);
             }
-            InventoryView view = player.getOpenInventory();
-            if (view.getTopInventory() == s.inv) retitle(view, LEGACY.serialize(title(s.kit, dirty)));
         });
-    }
-
-    @SuppressWarnings("deprecation") // InventoryView has no Component title setter; the legacy one re-sends the window
-    private static void retitle(InventoryView view, String title) {
-        view.setTitle(title);
     }
 
     /** Puts the item on the cursor back into the editor: its old slot when still free, else the first free one. */
@@ -626,17 +630,36 @@ public final class KitEditor implements Listener {
         }
     }
 
-    /** The player's own items again; a hub hotbar is rebuilt instead (the queue item may have changed meanwhile). */
+    /**
+     * The player's own items again. A plain hub hotbar (nothing but hub items) is rebuilt, since the queue item may
+     * have changed meanwhile; anything else (a builder's blocks, worn armour, items gathered for a kit save) comes
+     * back exactly as it was, with only a stale Play / Leave queue item swapped for the current one.
+     */
     private void giveBack(Player player, Session s) {
+        HubService hub = plugin.hub();
         boolean hubItems = false;
+        boolean others = false;
         for (ItemStack item : s.stash) {
-            if (plugin.hub().action(item) != null) {
-                hubItems = true;
-                break;
+            if (empty(item)) continue;
+            if (hub.action(item) != null) hubItems = true;
+            else others = true;
+        }
+        boolean inHub = hub.isHubWorld(player.getWorld());
+        if (hubItems && !others && inHub) {
+            hub.giveItems(player);
+            return;
+        }
+        PlayerInventory own = player.getInventory();
+        own.setContents(s.stash);
+        if (!hubItems || !inHub) return;
+        String queueKey = plugin.queue().isQueued(s.uuid) ? "leave-queue" : "queue";
+        GuiConfig.HotbarItem def = plugin.gui().item(queueKey);
+        for (int i = 0; i < s.stash.length; i++) {
+            String action = hub.action(s.stash[i]);
+            if (("queue".equals(action) || "leave-queue".equals(action)) && !queueKey.equals(action)) {
+                own.setItem(i, def == null ? null : hub.build(player, queueKey, def));
             }
         }
-        if (hubItems && plugin.hub().isHubWorld(player.getWorld())) plugin.hub().giveItems(player);
-        else player.getInventory().setContents(s.stash);
     }
 
     /** Removes any editor item from the player's own inventory and cursor (they must never leave the editor). */
@@ -695,7 +718,10 @@ public final class KitEditor implements Listener {
 
     // ------------------------------------------------------------------ clicks from dialogs
 
-    /** {@code duelcore:kiteditor/open {kit}} (picker, queue menu ✎, results "Edit kit") and {@code kiteditor/menu}. */
+    /**
+     * {@code duelcore:kiteditor/open {kit}} (the kit picker's kit buttons; any dialog may send it) and
+     * {@code kiteditor/menu} (the picker).
+     */
     private void click(Player player, String action, Map<String, String> data, @Nullable DialogResponseView view) {
         switch (action) {
             case "kiteditor/open" -> {

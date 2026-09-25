@@ -312,7 +312,7 @@ public final class MatchService implements Runnable {
             player.setInvulnerable(true);
             Runnable arrive = () -> {
                 if (!player.isOnline() || match(player.getUniqueId()) != m || m.isOver()) return;
-                KitManager.apply(player, m.kit());
+                p.kitLayout = KitManager.apply(player, m.kit(), p.kitLayout); // chosen once per match
                 player.setInvulnerable(true);
                 freeze(player);
                 applyBorder(player, arena);

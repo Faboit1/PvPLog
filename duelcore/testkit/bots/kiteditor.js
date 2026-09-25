@@ -2,7 +2,8 @@
 //  1. The Kit Editor hotbar item opens the kit picker and its kit click opens the editor (bot B); /kit edit <kit>
 //     opens the 6-row editor (bot A); the hub hotbar is put aside while it is open.
 //  2. Two items are swapped (or, for a one-item kit, the item is moved) and one item goes to an empty hotbar slot;
-//     the server's window must show exactly that, and the title gets the unsaved "•".
+//     the server's window must show exactly that, the Save button glints (unsaved), and the window is never re-opened
+//     (no retitle: a re-sent window makes a real client swallow the next put-down click) and keeps its title.
 //  3. Shift-click, number key, offhand key, drop / ctrl-drop, double click, a drag over two slots, a click outside
 //     the window with an item on the cursor, clicks in the own inventory and on locked slots change nothing, and no
 //     kit item ever reaches the bot's inventory or the ground. Right click picks up the whole stack.
@@ -69,7 +70,7 @@ async function openEditor (bot, kitId, open) {
   return w
 }
 
-/** The open window (re-read: a title change re-opens it with the same id). */
+/** The open window. */
 function win (bot) {
   const w = bot.currentWindow
   if (!w) fail('no window open')
@@ -126,6 +127,14 @@ async function assertUnchanged (bot, expected, label) {
   L.log('test', 'blocked', label)
 }
 
+/** True when the item shows the enchantment glint (the enchantment_glint_override component set to true). */
+function glints (item) {
+  const c = item && item.componentMap && item.componentMap.get('enchantment_glint_override')
+  if (!c) return false
+  const v = c.data && typeof c.data === 'object' && 'value' in c.data ? c.data.value : c.data
+  return v === true || v === 1
+}
+
 function hubHotbar (bot) {
   return [0, 1, 2, 3, 4, 5, 6, 7, 8].map(s => L.heldName(bot, s))
 }
@@ -169,6 +178,12 @@ async function main () {
   assertNoLeak(a, 'open')
   const start = arrangement(w)
   if (!same(start, defaults)) fail('A and B see different default layouts')
+  const cleanTitle = L.plain(w.title)
+  if (glints(w.slots[SAVE])) fail('the Save button glints with nothing changed')
+  // every window (re-)open from here to the end of the moves: there must be none
+  let reopened = 0
+  const onReopen = () => { reopened++ }
+  a.on('windowOpen', onReopen)
   const filled = EDITABLE.filter(s => w.slots[s])
   L.log('test', 'kit-items', filled.map(s => s + ':' + desc(w.slots[s])))
   if (filled.length === 0) fail('the kit has no items')
@@ -201,8 +216,11 @@ async function main () {
   await L.sleep(500)
   w = win(a)
   if (!same(arrangement(w), expected)) fail('moves not applied:\n' + JSON.stringify(arrangement(w)) + '\nexpected\n' + JSON.stringify(expected))
+  a.removeListener('windowOpen', onReopen)
+  if (reopened) fail('the editor window was re-opened ' + reopened + 'x during the moves (a retitle swallows clicks)')
   const title = L.plain(w.title)
-  if (!/•/.test(title)) fail('no unsaved marker in the title: ' + title)
+  if (title !== cleanTitle) fail('the title changed while editing: ' + title + ' (was ' + cleanTitle + ')')
+  if (!glints(w.slots[SAVE])) fail('no unsaved glint on the Save button: ' + JSON.stringify(w.slots[SAVE] && w.slots[SAVE].components))
   assertNoLeak(a, 'after moves')
   L.log('test', 'moves-ok', { title })
 

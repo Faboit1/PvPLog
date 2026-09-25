@@ -558,9 +558,8 @@ kit:
 
 # The kit editor (Kit Editor hotbar item, /kit edit [kit], /kiteditor [kit]). Look and sounds: gui.yml kit-editor.
 kit-editor:
-  # Chest title; title-unsaved while the arrangement differs from the saved one. <kit>
+  # Chest title (it stays the same while editing; the Save button glows while there are unsaved changes). <kit>
   title: "Editing · <kit>"
-  title-unsaved: "Editing · <kit> <#d4912a>•</#d4912a>"
   item:
     save-name: "<good>Save layout</good>"
     save-lore:
@@ -629,6 +628,9 @@ kit-editor:
   spectating: "<bad>Stop spectating to edit your kits.</bad>"
   not-in-hub: "<bad>Kits can only be edited in the hub.</bad>"
   not-ready: "<muted>Your kit layouts are still loading. Try again in a moment.</muted>"
+  # A match started before the player's layouts were loaded (just joined, slow database): the whole match uses the
+  # kit's default layout.
+  layout-not-loaded: "<accent>⚠</accent> <muted>Your kit layouts haven't loaded yet, so this</muted> <kit_icon> <text><kit></text> <muted>match uses the default layout.</muted>"
 
 dialog:
   close: "<muted>Close</muted>"

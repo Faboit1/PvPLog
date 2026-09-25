@@ -55,6 +55,8 @@ public final class Kit {
     private final @Nullable ItemStack boots;
     private final @Nullable ItemStack offhand;
     private final List<PotionEffect> effects;
+    /** {@link KitManager#fingerprint} of this kit, computed on first use. */
+    volatile String @Nullable [] fingerprint;
 
     public Kit(String id, String displayNameRaw, Component displayName, String description, Material icon,
                Component sprite, String spriteSpec, Category category, int order, boolean enabled, boolean ranked,

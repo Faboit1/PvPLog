@@ -351,28 +351,34 @@ them their items that way; armour always stays in the armour slots.
 
 - **Opening it.** The Kit Editor item (hotbar slot 4, `hotbar.kit-editor` in gui.yml) and `/kit edit` open the kit
   picker: every kit grouped like the queue menu's tabs, with its sprite, and a green ✎ on kits you saved a layout for.
-  `/kit edit <kit>` (or `/kiteditor <kit>`) goes straight to one kit. Dialogs open a kit's editor with the click
-  `duelcore:kiteditor/open {kit:"<id>"}` (the picker, the queue menu and the results screen use it). Only in the hub,
-  not while fighting or spectating; queued players can edit while they wait.
+  `/kit edit <kit>` (or `/kiteditor <kit>`) goes straight to one kit. The picker's kit buttons send the click
+  `duelcore:kiteditor/open {kit:"<id>"}`, which any dialog can use to open a kit's editor (`duelcore:kiteditor/menu`
+  opens the picker). Only in the hub, not while fighting or spectating; queued players can edit while they wait.
 - **The editor** is a 6-row chest titled "Editing · <kit>" that looks like the inventory: rows 1–3 are the inventory,
   row 4 the hotbar, row 5 the armour (locked), the offhand slot (next to the "← Offhand" label) and an info item,
   row 6 the buttons *Save*, *Reset to default* (put everything back where the kit file has it), *Clear layout*
   (delete the saved layout) and *Cancel*. Click an item to pick up the whole stack, click a slot to put it down or to
   swap it with what you hold (left or right click). Shift-clicks, number keys, the offhand key, dropping, double
   clicks, dragging over several slots and clicks in your own inventory do nothing, so an item can never leave the
-  editor, split or get duplicated. The title gets a "•" while there are unsaved changes (the Save button glints).
+  editor, split or get duplicated. The Save button glints while there are unsaved changes (the title never changes
+  while the editor is open: a new title re-opens the window on the client, which would swallow the next click).
 - **Saving.** Save plays a chime and closes the editor. A layout is only saved when every item of the kit is placed
   exactly once (an item still on the cursor is put back into a free slot first). Closing with Escape or Cancel keeps
   the old layout. When a match is found (or a party leader starts a party match) while you're editing, the editor
   closes and the arrangement is saved, and you're told. Your own inventory (the hub hotbar) is put aside while
-  editing and comes back when the editor closes.
-- **Kit changes.** A layout stores a fingerprint of the kit's items (type and amount per slot). When an admin
-  changes a kit's items (not just enchantments or names), layouts made for the old version stop being used, are
-  deleted, and each player is told once (on `/duelcore reload`, on join, or at their next match of that kit).
-  Admins' `/duelcore kit give` always gives the kit file's own layout.
+  editing and comes back when the editor closes (a plain hub hotbar is rebuilt so the Play / Leave queue item is
+  current; anything else you carried, armour included, comes back as it was).
+- **Kit changes.** A layout stores a fingerprint of the kit's items (type, amount and components such as potion
+  contents and enchantments, per slot). When an admin changes a kit's items (swapping two potions of the same type
+  counts too), layouts made for the old version stop being used, are deleted, and each player is told once (on
+  `/duelcore reload`, on join, or at their next match of that kit). Admins' `/duelcore kit give` always gives the kit
+  file's own layout.
+- **Matches.** The layout is chosen at a player's first round and kept for every round of that match. A player whose
+  layouts haven't loaded yet (just joined, slow database) plays that whole match with the default layout and is told.
 - **Storage.** `dc_kit_layouts` (schema v7): one row per player and kit with the arrangement (for each of the 37
   slots, which slot of the kit's default loadout goes there), the kit fingerprint and the time. Layouts are loaded
-  async when a player joins, kept while they're online and saved async; choosing the default deletes the row.
+  async when a player joins, kept while they're online and saved async; choosing the default deletes the row. When
+  loading fails (database down) it is retried after 30 s, doubling up to 5 min, with one stack trace per outage.
 - **Look.** gui.yml `kit-editor`: the items of the fixed slots, the picker's columns and width, and the sounds (open,
   pick, place, swap, deny, save, reset, clear, cancel; players' own sound setting applies). Texts are in
   messages.yml `kit-editor`. `/animtest play kit-editor-save` and `kit-editor-pick` preview the sounds.

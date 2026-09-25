@@ -26,6 +26,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.jspecify.annotations.Nullable;
@@ -244,21 +245,37 @@ public final class KitManager {
 
     /**
      * Resets the player to a clean survival state and gives the kit, laid out the way the player saved it in the kit
-     * editor (the default when they have no valid layout). Armour always goes to the armour slots. Every match type
-     * and every round goes through here.
+     * editor (the default when they have no valid layout). Armour always goes to the armour slots.
      */
     public static void apply(Player player, Kit kit) {
+        apply(player, kit, null);
+    }
+
+    /**
+     * {@link #apply(Player, Kit)} for one round of a match (every match type and every round goes through here): the
+     * layout is chosen at the first round and the later rounds get the same one, so a layout that only finished
+     * loading (or was saved elsewhere) meanwhile can't move the items between rounds of one match.
+     *
+     * @param chosen what this method returned for the player's earlier round of this match (same kit), or null at the
+     *     first round: the player's layout is looked up now
+     * @return the layout used ({@link KitLayout#identity} for the default), to pass to the next rounds
+     */
+    public static int[] apply(Player player, Kit kit, int @Nullable [] chosen) {
         resetState(player, kit.rules().maxHealth()); // closes an open kit editor first (it may auto-save the layout)
-        LayoutSource source = layouts;
-        int[] layout = null;
-        if (source != null) {
-            try {
-                layout = source.layout(player, kit);
-            } catch (RuntimeException e) {
-                layout = null; // a broken layout must never stop a round: the default it is
+        int[] layout = chosen;
+        if (layout == null) {
+            LayoutSource source = layouts;
+            if (source != null) {
+                try {
+                    layout = source.layout(player, kit);
+                } catch (RuntimeException e) {
+                    layout = null; // a broken layout must never stop a round: the default it is
+                }
             }
+            if (layout == null) layout = KitLayout.identity(KitLayout.filled(fingerprint(kit)));
         }
         give(player, kit, layout);
+        return layout.clone();
     }
 
     /** Like {@link #apply} but always in the kit's default layout (admin /duelcore kit give, before a kit save). */
@@ -296,15 +313,27 @@ public final class KitManager {
         return out;
     }
 
-    /** The kit's loadout fingerprint for layouts ({@link KitLayout#part}: item type and amount per position). */
+    /**
+     * The kit's loadout fingerprint for layouts ({@link KitLayout#part}: item type, amount and components per
+     * position). Computed once per loaded kit (a kit's items never change; a reload makes new Kit objects).
+     */
     public static String[] fingerprint(Kit kit) {
+        String[] cached = kit.fingerprint;
+        if (cached != null) return cached.clone();
         ItemStack[] sources = sources(kit);
         String[] parts = new String[KitLayout.SIZE];
         for (int i = 0; i < KitLayout.SIZE; i++) {
             ItemStack s = sources[i];
-            parts[i] = s == null ? "" : KitLayout.part(s.getType().getKey().toString(), s.getAmount());
+            parts[i] = s == null ? "" : KitLayout.part(s.getType().getKey().toString(), s.getAmount(), components(s));
         }
+        kit.fingerprint = parts.clone();
         return parts;
+    }
+
+    /** The item's components as vanilla text ("[]" when none), the part of its fingerprint that tells same-type items apart. */
+    private static String components(ItemStack stack) {
+        ItemMeta meta = stack.getItemMeta();
+        return meta == null ? "[]" : meta.getAsComponentString();
     }
 
     private static boolean empty(@Nullable ItemStack stack) {

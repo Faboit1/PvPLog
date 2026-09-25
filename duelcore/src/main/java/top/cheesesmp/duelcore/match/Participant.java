@@ -30,6 +30,8 @@ public final class Participant {
     int lastBeat = -1000;
     /** A heartbeat frame may still be on the action bar (cleared once the beats stop). */
     boolean beating;
+    /** The kit layout chosen at this player's first round, reused every later round of the match (null = not yet). */
+    int @Nullable [] kitLayout;
 
     double ratingAfter = Double.NaN;
     @Nullable Tier tierAfter;

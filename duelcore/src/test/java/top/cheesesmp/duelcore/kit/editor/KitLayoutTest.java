@@ -173,6 +173,39 @@ class KitLayoutTest {
         assertEquals("", KitLayout.part("minecraft:stone", 0));
     }
 
+    @Test
+    void kitHashTellsSameTypeItemsApart() {
+        // a pot kit: Healing in 3, Strength in 5, both splash_potion*1; swapping them in the kit file must reset layouts
+        String healing = "[minecraft:potion_contents={potion:\"minecraft:healing\"}]";
+        String strength = "[minecraft:potion_contents={potion:\"minecraft:strength\"}]";
+        String[] pot = kit();
+        pot[3] = KitLayout.part("minecraft:splash_potion", 1, healing);
+        pot[5] = KitLayout.part("minecraft:splash_potion", 1, strength);
+        String[] swapped = kit();
+        swapped[3] = KitLayout.part("minecraft:splash_potion", 1, strength);
+        swapped[5] = KitLayout.part("minecraft:splash_potion", 1, healing);
+        assertNotEquals(KitLayout.hash(pot), KitLayout.hash(swapped), "same-type items swapped in the kit file");
+        String[] tuned = kit();
+        tuned[0] = KitLayout.part("minecraft:diamond_sword", 1, "[minecraft:enchantments={\"minecraft:sharpness\":5}]");
+        assertNotEquals(KitLayout.hash(kit()), KitLayout.hash(tuned), "enchantment added");
+        // items without components keep the old "type*amount" part (their layouts survive the format change)
+        assertEquals("minecraft:stone*2", KitLayout.part("minecraft:stone", 2, "[]"));
+        assertEquals("minecraft:stone*2", KitLayout.part("minecraft:stone", 2, null));
+        assertEquals("minecraft:stone*2", KitLayout.part("minecraft:stone", 2));
+        assertEquals("", KitLayout.part("minecraft:stone", 0, healing));
+    }
+
+    @Test
+    void failedLoadsBackOff() {
+        assertEquals(30_000, KitLayouts.backoff(1));
+        assertEquals(60_000, KitLayouts.backoff(2));
+        assertEquals(120_000, KitLayouts.backoff(3));
+        assertEquals(240_000, KitLayouts.backoff(4));
+        assertEquals(300_000, KitLayouts.backoff(5));
+        assertEquals(300_000, KitLayouts.backoff(1000));
+        assertEquals(30_000, KitLayouts.backoff(0));
+    }
+
     /** CRC-32 of the {@link #kit()} fingerprint. */
     private static final int EXPECTED_HASH = 11987521;
 }
