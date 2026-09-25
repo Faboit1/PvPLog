@@ -163,10 +163,10 @@ Player commands (all players by default):
 | `/profile [player]` | `/stats` | Profile: overall tier and Elo, per-kit tier/rating/record, recent matches. `/profile <p> legacy` shows last season |
 | `/leaderboard [kit\|overall] [region]` | `/lb`, `/top` | Leaderboards, global or per region |
 | `/spectate [player]` | `/spec` | Watch a match. Without a name it opens the live list (search; highest Elo first, then by name). `/spectate stop` |
-| `/duel [player] [kit]` | | Unranked challenge. Without arguments it opens a player picker. `/duel accept\|deny <player>` |
-| `/settings` | | Duel requests, sidebar, sounds, chat tags, hub visibility, spectators, region, country, max ping |
 | `/party` | `/p` | Party menu (see *Parties*). `create`, `invite <player>`, `accept\|deny [player]`, `join <leader> [password]`, `leave`, `kick <player>`, `promote <player>`, `disband`, `chat`, `open`, `private`, `password [pw]`, `list`, `ffa [kit]`, `split [kit]`, `duel [leader] [kit]`, `duel accept\|deny [leader]` |
 | `/pc <message>` | | Party chat. Starting a chat message with `@` does the same |
+| `/duel [player] [kit]` | | Unranked challenge. Without arguments it opens a player picker. `/duel accept\|deny <player>` |
+| `/settings` | | Duel requests, sidebar, sounds, chat tags, hub visibility, spectators, region, country, max ping |
 
 Staff:
 
@@ -189,9 +189,9 @@ Staff:
 | Permission | Default | |
 | --- | --- | --- |
 | `duelcore.player` | true | Parent of everything below marked "true" |
+| `duelcore.party` | true | Parties: `/party`, `/pc` and the Party hotbar item (the 2v2 party queue is still to come) |
 | `duelcore.queue`, `.leave`, `.profile`, `.profile.others`, `.leaderboard`, `.spectate`, `.duel`, `.settings` | true | The matching commands and hotbar items |
-| `duelcore.party` | true | Parties: `/party`, `/pc` and the Party hotbar item |
-| `duelcore.tournament` | true | Reserved for tournaments (not in this build yet) |
+| `duelcore.party`, `duelcore.tournament` | true | Reserved for the 2v2 queue and tournaments (not in this build yet) |
 | `duelcore.spectate.bypass` | op | Spectate players who turned spectators off |
 | `duelcore.tier` | op | `/tier` |
 | `duelcore.bypass.commands` | op | Any command during a match (others are limited to `match.allowed-commands`) |

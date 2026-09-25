@@ -384,8 +384,8 @@ public final class PartyService implements Listener, Runnable {
         if (byMember.containsKey(target.getUniqueId())) return Outcome.of(Result.TARGET_IN_PARTY, name);
         PlayerProfile targetProfile = plugin.profiles().get(target);
         if (targetProfile == null) return Outcome.of(Result.OFFLINE, name);
-        // TODO(friends): with PARTY_INVITES off, friends may still invite; allow that once a FriendService exists
-        // (e.g. plugin.friends().areFriends(from, target)). Until then "off" means nobody can invite.
+        // TODO(friends): with PARTY_INVITES off, friends may still invite; allow that once the FriendService is merged
+        //  (plugin.friends().areFriends(from.getUniqueId(), target.getUniqueId())). Until then "off" means nobody.
         if (!targetProfile.setting(Setting.PARTY_INVITES)) return Outcome.of(Result.INVITES_DISABLED, name);
         if (party != null && party.size() >= maxSize()) return Outcome.of(Result.FULL);
         if (party != null && findInvite(target.getUniqueId(), party.id(), null) != null) {
@@ -670,17 +670,6 @@ public final class PartyService implements Listener, Runnable {
             return null;
         });
         plugin.messages().send(player, on ? "party.chat-on" : "party.chat-off");
-        return Outcome.OK;
-    }
-
-    /** Accept party invites from anyone, or from nobody (Setting.PARTY_INVITES; friends-only once friends exist). */
-    public Outcome toggleInvites(Player player) {
-        PlayerProfile profile = plugin.profiles().get(player);
-        if (profile == null) return Outcome.of(Result.NO_PROFILE);
-        boolean on = !profile.setting(Setting.PARTY_INVITES);
-        profile.setting(Setting.PARTY_INVITES, on);
-        plugin.profiles().saveSettings(profile);
-        plugin.messages().send(player, on ? "party.invites-on" : "party.invites-off");
         return Outcome.OK;
     }
 

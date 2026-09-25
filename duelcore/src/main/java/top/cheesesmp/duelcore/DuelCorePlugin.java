@@ -128,7 +128,6 @@ public final class DuelCorePlugin extends JavaPlugin {
         pm.registerEvents(results, this);
         pm.registerEvents(respawnPull, this);
         pm.registerEvents(new top.cheesesmp.duelcore.ui.MotdService(this), this);
-        parties.enable(); // listeners, "party" clicks and hub item; loads the parties once the database is ready
 
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> commands.register(event.registrar()));
 
@@ -141,6 +140,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         scheduler.runTaskTimer(this, duels, 20L, 20L);
         scheduler.runTaskTimer(this, leaderboards, 200L, 200L);
         scheduler.runTaskTimer(this, profiles::sweep, 1200L, 1200L);
+        parties.enable(); // listeners, "party" clicks, hub item and timers; loads the parties once the database is ready
 
         getServer().getServicesManager().register(DuelCoreApi.class, new DuelCoreApi(this), this, ServicePriority.Normal);
 

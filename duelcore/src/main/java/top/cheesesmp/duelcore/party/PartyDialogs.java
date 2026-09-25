@@ -216,13 +216,9 @@ public final class PartyDialogs {
         List<DialogInput> inputs = List.of(DialogInput.text("password", msg().get("party.dialog.password-input"))
             .width(Math.min(gui.partyWidth, 300)).maxLength(PartyPasswords.MAX_LENGTH).build());
         int w = gui.partyButtonWidth * 3 / 2;
-        PlayerProfile profile = plugin.profiles().get(player);
-        boolean invitable = profile == null || profile.setting(Setting.PARTY_INVITES);
         List<ActionButton> buttons = List.of(
             button(msg().get("party.dialog.create"), msg().get("party.dialog.create-tooltip"), w, "party/create", Map.of()),
-            button(msg().get("party.dialog.join"), msg().get("party.dialog.join-tooltip"), w, "party/join-menu", Map.of()),
-            button(msg().get(invitable ? "party.dialog.invites-on" : "party.dialog.invites-off"),
-                msg().get("party.dialog.invites-tooltip"), w * 2, "party/invites", Map.of()));
+            button(msg().get("party.dialog.join"), msg().get("party.dialog.join-tooltip"), w, "party/join-menu", Map.of()));
         player.showDialog(dialog(msg().get("party.dialog.title"), body, inputs,
             DialogType.multiAction(buttons).columns(2).exitAction(close()).build()));
     }
@@ -383,7 +379,8 @@ public final class PartyDialogs {
             if (profile == null || !profile.setting(Setting.PARTY_INVITES)) continue;
             candidates.add(other);
         }
-        // TODO(friends): list the inviter's online friends first once a FriendService exists (e.g. plugin.friends()).
+        // TODO(friends): once the FriendService is merged, list the inviter's online friends first, e.g. sort by
+        //  plugin.friends().areFriends(player.getUniqueId(), p.getUniqueId()) before the name.
         candidates.sort(Comparator.comparing(Player::getName, String.CASE_INSENSITIVE_ORDER));
         int w = gui.partyButtonWidth * 3 / 2;
         List<ActionButton> buttons = new ArrayList<>();
@@ -522,10 +519,6 @@ public final class PartyDialogs {
                 });
             }
             case "party/join-menu" -> openJoin(player, "", null);
-            case "party/invites" -> {
-                Outcome o = parties.toggleInvites(player);
-                openNone(player, o.ok() ? null : error(o));
-            }
             case "party/join" -> {
                 String leader = input(view, "leader");
                 String password = input(view, "password");
