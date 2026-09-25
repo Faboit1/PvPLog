@@ -61,6 +61,7 @@ public final class CommandService {
                 return Command.SINGLE_SUCCESS;
             }).build(), "Duel settings", List.of());
         commands.register(tier(), "Tier management", List.of());
+        new top.cheesesmp.duelcore.friends.FriendCommands(plugin, plugin.friends()).register(commands);
         commands.register(new AdminCommand(plugin, this).build(), "DuelCore administration", List.of("dc"));
     }
 

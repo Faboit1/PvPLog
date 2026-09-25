@@ -5,6 +5,7 @@
 # ─────────────────────────────────────────────────────────────
 
 # Hub hotbar. Items can't be moved or dropped. "player_head" shows the player's own skin.
+# action-bar: hint shown above the hotbar while the item is held ("" = none). An empty hand clears it.
 hotbar:
   queue:
     slot: 0
@@ -12,36 +13,49 @@ hotbar:
     name: "<text>Play</text>"
     lore:
       - "<muted>Pick a kit and find a match"
+    action-bar: "<muted>Right-click to</muted> <text>play</text>"
   leave-queue:
     slot: 0
     item: gray_dye
     name: "<bad>Leave queue</bad>"
     lore:
       - "<muted>Stop searching"
+    action-bar: "<muted>Right-click to</muted> <text>leave the queue</text>"
   leaderboard:
     slot: 2
     item: nether_star
     name: "<text>Leaderboards</text>"
     lore:
       - "<muted>Top players, overall and per kit"
+    action-bar: "<muted>Right-click to see the</muted> <text>leaderboards</text>"
   profile:
     slot: 4
     item: player_head
     name: "<text>Profile</text>"
     lore:
       - "<muted>Your tiers, stats and history"
+    action-bar: "<muted>Right-click to open your</muted> <text>profile</text>"
   settings:
     slot: 6
     item: comparator
     name: "<text>Settings</text>"
     lore:
       - "<muted>Region, ping, sidebar, requests"
+    action-bar: "<muted>Right-click to change your</muted> <text>settings</text>"
   spectate:
     slot: 8
     item: ender_eye
     name: "<text>Spectate</text>"
     lore:
       - "<muted>Watch a live match"
+    action-bar: "<muted>Right-click to</muted> <text>watch a live match</text>"
+  friends:
+    slot: 7
+    item: name_tag
+    name: "<text>Friends</text>"
+    lore:
+      - "<muted>Who's online, follow players, duel friends"
+    action-bar: "<muted>Right-click to open</muted> <text>friends</text>"
   # Given to spectators instead of the hub items.
   stop-spectating:
     slot: 8
@@ -49,6 +63,7 @@ hotbar:
     name: "<bad>Stop spectating</bad>"
     lore:
       - "<muted>Back to the hub"
+    action-bar: "<muted>Right-click to</muted> <text>stop spectating</text>"
 
 # Server list entry. Placeholders: <online> <max> <live> (matches) <fighting> <queued> <kits>
 motd:

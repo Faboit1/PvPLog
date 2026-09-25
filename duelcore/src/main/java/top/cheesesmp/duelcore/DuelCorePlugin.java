@@ -63,6 +63,7 @@ public final class DuelCorePlugin extends JavaPlugin {
     private top.cheesesmp.duelcore.ui.Animations animations;
     private DialogService dialogs;
     private ClickRouter clicks;
+    private top.cheesesmp.duelcore.friends.FriendService friends;
     private LeaderboardService leaderboards;
     private CommandService commands;
     private Diagnostics diagnostics;
@@ -126,6 +127,9 @@ public final class DuelCorePlugin extends JavaPlugin {
         pm.registerEvents(results, this);
         pm.registerEvents(respawnPull, this);
         pm.registerEvents(new top.cheesesmp.duelcore.ui.MotdService(this), this);
+        pm.registerEvents(new top.cheesesmp.duelcore.hub.HotbarHints(this), this);
+        friends = new top.cheesesmp.duelcore.friends.FriendService(this);
+        friends.enable();
 
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> commands.register(event.registrar()));
 
@@ -175,6 +179,7 @@ public final class DuelCorePlugin extends JavaPlugin {
             }
         }
         if (arenas != null) arenas.disable();
+        if (friends != null) friends.disable();
         if (database != null) database.close();
     }
 
@@ -298,6 +303,11 @@ public final class DuelCorePlugin extends JavaPlugin {
     /** Custom-click routing; features register their own {@code duelcore:<prefix>/…} handlers here. */
     public ClickRouter clicks() {
         return clicks;
+    }
+
+    /** Follows and friends (mutual follows) of online players. */
+    public top.cheesesmp.duelcore.friends.FriendService friends() {
+        return friends;
     }
 
     public DialogService dialogs() {
