@@ -60,6 +60,7 @@ public final class DuelCorePlugin extends JavaPlugin {
     private DuelRequestService duels;
     private ResultsService results;
     private top.cheesesmp.duelcore.ui.RespawnPull respawnPull;
+    private top.cheesesmp.duelcore.ui.SpawnRise spawnRise;
     private top.cheesesmp.duelcore.ui.Animations animations;
     private DialogService dialogs;
     private top.cheesesmp.duelcore.hub.HotbarHints hints;
@@ -101,6 +102,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         duels = new DuelRequestService(this);
         results = new ResultsService(this);
         respawnPull = new top.cheesesmp.duelcore.ui.RespawnPull(this);
+        spawnRise = new top.cheesesmp.duelcore.ui.SpawnRise(this);
         animations = new top.cheesesmp.duelcore.ui.Animations(this);
         dialogs = new DialogService(this);
         hints = new top.cheesesmp.duelcore.hub.HotbarHints(this);
@@ -129,6 +131,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         pm.registerEvents(hints, this);
         pm.registerEvents(results, this);
         pm.registerEvents(respawnPull, this);
+        pm.registerEvents(spawnRise, this);
         pm.registerEvents(new top.cheesesmp.duelcore.ui.MotdService(this), this);
 
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> commands.register(event.registrar()));
@@ -168,6 +171,7 @@ public final class DuelCorePlugin extends JavaPlugin {
     public void onDisable() {
         try {
             if (respawnPull != null) respawnPull.cancelAll();
+            if (spawnRise != null) spawnRise.cancelAll();
             if (matches != null) matches.cancelAll();
         } catch (Throwable t) {
             getLogger().log(Level.WARNING, "Cancelling matches failed", t);
@@ -294,6 +298,10 @@ public final class DuelCorePlugin extends JavaPlugin {
 
     public top.cheesesmp.duelcore.ui.RespawnPull respawnPull() {
         return respawnPull;
+    }
+
+    public top.cheesesmp.duelcore.ui.SpawnRise spawnRise() {
+        return spawnRise;
     }
 
     public top.cheesesmp.duelcore.ui.Animations animations() {

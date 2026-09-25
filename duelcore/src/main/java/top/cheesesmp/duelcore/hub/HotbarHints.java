@@ -21,7 +21,9 @@ import top.cheesesmp.duelcore.config.GuiConfig;
 /**
  * Action bar hints for the hub hotbar: while a hub item is held its gui.yml {@code action-bar} text shows (e.g.
  * "Right-click to play"), switching to another item shows that one's, and switching to an empty slot clears it.
- * While queued the "searching" action bar has priority, except for a moment right after switching items.
+ * The hint is also shown when items are given (join, leaving a match, starting to spectate). While queued the
+ * "searching" action bar has priority, except for a moment right after switching items. Players in a match are never
+ * touched.
  */
 public final class HotbarHints implements Listener, Runnable {
 
@@ -43,19 +45,42 @@ public final class HotbarHints implements Listener, Runnable {
         return at != null && System.currentTimeMillis() - at < SWITCH_PRIORITY_MS;
     }
 
+    /** Shows the hint for what the player is holding now (after hub or spectator items were given). */
+    public void refresh(Player player) {
+        UUID uuid = player.getUniqueId();
+        if (plugin.matches().match(uuid) != null) {
+            showing.remove(uuid); // match action bars (round results, bounds) must never be touched
+            return;
+        }
+        if (searching(player)) return; // the queue's searching bar has priority
+        Component hint = hint(player, player.getInventory().getItemInMainHand());
+        if (hint != null) {
+            showing.add(uuid);
+            player.sendActionBar(hint);
+        } else if (showing.remove(uuid)) {
+            player.sendActionBar(Component.empty());
+        }
+    }
+
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onHeld(PlayerItemHeldEvent event) {
         Player player = event.getPlayer();
+        UUID uuid = player.getUniqueId();
+        if (plugin.matches().match(uuid) != null) {
+            showing.remove(uuid);
+            return;
+        }
         Component hint = hint(player, player.getInventory().getItem(event.getNewSlot()));
         if (hint != null) {
-            switchedAt.put(player.getUniqueId(), System.currentTimeMillis());
-            showing.add(player.getUniqueId());
+            switchedAt.put(uuid, System.currentTimeMillis());
+            showing.add(uuid);
             player.sendActionBar(hint);
         } else {
-            switchedAt.remove(player.getUniqueId());
-            showing.remove(player.getUniqueId());
-            // an empty hand (or an item without a hint) in the lobby clears the bar; match and queue bars stay
-            if (inLobby(player) && !searching(player)) player.sendActionBar(Component.empty());
+            switchedAt.remove(uuid);
+            boolean wasShowing = showing.remove(uuid);
+            // an empty hand (or an item without a hint) in the lobby clears the bar; queue bars stay. Spectators
+            // only get it cleared when a hint was on screen, so round results aren't wiped.
+            if (!searching(player) && (inLobby(player) || wasShowing)) player.sendActionBar(Component.empty());
         }
     }
 

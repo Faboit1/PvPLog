@@ -184,12 +184,14 @@ public final class HubService {
             player.getInventory().setItem(def.slot(), build(player, key, def));
         }
         player.getInventory().setHeldItemSlot(0);
+        plugin.hints().refresh(player);
     }
 
     public void giveSpectatorItems(Player player) {
         player.getInventory().clear();
         GuiConfig.HotbarItem def = plugin.gui().item("stop-spectating");
         if (def != null) player.getInventory().setItem(def.slot(), build(player, "stop-spectating", def));
+        plugin.hints().refresh(player);
     }
 
     public ItemStack build(Player player, String action, GuiConfig.HotbarItem def) {
