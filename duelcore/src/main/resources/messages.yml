@@ -88,6 +88,10 @@ match:
   out-of-bounds: "<bad>Stay inside the arena.</bad>"
   opponent-quit: "<muted><text><player></text> left the match and forfeits.</muted>"
   opponent-forfeit: "<muted><text><player></text> forfeited.</muted>"
+  # A ranked opponent's connection dropped and one of their disconnect saves voided the match.
+  opponent-connection-lost: "<muted><text><player></text> lost connection. No result, no Elo change.</muted>"
+  # Told on the next join after a saved drop. <left> of <per_day> saves are left today.
+  connection-saved: "<muted>Your connection dropped in a ranked match: no Elo lost.</muted> <text><left></text><muted>/<per_day> disconnect saves left today.</muted>"
   forfeit-confirm: "<muted>Type <text>/leave</text> again within 5 seconds to forfeit. It counts as a loss.</muted>"
   forfeited: "<muted>You forfeited the match.</muted>"
   command-blocked: "<muted>You can't use that command during a match.</muted>"
@@ -132,6 +136,7 @@ results:
   header: "<kit_icon> <text><kit></text> <muted>· <mode></muted>"
   score: "<text><you></text> <accent><you_score> – <opp_score></accent> <text><opponent></text>"
   forfeit: "<muted>Ended by forfeit.</muted>"
+  connection-lost: "<muted>A connection dropped: no result, no Elo change.</muted>"
   stat-hits: "<muted>Hits</muted>  <text><you></text> <muted>· <opp></muted>"
   stat-damage: "<muted>Damage</muted>  <text><you>❤</text> <muted>· <opp>❤</muted>"
   stat-combo: "<muted>Best combo</muted>  <text><you></text> <muted>· <opp></muted>"

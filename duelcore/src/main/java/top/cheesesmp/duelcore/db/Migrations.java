@@ -11,7 +11,7 @@ import java.util.List;
 /** Versioned schema. Append new versions; never edit a released one. */
 public final class Migrations {
 
-    public static final int LATEST = 7;
+    public static final int LATEST = 8;
 
     private Migrations() {
     }
@@ -181,6 +181,12 @@ public final class Migrations {
                     + "kit_id SMALLINT NOT NULL, "
                     + "PRIMARY KEY (player_id, kit_id))" + d.clustered());
             }
+            case 8 -> // disconnect saves used per player and UTC day (match.disconnect-saves-per-day)
+                s.add("CREATE TABLE IF NOT EXISTS dc_disconnect_saves ("
+                    + "uuid VARCHAR(36) NOT NULL, "
+                    + "day BIGINT NOT NULL, "
+                    + "used INT NOT NULL, "
+                    + "PRIMARY KEY (uuid, day))" + d.clustered());
             case 5 -> {
                 // new settings that default to on (FRIEND_ALERTS bit 7, PARTY_INVITES bit 8) for players who existed
                 // before them; new rows get them from Setting.defaults()

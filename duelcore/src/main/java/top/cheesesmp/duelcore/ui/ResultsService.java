@@ -105,6 +105,8 @@ public final class ResultsService implements org.bukkit.event.Listener {
             Messages.num("you_score", m.score(self.team())), Messages.num("opp_score", m.score(1 - self.team()))));
         if (m.endReason() == Match.EndReason.FORFEIT_QUIT || m.endReason() == Match.EndReason.FORFEIT_COMMAND) {
             lines.add(plugin.messages().get("results.forfeit"));
+        } else if (m.endReason() == Match.EndReason.CONNECTION_LOST) {
+            lines.add(plugin.messages().get("results.connection-lost"));
         }
         lines.add(Component.empty());
         lines.add(plugin.messages().get("results.stat-hits", Messages.num("you", self.hits()),

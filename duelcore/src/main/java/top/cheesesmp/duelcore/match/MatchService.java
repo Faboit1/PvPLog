@@ -688,12 +688,34 @@ public final class MatchService implements Runnable {
 
     /** A participant left the server or used /leave: they lose (or drop out, in team games). */
     public void forfeit(Player player, boolean quit) {
+        forfeit(player, quit, false);
+    }
+
+    /**
+     * {@code connectionLost}: the player quit because their connection dropped. In a ranked 1v1 that uses one of their
+     * disconnect saves when they have one left: the match ends with no result and nobody's Elo changes.
+     */
+    public void forfeit(Player player, boolean quit, boolean connectionLost) {
         Match m = byPlayer.get(player.getUniqueId());
         if (m == null) return;
         Participant p = m.participant(player.getUniqueId());
         if (p == null) return;
         if (m.isOver()) {
             if (quit) byPlayer.remove(player.getUniqueId());
+            return;
+        }
+        if (quit && connectionLost && m.ranked() && m.participants().size() == 2 && !m.ffa()
+            && plugin.disconnectSaves().tryUse(player.getUniqueId())) {
+            p.left = true;
+            p.alive = false;
+            byPlayer.remove(player.getUniqueId());
+            int left = plugin.disconnectSaves().remaining(player.getUniqueId());
+            plugin.getLogger().info("[match] " + p.name() + " lost connection in ranked match #" + m.id()
+                + ": disconnect save used, no Elo change (" + left + " left today)");
+            for (Player other : online(m)) {
+                if (other != player) plugin.messages().send(other, "match.opponent-connection-lost", Messages.text("player", p.name()));
+            }
+            end(m, -1, Match.EndReason.CONNECTION_LOST);
             return;
         }
         p.left = true;

@@ -24,7 +24,9 @@ public final class Match {
     public enum Origin { QUEUE, DUEL, TOURNAMENT, PARTY }
 
     public enum EndReason {
-        SCORE(0), FORFEIT_QUIT(1), FORFEIT_COMMAND(2), CANCELLED(3), DRAW(4), ADMIN(5), NO_ARENA(6);
+        SCORE(0), FORFEIT_QUIT(1), FORFEIT_COMMAND(2), CANCELLED(3), DRAW(4), ADMIN(5), NO_ARENA(6),
+        /** A ranked player's connection dropped and a disconnect save voided the match (no Elo change). */
+        CONNECTION_LOST(7);
 
         private final int id;
 

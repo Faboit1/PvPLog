@@ -244,7 +244,8 @@ public final class MatchListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOW)
     public void onQuit(PlayerQuitEvent event) {
-        plugin.matches().forfeit(event.getPlayer(), true);
+        Player player = event.getPlayer();
+        plugin.matches().forfeit(player, true, plugin.disconnectSaves().connectionLost(player, event.getReason()));
     }
 
     // ------------------------------------------------------------------ items & projectiles

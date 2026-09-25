@@ -57,6 +57,7 @@ public final class DuelCorePlugin extends JavaPlugin {
     private QueueService queue;
     private top.cheesesmp.duelcore.queue.QueueMusic queueMusic;
     private MatchService matches;
+    private top.cheesesmp.duelcore.match.DisconnectSaves disconnectSaves;
     private SpectateService spectate;
     private DuelRequestService duels;
     private ResultsService results;
@@ -112,6 +113,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         queueMusic = new top.cheesesmp.duelcore.queue.QueueMusic(this);
         for (String problem : queueMusic.reload()) getLogger().warning("config.yml " + problem);
         matches = new MatchService(this);
+        disconnectSaves = new top.cheesesmp.duelcore.match.DisconnectSaves(this);
         spectate = new SpectateService(this);
         duels = new DuelRequestService(this);
         results = new ResultsService(this);
@@ -145,6 +147,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         pm.registerEvents(queue, this);
         pm.registerEvents(queueMusic, this);
         pm.registerEvents(new MatchListener(this), this);
+        pm.registerEvents(disconnectSaves, this);
         pm.registerEvents(spectate, this);
         pm.registerEvents(duels, this);
         pm.registerEvents(sidebar, this);
@@ -346,6 +349,10 @@ public final class DuelCorePlugin extends JavaPlugin {
 
     public QueueService queue() {
         return queue;
+    }
+
+    public top.cheesesmp.duelcore.match.DisconnectSaves disconnectSaves() {
+        return disconnectSaves;
     }
 
     public MatchService matches() {

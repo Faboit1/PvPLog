@@ -110,6 +110,12 @@ match:
   timeout-decision: health
   # Draw rounds still count towards the round number but give no point. Hard cap on rounds per match:
   max-rounds: 15
+  # Disconnect saves: when a player's connection drops in a ranked match (not when they leave), the match ends with
+  # no result and nobody's Elo changes, this many times per player per day (UTC); after that a drop is a forfeit.
+  # 0 = off. Behind a proxy a drop looks like a normal quit, so a quit also counts as a drop when the player sent no
+  # movement or input for disconnect-idle-seconds before it (0 = only the server's own timeout reasons).
+  disconnect-saves-per-day: 5
+  disconnect-idle-seconds: 5
   # Commands usable during a match (everything else is blocked). Admins with duelcore.bypass.commands ignore this.
   allowed-commands: [leave, forfeit, msg, tell, w, r, reply, profile, ping]
   # Play the totem animation with the kit's item when a match is found (silent: animations.match-found-sounds play).

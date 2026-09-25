@@ -64,6 +64,8 @@ public final class MainConfig {
     public final int returnDelaySeconds;
     public final String timeoutDecision;
     public final int maxRounds;
+    public final int disconnectSavesPerDay;
+    public final int disconnectIdleSeconds;
     public final Set<String> allowedCommands;
     public final boolean totemPop;
     public final boolean animRespawnThrow;
@@ -241,6 +243,8 @@ public final class MainConfig {
         returnDelaySeconds = Math.max(1, c.getInt("match.return-delay-seconds", 4));
         timeoutDecision = c.getString("match.timeout-decision", "health").toLowerCase(Locale.ROOT);
         maxRounds = Math.max(1, c.getInt("match.max-rounds", 15));
+        disconnectSavesPerDay = Math.max(0, c.getInt("match.disconnect-saves-per-day", 5));
+        disconnectIdleSeconds = Math.max(0, c.getInt("match.disconnect-idle-seconds", 5));
         allowedCommands = lower(c.getStringList("match.allowed-commands"));
         totemPop = c.getBoolean("match.totem-pop", true);
         animRespawnThrow = c.getBoolean("animations.respawn-throw", true);
