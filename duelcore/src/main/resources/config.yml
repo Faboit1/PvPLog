@@ -179,6 +179,14 @@ tournaments:
   # Seconds between the signup closing and the first round.
   start-delay-seconds: 10
 
+party:
+  # Most members a party can have (parties are kept while members are offline and across restarts).
+  max-size: 20
+  # Seconds before a party invite or a party-vs-party challenge expires.
+  invite-seconds: 60
+  # New parties start open (listed in the party menu for anyone to join) instead of private (invite or password).
+  open-by-default: false
+
 debug:
   # Extra console output for matches and arena resets.
   verbose: false

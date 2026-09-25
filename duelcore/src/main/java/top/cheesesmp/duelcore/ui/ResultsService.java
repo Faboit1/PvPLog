@@ -48,9 +48,13 @@ public final class ResultsService implements org.bukkit.event.Listener {
             boolean won = !draw && p.team() == m.winnerTeam();
             String outcome = draw ? "draw" : won ? "victory" : "defeat";
             Component title = plugin.messages().get("results.title-" + outcome);
-            player.showTitle(Title.title(title, plugin.messages().get("results.subtitle",
+            Component subtitle = m.ffa()
+                ? plugin.messages().get("party.results.subtitle-ffa", Messages.text("winner", winnerName(m)),
+                    Messages.num("kills", p.kills()))
+                : plugin.messages().get("results.subtitle",
                     Messages.num("you", m.score(p.team())), Messages.num("opp", m.score(1 - p.team())),
-                    Messages.text("opponent", m.teamName(1 - p.team()))),
+                    Messages.text("opponent", m.teamName(1 - p.team())));
+            player.showTitle(Title.title(title, subtitle,
                 Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(2200), Duration.ofMillis(400))));
             List<Component> lines = lines(m, p);
             for (Component line : chatLines(m, p)) player.sendMessage(line);
@@ -61,7 +65,7 @@ public final class ResultsService implements org.bukkit.event.Listener {
             for (UUID s : m.spectators()) {
                 Player sp = Bukkit.getPlayer(s);
                 if (sp == null) continue;
-                plugin.messages().send(sp, "results.spectator", Messages.text("winner",
+                plugin.messages().send(sp, m.ffa() ? "party.results.spectator-ffa" : "results.spectator", Messages.text("winner",
                         m.winnerTeam() < 0 ? plugin.messages().raw("results.nobody") : m.teamName(m.winnerTeam())),
                     Messages.num("red_score", m.score(0)), Messages.num("blue_score", m.score(1)),
                     Messages.comp("kit", m.kit().displayName()));
@@ -90,6 +94,7 @@ public final class ResultsService implements org.bukkit.event.Listener {
     }
 
     private List<Component> lines(Match m, Participant self) {
+        if (m.ffa()) return ffaLines(m, self);
         Participant opp = m.opponentOf(self);
         List<Component> lines = new ArrayList<>();
         lines.add(plugin.messages().get("results.header", Messages.comp("kit_icon", m.kit().sprite()),
@@ -122,7 +127,34 @@ public final class ResultsService implements org.bukkit.event.Listener {
         return lines;
     }
 
+    /** A free-for-all has no single opponent: the winner, then the player's own numbers. */
+    private List<Component> ffaLines(Match m, Participant self) {
+        List<Component> lines = new ArrayList<>();
+        lines.add(plugin.messages().get("results.header", Messages.comp("kit_icon", m.kit().sprite()),
+            Messages.comp("kit", m.kit().displayName()), Messages.text("mode", plugin.messages().raw("party.results.mode-ffa"))));
+        lines.add(plugin.messages().get("party.results.winner-ffa", Messages.text("winner", winnerName(m)),
+            Messages.num("players", m.participants().size())));
+        if (m.endReason() == Match.EndReason.FORFEIT_QUIT || m.endReason() == Match.EndReason.FORFEIT_COMMAND) {
+            lines.add(plugin.messages().get("results.forfeit"));
+        }
+        lines.add(Component.empty());
+        lines.add(plugin.messages().get("party.results.stat-kills", Messages.num("kills", self.kills())));
+        lines.add(plugin.messages().get("party.results.stat-own", Messages.num("hits", self.hits()),
+            Messages.text("damage", hearts(self.damageDealt())), Messages.num("combo", self.bestCombo())));
+        return lines;
+    }
+
+    private String winnerName(Match m) {
+        return m.winnerTeam() < 0 ? plugin.messages().raw("results.nobody") : m.teamName(m.winnerTeam());
+    }
+
     private List<Component> chatLines(Match m, Participant self) {
+        if (m.ffa()) {
+            return List.of(plugin.messages().get("party.results.chat-ffa", Messages.comp("kit_icon", m.kit().sprite()),
+                Messages.comp("outcome", plugin.messages().get("results.word-" + (m.winnerTeam() < 0 ? "draw"
+                    : m.winnerTeam() == self.team() ? "victory" : "defeat"))),
+                Messages.text("winner", winnerName(m)), Messages.num("kills", self.kills())));
+        }
         List<Component> out = new ArrayList<>();
         out.add(plugin.messages().get("results.chat", Messages.comp("kit_icon", m.kit().sprite()),
             Messages.comp("outcome", plugin.messages().get("results.word-" + (m.winnerTeam() < 0 ? "draw"

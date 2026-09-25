@@ -6,6 +6,15 @@
 
 # Hub hotbar. Items can't be moved or dropped. "player_head" shows the player's own skin.
 hotbar:
+  # Parties (/party): the party menu, or the create / join screen when not in a party.
+  party:
+    slot: 1
+    item: cake
+    name: "<text>Party</text>"
+    lore:
+      - "<muted>Invite players, party chat,"
+      - "<muted>party duels, FFA and party vs party"
+    action-bar: "<muted>Right-click to open your</muted> <text>party</text> <muted>· invite, party chat, party duels and FFA</muted>"
   queue:
     slot: 0
     item: netherite_sword
@@ -113,6 +122,28 @@ sidebar:
     - "<muted>Time</muted>  <text><time></text>"
     - ""
     - "<muted>cheesesmp.top</muted>"
+  # Party FFA (everyone for themselves). Extra: <kit> <kit_icon> <mode> <alive> <players> <kills> <time> <ping>
+  match-ffa:
+    - ""
+    - "<kit_icon> <text><kit></text> <muted>free for all</muted>"
+    - ""
+    - "<muted>Alive</muted>  <accent><alive></accent><muted>/<players></muted>"
+    - "<muted>Kills</muted>  <text><kills></text>"
+    - ""
+    - "<muted>Time</muted>  <text><time></text>"
+    - "<muted>Ping</muted>  <text><ping></text>"
+    - ""
+    - "<muted>cheesesmp.top</muted>"
+  # Spectating a party FFA. Extra: <kit> <kit_icon> <alive> <players> <time>
+  spectate-ffa:
+    - ""
+    - "<kit_icon> <text><kit></text> <muted>spectating</muted>"
+    - ""
+    - "<muted>Alive</muted>  <accent><alive></accent><muted>/<players></muted>"
+    - ""
+    - "<muted>Time</muted>  <text><time></text>"
+    - ""
+    - "<muted>cheesesmp.top</muted>"
 
 # Tier tags: the icon of a kit followed by the tier in it. In the hub the player's best kit (best tier, then highest
 # rating), during a match the match's kit with the tier they had when it started. The tab list is sorted by tier.
@@ -150,3 +181,13 @@ dialogs:
   spectate-limit: 30
   # Recent matches on the profile page.
   history-lines: 5
+
+# The party menu (party hub item, /party). Texts are in messages.yml (party.dialog).
+party-menu:
+  # Members listed per page of the party menu.
+  members-per-page: 8
+  # Most invitations, open parties, players to invite and parties to challenge listed at once.
+  list-limit: 24
+  # Width of the text lines and of the buttons (three per row).
+  width: 300
+  button-width: 100

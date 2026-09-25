@@ -13,7 +13,10 @@ import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.arena.ArenaInstance;
 import top.cheesesmp.duelcore.kit.Kit;
 
-/** State of one running match. Main thread only. Teams are 0 and 1; a 1v1 has one player per team. */
+/**
+ * State of one running match. Main thread only. Teams are numbered from 0: a 1v1 has teams 0 and 1 with one player
+ * each, team games have two teams of several players, and a free-for-all ({@link #ffa()}) one team per fighter.
+ */
 public final class Match {
 
     public enum State { STARTING, PREPARING, COUNTDOWN, FIGHTING, ROUND_END, ENDING, ENDED }
@@ -43,6 +46,7 @@ public final class Match {
     private final boolean ranked;
     private final Origin origin;
     private final int firstTo;
+    private final boolean ffa;
     private final List<Participant> participants;
     private final Map<UUID, Participant> byUuid = new HashMap<>();
     private final Set<UUID> spectators = new LinkedHashSet<>();
@@ -54,7 +58,8 @@ public final class Match {
     State state = State.STARTING;
     int stateTicks;
     int round;
-    final int[] score = new int[2];
+    /** Round wins per team (at least two teams). */
+    final int[] score;
     long firstFightAt;
     int roundTicks;
     int winnerTeam = -1;
@@ -66,13 +71,24 @@ public final class Match {
     @Nullable String arenaName;
 
     public Match(int id, Kit kit, boolean ranked, Origin origin, List<Participant> participants) {
+        this(id, kit, ranked, origin, participants, false);
+    }
+
+    /** {@code ffa}: a free-for-all, every fighter on their own team, played as one round (first to 1). */
+    public Match(int id, Kit kit, boolean ranked, Origin origin, List<Participant> participants, boolean ffa) {
         this.id = id;
         this.kit = kit;
         this.ranked = ranked;
         this.origin = origin;
-        this.firstTo = kit.firstTo();
+        this.ffa = ffa;
+        this.firstTo = ffa ? 1 : kit.firstTo();
         this.participants = List.copyOf(participants);
-        for (Participant p : participants) byUuid.put(p.uuid(), p);
+        int teams = 2;
+        for (Participant p : participants) {
+            byUuid.put(p.uuid(), p);
+            teams = Math.max(teams, p.team() + 1);
+        }
+        this.score = new int[teams];
     }
 
     public int id() {
@@ -93,6 +109,23 @@ public final class Match {
 
     public int firstTo() {
         return firstTo;
+    }
+
+    /** Free-for-all: last one standing wins (spawns: {@link Teams#ring}). */
+    public boolean ffa() {
+        return ffa;
+    }
+
+    /** Number of teams: 2 for duels and team games, one per fighter in a free-for-all. */
+    public int teamCount() {
+        return score.length;
+    }
+
+    /** Fighters still standing this round. */
+    public int alive() {
+        int n = 0;
+        for (Participant p : participants) if (p.alive && !p.left) n++;
+        return n;
     }
 
     public List<Participant> participants() {
@@ -131,8 +164,9 @@ public final class Match {
         return round;
     }
 
+    /** Round wins of a team (0 for a team that doesn't exist). */
     public int score(int team) {
-        return score[team];
+        return team >= 0 && team < score.length ? score[team] : 0;
     }
 
     public List<Integer> roundWinners() {
@@ -171,10 +205,12 @@ public final class Match {
         return state == State.FIGHTING;
     }
 
+    /** "Name", "A & B", "A & B & C", or "A & B +3" for bigger (party) teams. */
     public String teamName(int team) {
         List<Participant> t = team(team);
         if (t.isEmpty()) return "?";
         if (t.size() == 1) return t.get(0).name();
+        if (t.size() > 3) return t.get(0).name() + " & " + t.get(1).name() + " +" + (t.size() - 2);
         return String.join(" & ", t.stream().map(Participant::name).toList());
     }
 
@@ -187,10 +223,10 @@ public final class Match {
         return endListeners;
     }
 
-    /** Compact round history, e.g. "0110" = team 0, 1, 1, 0 won rounds 1–4 ("d" for draws). */
+    /** Compact round history, e.g. "0110" = team 0, 1, 1, 0 won rounds 1–4 ("d" for draws, "A"… for teams 10+). */
     public String roundString() {
         StringBuilder sb = new StringBuilder();
-        for (int w : roundWinners) sb.append(w < 0 ? 'd' : (char) ('0' + w));
+        for (int w : roundWinners) sb.append(w < 0 ? 'd' : w < 10 ? (char) ('0' + w) : (char) ('A' + Math.min(w - 10, 25)));
         return sb.toString();
     }
 }

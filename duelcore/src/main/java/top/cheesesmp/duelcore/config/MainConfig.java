@@ -118,6 +118,11 @@ public final class MainConfig {
     public final int tournamentMaxPlayers;
     public final int tournamentStartDelaySeconds;
 
+    // parties
+    public final int partyMaxSize;
+    public final int partyInviteSeconds;
+    public final boolean partyOpenByDefault;
+
     public final boolean verbose;
 
     public MainConfig(FileConfiguration c) {
@@ -215,6 +220,10 @@ public final class MainConfig {
         tournamentMinPlayers = Math.max(2, c.getInt("tournaments.min-players", 4));
         tournamentMaxPlayers = Math.max(tournamentMinPlayers, c.getInt("tournaments.max-players", 64));
         tournamentStartDelaySeconds = Math.max(1, c.getInt("tournaments.start-delay-seconds", 10));
+
+        partyMaxSize = Math.clamp(c.getInt("party.max-size", 20), 2, 100);
+        partyInviteSeconds = Math.clamp(c.getInt("party.invite-seconds", 60), 10, 600);
+        partyOpenByDefault = c.getBoolean("party.open-by-default", false);
 
         verbose = c.getBoolean("debug.verbose", false);
     }

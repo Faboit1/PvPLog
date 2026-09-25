@@ -61,7 +61,7 @@ permissions:
     description: Change personal settings (/settings)
     default: true
   duelcore.party:
-    description: Create and join 2v2 parties (/party)
+    description: Parties, party chat and party matches (/party, /pc, the Party hotbar item)
     default: true
   duelcore.tournament:
     description: Sign up for tournaments (/tournament join)

@@ -61,6 +61,9 @@ public final class CommandService {
                 return Command.SINGLE_SUCCESS;
             }).build(), "Duel settings", List.of());
         commands.register(tier(), "Tier management", List.of());
+        top.cheesesmp.duelcore.party.PartyCommands party = new top.cheesesmp.duelcore.party.PartyCommands(plugin);
+        commands.register(party.party(), "Parties: invite players, party chat, party duels and FFA", List.of("p"));
+        commands.register(party.chat(), "Talk to your party", List.of());
         commands.register(new AdminCommand(plugin, this).build(), "DuelCore administration", List.of("dc"));
     }
 

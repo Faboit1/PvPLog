@@ -22,6 +22,14 @@ public final class GuiConfig {
     public final List<String> sidebarQueue;
     public final List<String> sidebarMatch;
     public final List<String> sidebarSpectate;
+    /** Free-for-all versions of the match and spectate sidebars (party FFA). */
+    public final List<String> sidebarMatchFfa;
+    public final List<String> sidebarSpectateFfa;
+    /** Party menu: members per page, most parties / players listed, text and button widths. */
+    public final int partyMembersPerPage;
+    public final int partyListLimit;
+    public final int partyWidth;
+    public final int partyButtonWidth;
     public final String chatFormat;
     public final String tabFormat;
     public final String nametagPrefix;
@@ -57,7 +65,13 @@ public final class GuiConfig {
         sidebarQueue = y.getStringList("sidebar.queue");
         sidebarMatch = y.getStringList("sidebar.match");
         sidebarSpectate = y.getStringList("sidebar.spectate");
-        chatFormat = y.getString("tags.chat", "<tier> <text><name></text><muted>:</muted> <message>");
+        sidebarMatchFfa = y.getStringList("sidebar.match-ffa");
+        sidebarSpectateFfa = y.getStringList("sidebar.spectate-ffa");
+        partyMembersPerPage = Math.clamp(y.getInt("party-menu.members-per-page", 8), 1, 30);
+        partyListLimit = Math.clamp(y.getInt("party-menu.list-limit", 24), 1, 100);
+        partyWidth = Math.clamp(y.getInt("party-menu.width", 300), 100, 1024);
+        partyButtonWidth = Math.clamp(y.getInt("party-menu.button-width", 100), 40, 400);
+        chatFormat =y.getString("tags.chat", "<tier> <text><name></text><muted>:</muted> <message>");
         tabFormat = y.getString("tags.tab", "<tier> <text><name></text>");
         nametagPrefix = y.getString("tags.nametag-prefix", "<tier> ");
         hideUnrankedTag = y.getBoolean("tags.hide-unranked", false);
