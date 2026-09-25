@@ -77,6 +77,7 @@ public final class DuelCorePlugin extends JavaPlugin {
     private top.cheesesmp.duelcore.debug.TesterMode tester;
     private top.cheesesmp.duelcore.hub.HubProgress hubProgress;
     private top.cheesesmp.duelcore.ui.AlertPop alerts;
+    private top.cheesesmp.duelcore.kit.editor.KitEditor kitEditor;
     private boolean papiHooked;
 
     @Override
@@ -178,6 +179,8 @@ public final class DuelCorePlugin extends JavaPlugin {
         scheduler.runTaskTimer(this, leaderboards, 200L, 200L);
         scheduler.runTaskTimer(this, profiles::sweep, 1200L, 1200L);
         parties.enable(); // listeners, "party" clicks, hub item and timers; loads the parties once the database is ready
+        kitEditor = new top.cheesesmp.duelcore.kit.editor.KitEditor(this);
+        kitEditor.enable(); // players' kit layouts (used by KitManager.apply), "kiteditor" clicks, hub item
 
         getServer().getServicesManager().register(DuelCoreApi.class, new DuelCoreApi(this), this, ServicePriority.Normal);
 
@@ -201,6 +204,11 @@ public final class DuelCorePlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        try {
+            if (kitEditor != null) kitEditor.disable(); // open editors close and give the players their items back
+        } catch (Throwable t) {
+            getLogger().log(Level.WARNING, "Closing kit editors failed", t);
+        }
         try {
             if (anim != null) anim.cancelAll();
             if (queueMusic != null) queueMusic.stopAll();
@@ -240,6 +248,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         arenas.queue().budget(settings().blockBudgetMs);
         queue.reload();
         problems.addAll(queueMusic.reload());
+        problems.addAll(kitEditor.reload()); // layouts made for a kit that changed are reset (players are told)
         ratingSystem = buildRatingSystem();
         leaderboards.clear();
         tags.refreshTeams();
@@ -420,6 +429,16 @@ public final class DuelCorePlugin extends JavaPlugin {
     /** Sound + action bar pop for friend and party alerts. */
     public top.cheesesmp.duelcore.ui.AlertPop alerts() {
         return alerts;
+    }
+
+    /** The kit editor: players' own kit layouts, the editor chest and the kit picker. */
+    public top.cheesesmp.duelcore.kit.editor.KitEditor kitEditor() {
+        return kitEditor;
+    }
+
+    /** Players' saved kit layouts (cached while online), used by KitManager.apply. */
+    public top.cheesesmp.duelcore.kit.editor.KitLayouts kitLayouts() {
+        return kitEditor.layouts();
     }
 
     /** Persistent parties: /party, party chat, party matches. */

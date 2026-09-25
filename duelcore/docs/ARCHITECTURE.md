@@ -23,6 +23,8 @@ top.cheesesmp.duelcore
 │   └── dao/                  PlayerDao, RatingDao, MatchDao, SeasonDao, LeaderboardDao
 ├── profile/                  PlayerProfile, KitStats, PlayerSettings, ProfileService (cache + async save)
 ├── kit/                      Kit, KitRules, KitLoader (YAML → Kit, vanilla item strings), KitManager
+│   └── editor/               KitLayout (pure layout maths + kit fingerprint), KitLayouts (per-player cache, async
+│                             save), KitEditor (the editor chest), KitPicker (dialog), KitEditorCommands, KitEditorStyle
 ├── arena/                    ArenaTemplate, ArenaSnapshot(+IO, .dca format), SchematicImporter (Sponge v2/v3),
 │                             ArenaGenerator (built-in defaults), ArenaWorld (void world), SlotGrid,
 │                             ArenaInstance, ArenaPool, BlockJobQueue (tick-budgeted), ArenaEditor, ArenaManager
@@ -73,7 +75,15 @@ dc_match_players (match_id, player_id, team TINYINT, rounds_won TINYINT, hits IN
                   IDX (player_id, match_id)                              -- recent history
 dc_parties       (id VARCHAR(36) PK, leader_id INT, open TINYINT, password VARCHAR(64) NULL, created_at BIGINT)
 dc_party_members (player_id INT PK, party_id VARCHAR(36) IDX, joined_at BIGINT, chat TINYINT)  -- one party each
+dc_kit_layouts   (player_id INT, kit_id SMALLINT, layout VARCHAR(255), kit_hash INT, updated_at BIGINT,
+                  PK(player_id, kit_id))                                 -- kit editor, schema v7
 ```
+
+A kit layout maps each of the 37 editable positions (inventory slots 0–35, offhand 36) to the position of the kit's
+default loadout that goes there (or -1). `kit_hash` is a CRC-32 of the kit's item types and amounts per position;
+`KitManager.apply` (every match type, every round) uses a layout only when it still matches the kit and is a complete
+permutation, otherwise the default, and a layout that no longer fits the current kit is deleted with a one-time
+notice. Layouts are loaded on join, cached while online and written through `OrderedWrites`.
 
 Parties are loaded once at startup and changed in memory; their writes go through `db/OrderedWrites`, which keeps
 them in order on the MySQL pool (follows, follow-graph loads and queue favourites use it too). Passwords are salted PBKDF2 hashes. A player removed from a party while offline gets

@@ -33,6 +33,7 @@ permissions:
       duelcore.settings: true
       duelcore.friends: true
       duelcore.party: true
+      duelcore.kiteditor: true
       duelcore.tournament: true
   duelcore.queue:
     description: Join ranked and unranked queues (/queue)
@@ -66,6 +67,9 @@ permissions:
     default: true
   duelcore.party:
     description: Parties, party chat and party matches (/party, /pc, the Party hotbar item)
+    default: true
+  duelcore.kiteditor:
+    description: Arrange your own kit layouts (/kit edit, /kiteditor, the Kit Editor hotbar item)
     default: true
   duelcore.tournament:
     description: Sign up for tournaments (/tournament join)

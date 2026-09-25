@@ -556,6 +556,80 @@ kit:
   saved: "<good>Saved kit <text><id></text> from your inventory.</good>"
   save-failed: "<bad>Could not save the kit: <reason>"
 
+# The kit editor (Kit Editor hotbar item, /kit edit [kit], /kiteditor [kit]). Look and sounds: gui.yml kit-editor.
+kit-editor:
+  # Chest title; title-unsaved while the arrangement differs from the saved one. <kit>
+  title: "Editing · <kit>"
+  title-unsaved: "Editing · <kit> <#d4912a>•</#d4912a>"
+  item:
+    save-name: "<good>Save layout</good>"
+    save-lore:
+      - "<muted>Every match of this kit gives"
+      - "<muted>you your items like this."
+    reset-name: "<accent>Reset to default</accent>"
+    reset-lore:
+      - "<muted>Put everything back where the"
+      - "<muted>kit has it. Save to keep it."
+    clear-name: "<bad>Clear layout</bad>"
+    clear-lore:
+      - "<muted>Delete your saved layout and"
+      - "<muted>use the kit's default again."
+    clear-lore-none:
+      - "<muted>You're using the kit's default"
+      - "<muted>layout (nothing saved)."
+    cancel-name: "<bad>Cancel</bad>"
+    cancel-lore:
+      - "<muted>Close without saving."
+    offhand-name: "<text>← Offhand</text>"
+    offhand-lore:
+      - "<muted>The slot on the left is your offhand."
+    info-name: "<accent>Editing <kit></accent>"
+    info-lore:
+      - "<text>Click an item to pick it up,</text>"
+      - "<text>click a slot to put it down or swap.</text>"
+      - ""
+      - "<muted>Rows 1-3: inventory · Row 4: hotbar</muted>"
+      - "<muted>Armour always stays on.</muted>"
+      - "<muted>Save when you're done.</muted>"
+    # Appended to the (locked) armour pieces.
+    locked:
+      - "<muted>Locked: armour always stays on</muted>"
+    no-armor: "<muted>No <piece></muted>"
+    pieces:
+      helmet: "helmet"
+      chestplate: "chestplate"
+      leggings: "leggings"
+      boots: "boots"
+  # The kit picker dialog. <icon> <name> = the queue menu's tab icon and name of a category.
+  picker:
+    title: "Kit Editor"
+    header: "<accent>Pick a kit to arrange its items.</accent>"
+    category: "<icon> <text><name></text>"
+    kit: "<kit_icon> <text><kit></text>"
+    kit-custom: "<kit_icon> <good><kit> ✎</good>"
+    separator: "    "
+    kit-hover: "<text><description></text><newline><muted>Default layout.</muted><newline><newline><muted>Click to edit.</muted>"
+    kit-hover-custom: "<text><description></text><newline><good>✎ Your own layout</good><newline><newline><muted>Click to edit.</muted>"
+    footer: "<muted><good>✎</good> = your own layout. Every match of that kit uses it.</muted>"
+    no-kits: "<muted>No kits to edit right now.</muted>"
+  saved: "<good>✔ Saved your</good> <kit_icon> <text><kit></text> <good>layout.</good> <muted>Every match of this kit uses it.</muted>"
+  saved-default: "<good>✔</good> <muted>Using the default layout for</muted> <kit_icon> <text><kit></text><muted>.</muted>"
+  auto-saved: "<good>✔ Match found:</good> <muted>your</muted> <kit_icon> <text><kit></text> <muted>layout was saved.</muted>"
+  auto-save-failed: "<bad>Match found:</bad> <muted>your</muted> <kit_icon> <text><kit></text> <muted>layout could not be saved; the last one is used.</muted>"
+  discarded: "<muted>Closed the</muted> <text><kit></text> <muted>editor without saving.</muted>"
+  reset-done: "<accent>Default layout</accent> <muted>· Save to keep it</muted>"
+  cleared: "<muted>Cleared your</muted> <text><kit></text> <muted>layout: the default is used again.</muted>"
+  already-default: "<muted>You're already using the default</muted> <text><kit></text> <muted>layout.</muted>"
+  invalid: "<bad>Every item of the kit must be placed before saving.</bad>"
+  save-failed: "<bad>Could not save the layout right now. Try again in a moment.</bad>"
+  kit-changed: "<bad>The</bad> <text><kit></text> <bad>kit was changed while you edited it; open the editor again.</bad>"
+  # Told once when an admin changed a kit's items and a saved layout no longer fits.
+  layout-reset: "<accent>⚠</accent> <muted>The</muted> <kit_icon> <text><kit></text> <muted>kit changed, so your layout was reset to the default. Edit it again with</muted> <text>/kit edit</text><muted>.</muted>"
+  in-match: "<bad>You can't edit kits during a match.</bad>"
+  spectating: "<bad>Stop spectating to edit your kits.</bad>"
+  not-in-hub: "<bad>Kits can only be edited in the hub.</bad>"
+  not-ready: "<muted>Your kit layouts are still loading. Try again in a moment.</muted>"
+
 dialog:
   close: "<muted>Close</muted>"
   # The queue menu (Play item, /queue). Layout knobs are in gui.yml (queue-menu).

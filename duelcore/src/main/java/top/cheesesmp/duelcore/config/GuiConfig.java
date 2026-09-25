@@ -86,6 +86,8 @@ public final class GuiConfig {
     public final int searchingCycleTicks;
     /** In-match animation colours and confetti (match-fx). */
     public final top.cheesesmp.duelcore.ui.MatchFxStyle matchFx;
+    /** The kit editor: items of its fixed slots, the kit picker and its sounds (kit-editor). */
+    public final top.cheesesmp.duelcore.kit.editor.KitEditorStyle kitEditor;
 
     public GuiConfig(YamlConfiguration y) {
         ConfigurationSection hb = y.getConfigurationSection("hotbar");
@@ -167,6 +169,7 @@ public final class GuiConfig {
         searchingColors = colors.isEmpty() ? List.of(net.kyori.adventure.text.format.TextColor.color(0xF2C14E)) : List.copyOf(colors);
         searchingCycleTicks = (int) Math.round(Math.clamp(y.getDouble("searching.cycle-seconds", 6), 1, 60) * 20);
         matchFx = top.cheesesmp.duelcore.ui.MatchFxStyle.parse(y);
+        kitEditor = top.cheesesmp.duelcore.kit.editor.KitEditorStyle.parse(y);
     }
 
     public @Nullable HotbarItem item(String key) {
