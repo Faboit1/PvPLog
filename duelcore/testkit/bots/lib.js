@@ -92,6 +92,21 @@ function createBot (name, opts = {}) {
     bot._client.on('position', () => { phys.positions++; phys.posAt = Date.now() })
     bot._client.on('start_configuration', () => physEvent('config'))
   })
+  // A box that ends exactly flush with a block face (x/z ± 0.3 on a whole number) gets every such move set back by
+  // the server: the position reaches it a hair past the face (bots join through ViaBackwards), which counts as moving
+  // into the block. Stop a thousandth short of the face instead. (opts.flushGuard === false turns this off.)
+  if (opts.flushGuard !== false) {
+    bot.on('physicsTick', () => {
+      const pos = bot.entity && bot.entity.position
+      if (!pos) return
+      for (const axis of ['x', 'z']) {
+        const hi = pos[axis] + 0.3
+        const lo = pos[axis] - 0.3
+        if (Math.abs(hi - Math.round(hi)) < 1e-6) pos[axis] -= 1e-3
+        else if (Math.abs(lo - Math.round(lo)) < 1e-6) pos[axis] += 1e-3
+      }
+    })
+  }
   bot.on('kicked', r => log(name, 'kicked', plain(r)))
   bot.on('error', e => log(name, 'error', e.message))
   bot.on('end', r => log(name, 'end', r))

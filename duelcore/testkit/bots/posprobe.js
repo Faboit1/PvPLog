@@ -12,7 +12,18 @@ async function main () {
   for (const bot of [a, b]) {
     bot.once('login', () => {
       let dumped = 0
+      // the movement packets we sent, to see which move the server rejected
+      const sent = []
+      const write = bot._client.write.bind(bot._client)
+      bot._client.write = (name, params) => {
+        if (/^position|^look|^flying/.test(name) && fightAt) {
+          sent.push({ n: name, t: ((Date.now() - fightAt) / 1000).toFixed(2), x: params.x, y: params.y, z: params.z, f: params.flags || params.onGround })
+          if (sent.length > 6) sent.shift()
+        }
+        return write(name, params)
+      }
       bot._client.on('position', p => {
+        if (fightAt && dumped < 2) L.log('test', 'sent-before-setback-' + bot.username, sent.slice())
         if (!fightAt) return
         if (dumped < 2 && bot.entity) {
           // what the client sees where the server keeps putting us back: the cells the bot's box would enter
