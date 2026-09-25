@@ -107,6 +107,25 @@ function createBot (name, opts = {}) {
       }
     })
   }
+  // Behind the proxy's LimboAuth: register on the first join, log in afterwards (BOT_AUTH_PASSWORD, from the test
+  // kit's bot-env.properties). Each prompt is answered at most once every 3 s.
+  const authPassword = process.env.BOT_AUTH_PASSWORD
+  if (authPassword) {
+    let lastAuth = 0
+    bot.on('messagestr', m => {
+      const now = Date.now()
+      if (now - lastAuth < 3000) return
+      if (/\/reg(ister)?\b/i.test(m)) {
+        lastAuth = now
+        bot.chat('/register ' + authPassword + ' ' + authPassword)
+        log(name, 'auth', 'register')
+      } else if (/\/l(ogin)?\b/i.test(m)) {
+        lastAuth = now
+        bot.chat('/login ' + authPassword)
+        log(name, 'auth', 'login')
+      }
+    })
+  }
   bot.on('kicked', r => log(name, 'kicked', plain(r)))
   bot.on('error', e => log(name, 'error', e.message))
   bot.on('end', r => log(name, 'end', r))

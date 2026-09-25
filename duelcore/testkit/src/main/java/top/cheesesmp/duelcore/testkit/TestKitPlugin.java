@@ -39,6 +39,7 @@ public final class TestKitPlugin extends JavaPlugin implements Listener {
     public void onEnable() {
         root = new File(Bukkit.getWorldContainer().getAbsoluteFile(), "duelcore-test");
         open = readOpen();
+        proxied = readProxied();
         getServer().getPluginManager().registerEvents(this, this);
         getLogger().info("TestKit ready, root=" + root + " onlineMode=" + Bukkit.getOnlineMode()
             + " joinMode=" + (open ? "open" : "testers"));
@@ -227,9 +228,8 @@ public final class TestKitPlugin extends JavaPlugin implements Listener {
     @EventHandler(priority = org.bukkit.event.EventPriority.LOWEST)
     public void onPreLogin(AsyncPlayerPreLoginEvent event) {
         if (Bukkit.getOnlineMode()) return;
-        boolean loopback = event.getAddress().isLoopbackAddress();
-        boolean botName = event.getName().toLowerCase().startsWith("dcbot");
-        if (loopback && botName) return;
+        if (proxied) return; // behind the Velocity proxy, which authenticates every login (LimboAuth)
+        if (isBot(event.getName(), event.getAddress())) return;
         String reason;
         try {
             reason = checkLogin(event.getName(), event.getUniqueId(), event.getAddress().getHostAddress());
@@ -253,10 +253,28 @@ public final class TestKitPlugin extends JavaPlugin implements Listener {
     public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) {
         org.bukkit.entity.Player p = event.getPlayer();
         java.net.InetSocketAddress address = p.getAddress();
-        if (Bukkit.getOnlineMode() || address == null || !address.getAddress().isLoopbackAddress()
-            || !p.getName().toLowerCase().startsWith("dcbot")) return;
+        if (Bukkit.getOnlineMode() || address == null || !isBot(p.getName(), address.getAddress())) return;
         org.bukkit.permissions.PermissionAttachment a = p.addAttachment(this);
         for (String perm : EXEMPT) a.setPermission(perm, true);
+    }
+
+    /** Whether the server runs behind a Velocity proxy (config/paper-global.yml proxies.velocity.enabled). */
+    private boolean proxied;
+
+    private boolean readProxied() {
+        File paper = new File(Bukkit.getWorldContainer().getAbsoluteFile(), "config/paper-global.yml");
+        return paper.isFile() && org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(paper)
+            .getBoolean("proxies.velocity.enabled", false);
+    }
+
+    /**
+     * A test bot: a "dcbot" name from this machine. Directly that is loopback; behind the proxy the forwarded address
+     * of a bot on this node is a private (site-local) docker address, which real players, coming in from the
+     * internet, never have.
+     */
+    private boolean isBot(String name, java.net.InetAddress address) {
+        if (!name.toLowerCase().startsWith("dcbot")) return false;
+        return address.isLoopbackAddress() || (proxied && address.isSiteLocalAddress());
     }
 
     private static final String USAGE = "/tester on | off | status | add <player> | remove <player> | list";
@@ -370,7 +388,7 @@ public final class TestKitPlugin extends JavaPlugin implements Listener {
     public void onBotChat(io.papermc.paper.event.player.AsyncChatEvent event) {
         org.bukkit.entity.Player p = event.getPlayer();
         java.net.InetSocketAddress address = p.getAddress();
-        if (address == null || !address.getAddress().isLoopbackAddress() || !p.getName().toLowerCase().startsWith("dcbot")) return;
+        if (address == null || !isBot(p.getName(), address.getAddress())) return;
         String text = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(event.message());
         if (!text.equals("!unstick")) return;
         event.setCancelled(true);
@@ -469,8 +487,21 @@ public final class TestKitPlugin extends JavaPlugin implements Listener {
         String stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss"));
         File log = new File(logs, id + "-" + stamp + ".log");
         try {
-            Process p = new ProcessBuilder(cmd).directory(bots).redirectErrorStream(true)
-                .redirectOutput(log).start();
+            ProcessBuilder pb = new ProcessBuilder(cmd).directory(bots).redirectErrorStream(true).redirectOutput(log);
+            // {root}/bot-env.properties: where the bots connect (MC_HOST, MC_PORT, e.g. the proxy) and the password
+            // they register / log in with behind LimboAuth (BOT_AUTH_PASSWORD); kept out of the repository
+            File env = new File(root, "bot-env.properties");
+            if (env.isFile()) {
+                java.util.Properties props = new java.util.Properties();
+                try (var in = Files.newBufferedReader(env.toPath())) {
+                    props.load(in);
+                }
+                for (String k : List.of("MC_HOST", "MC_PORT", "BOT_AUTH_PASSWORD", "BOT_VERSION")) {
+                    String v = props.getProperty(k);
+                    if (v != null && !v.isBlank()) pb.environment().put(k, v.trim());
+                }
+            }
+            Process p = pb.start();
             processes.put(id, p);
             getLogger().info("[testkit] started " + id + " pid=" + p.pid() + " log=" + log.getName());
             p.onExit().thenAccept(done -> getLogger().info("[testkit] " + id + " exited code=" + done.exitValue()));
