@@ -75,6 +75,8 @@ public final class GuiConfig {
     public final int searchingCycleTicks;
     public final List<net.kyori.adventure.bossbar.BossBar.Color> searchingBossColors;
     public final net.kyori.adventure.bossbar.BossBar.Overlay searchingBossOverlay;
+    /** In-match animation colours and confetti (match-fx). */
+    public final top.cheesesmp.duelcore.ui.MatchFxStyle matchFx;
 
     public GuiConfig(YamlConfiguration y) {
         ConfigurationSection hb = y.getConfigurationSection("hotbar");
@@ -154,6 +156,7 @@ public final class GuiConfig {
         var overlay = net.kyori.adventure.bossbar.BossBar.Overlay.NAMES.value(
             y.getString("searching.boss-bar-overlay", "progress").trim().toLowerCase(java.util.Locale.ROOT));
         searchingBossOverlay = overlay == null ? net.kyori.adventure.bossbar.BossBar.Overlay.PROGRESS : overlay;
+        matchFx = top.cheesesmp.duelcore.ui.MatchFxStyle.parse(y);
     }
 
     public @Nullable HotbarItem item(String key) {

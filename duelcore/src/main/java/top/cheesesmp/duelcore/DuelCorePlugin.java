@@ -148,6 +148,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         pm.registerEvents(results, this);
         pm.registerEvents(respawnPull, this);
         pm.registerEvents(spawnRise, this);
+        animations.fx().registerPreviews(tester); // /tester play countdown, fight, round-won, combo, heartbeat, …
         pm.registerEvents(new top.cheesesmp.duelcore.ui.MotdService(this), this);
         pm.registerEvents(anim, this);
         pm.registerEvents(progress, this);

@@ -169,6 +169,30 @@ animations:
   # Ticks while the progress counts, the flourish and the demotion notes. Players can also turn sounds off in
   # their settings.
   progress-sounds: true
+  # In-match animations (texts in messages.yml match.fx, colours in gui.yml match-fx). Countdown numbers pop in
+  # (green, yellow, red by seconds left) with a tick that rises each second.
+  countdown-pop: true
+  # "FIGHT!" with a gradient sweep across the letters and a punch sound.
+  fight-sweep: true
+  # When a round ends and the match goes on: "ROUND WON" / "ROUND LOST" types in and the score below it pops
+  # (spectators see who took the round).
+  round-banner: true
+  # The countdown subtitle pulses "Match point" when someone is one round from winning.
+  match-point: true
+  # Action bar for the attacker: the hit combo counter pops on every hit from 2 hits on; "+1 kill" for a kill.
+  combo-bar: true
+  # A quiet heartbeat and a red pulse of the health in the action bar at or below heartbeat-hearts hearts; the
+  # lower, the faster.
+  heartbeat: true
+  heartbeat-hearts: 3
+  # Match won: a victory jingle and a shimmer over the "Victory" title (spectators see the winner's name).
+  victory-title: true
+  # Match lost: three quiet falling notes, the "Defeat" title greys out a little.
+  defeat-title: true
+  # Confetti raining around the match winner.
+  victory-confetti: true
+  # Party FFA: "3 players left" pops when someone is eliminated.
+  players-left: true
   # Sounds when a match is found (instead of the totem sound) and when a round's fight starts. One line is picked at
   # random each time. A line is one or more sounds played together, joined with "+". Each sound:
   #   <sound id> [pitch or min-max] [volume, default 0.7] [@delay in ticks]

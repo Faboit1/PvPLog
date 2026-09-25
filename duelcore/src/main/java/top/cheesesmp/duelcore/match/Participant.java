@@ -26,6 +26,8 @@ public final class Participant {
     int kills;
     @Nullable UUID lastDamager;
     long lastDamagedAt;
+    /** Round tick of the last low-health heartbeat (presentation only). */
+    int lastBeat = -1000;
 
     double ratingAfter = Double.NaN;
     @Nullable Tier tierAfter;
@@ -113,5 +115,6 @@ public final class Participant {
         combo = 0;
         lastDamager = null;
         lastDamagedAt = 0;
+        lastBeat = -1000;
     }
 }

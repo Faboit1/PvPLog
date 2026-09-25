@@ -152,6 +152,24 @@ progress-reveal:
   # The bright band sweeping over the tier in the tier-up and placed titles.
   shimmer-color: "#ffffff"
 
+# In-match animations (config.yml animations: countdown-pop, fight-sweep, round-banner, …; texts in messages.yml
+# match.fx).
+match-fx:
+  # Countdown number colour by seconds left: 1, 2, 3 and more.
+  countdown-colors: ["#ff5a5a", "#ffd24a", "#5bd46a"]
+  # A number that pops (countdown, combo counter, score, players left) shows in this colour first.
+  pop-color: "#ffffff"
+  # "FIGHT!": gradient across the letters, left to right.
+  fight-colors: ["#ffd24a", "#ff7a3d", "#ff5a5a"]
+  # The bright band sweeping over "FIGHT!", "Victory" and the winner's name.
+  shine-color: "#ffffff"
+  # Low-health heartbeat: the action bar pulses from the first colour to the second.
+  heartbeat-colors: ["#ff3b3b", "#6a1f1f"]
+  # What the combo / kill bar fades to, and the colour "Defeat" greys towards.
+  fade-color: "#6b7078"
+  # Confetti over the match winner: the falling dust takes the colour of these blocks.
+  confetti: [RED_CONCRETE, ORANGE_CONCRETE, YELLOW_CONCRETE, LIME_CONCRETE, LIGHT_BLUE_CONCRETE, MAGENTA_CONCRETE]
+
 sidebar:
   enabled: true
   title: "<accent>Duels</accent>"
