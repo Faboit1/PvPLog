@@ -154,6 +154,8 @@ party:
   you-left: "<muted>You left the party.</muted>"
   you-kicked: "<muted>You were removed from <text><leader></text>'s party.</muted>"
   you-disbanded: "<muted>You disbanded the party.</muted>"
+  invites-on: "<muted>Party invites <good>on</good>: anyone can invite you to their party.</muted>"
+  invites-off: "<muted>Party invites <bad>off</bad>: nobody can invite you to a party.</muted>"
   welcome-back: "<muted>You're in <text><leader></text>'s party · <online>/<size> online · <text>/party</text></muted>"
   # Shown on the next join to players who were removed while offline. <leader>
   notice-kicked: "<muted>While you were away, <text><leader></text> removed you from their party.</muted>"
@@ -260,6 +262,9 @@ party:
     create-tooltip: "<muted>You lead it. A password (optional) is asked from players who join without an invite.</muted>"
     join: "<accent>Join Party</accent>"
     join-tooltip: "<muted>Join by the leader's name</muted>"
+    invites-on: "<muted>Party invites:</muted> <good>On</good>"
+    invites-off: "<muted>Party invites:</muted> <bad>Off</bad>"
+    invites-tooltip: "<muted>Whether other players can invite you to their party</muted>"
     invites-title: "<accent>Invitations</accent>"
     invite-line: "<head> <text><leader></text><muted>'s party · <size>/<max></muted>  <accept> <deny>"
     open-title: "<accent>Open parties</accent>"

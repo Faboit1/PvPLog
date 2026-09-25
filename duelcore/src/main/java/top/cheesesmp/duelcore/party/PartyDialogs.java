@@ -216,9 +216,13 @@ public final class PartyDialogs {
         List<DialogInput> inputs = List.of(DialogInput.text("password", msg().get("party.dialog.password-input"))
             .width(Math.min(gui.partyWidth, 300)).maxLength(PartyPasswords.MAX_LENGTH).build());
         int w = gui.partyButtonWidth * 3 / 2;
+        PlayerProfile profile = plugin.profiles().get(player);
+        boolean invitable = profile == null || profile.setting(Setting.PARTY_INVITES);
         List<ActionButton> buttons = List.of(
             button(msg().get("party.dialog.create"), msg().get("party.dialog.create-tooltip"), w, "party/create", Map.of()),
-            button(msg().get("party.dialog.join"), msg().get("party.dialog.join-tooltip"), w, "party/join-menu", Map.of()));
+            button(msg().get("party.dialog.join"), msg().get("party.dialog.join-tooltip"), w, "party/join-menu", Map.of()),
+            button(msg().get(invitable ? "party.dialog.invites-on" : "party.dialog.invites-off"),
+                msg().get("party.dialog.invites-tooltip"), w * 2, "party/invites", Map.of()));
         player.showDialog(dialog(msg().get("party.dialog.title"), body, inputs,
             DialogType.multiAction(buttons).columns(2).exitAction(close()).build()));
     }
@@ -274,7 +278,7 @@ public final class PartyDialogs {
             for (PartyService.Challenge c : parties.challenges(party.id())) {
                 Kit kit = plugin.kits().get(c.kit());
                 if (kit == null) continue;
-                Map<String, String> data = payload("party", c.from());
+                Map<String, String> data = payload("party", c.from(), "from", "menu");
                 incoming.add(msg().get("party.dialog.challenge-line", Messages.text("leader", c.fromLeader()),
                     Messages.comp("kit", kit.displayName()), Messages.comp("kit_icon", kit.sprite()),
                     Messages.comp("accept", msg().get("party.dialog.accept-link").clickEvent(click("party/duel-accept", data))),
@@ -442,11 +446,11 @@ public final class PartyDialogs {
                     Messages.comp("kit", kit.displayName())), Component.text(kit.description()), gui.kitButtonWidth,
                 "party/start", payload("mode", mode.id(), "kit", kit.id(), "target", target == null ? "" : target)));
         }
-        if (buttons.isEmpty()) buttons.add(button(msg().get("party.dialog.back"), null, 120, "party/menu", Map.of()));
         Component info = msg().get("party.dialog.kit-body-" + mode.id(), Messages.num("online", parties.onlineCount(party)),
             Messages.text("leader", targetParty == null ? "" : leaderName(targetParty)), Messages.num("seconds", parties.inviteSeconds()));
-        player.showDialog(dialog(msg().get("party.dialog.kit-title", Messages.comp("mode", msg().get("party.dialog.mode-" + mode.id()))),
-            body(null, info), List.of(), DialogType.multiAction(buttons).columns(gui.kitColumns).exitAction(back()).build()));
+        Component title = msg().get("party.dialog.kit-title", Messages.comp("mode", msg().get("party.dialog.mode-" + mode.id())));
+        player.showDialog(dialog(title, body(null, info), List.of(), buttons.isEmpty() ? DialogType.notice(back())
+            : DialogType.multiAction(buttons).columns(gui.kitColumns).exitAction(back()).build()));
     }
 
     /** Parties that can be challenged (their leader is online). */
@@ -466,9 +470,12 @@ public final class PartyDialogs {
                     Messages.text("leader", leaderName(p)), Messages.num("online", parties.onlineCount(p)),
                     Messages.num("size", p.size())), null, w, "party/pvp-pick", payload("party", p.id())));
         }
-        if (buttons.isEmpty()) buttons.add(button(msg().get("party.dialog.back"), null, w, "party/menu", Map.of()));
-        Component info = msg().get(targets.isEmpty() ? "party.dialog.pvp-none" : "party.dialog.pvp-body");
-        player.showDialog(dialog(msg().get("party.dialog.pvp-title"), body(notice, info), List.of(),
+        Component title = msg().get("party.dialog.pvp-title");
+        if (buttons.isEmpty()) {
+            player.showDialog(dialog(title, body(notice, msg().get("party.dialog.pvp-none")), List.of(), DialogType.notice(back())));
+            return;
+        }
+        player.showDialog(dialog(title, body(notice, msg().get("party.dialog.pvp-body")), List.of(),
             DialogType.multiAction(buttons).columns(2).exitAction(back()).build()));
     }
 
@@ -482,9 +489,11 @@ public final class PartyDialogs {
             Messages.comp("kit_icon", kit.sprite()), Messages.num("seconds", parties.inviteSeconds()));
         Map<String, String> data = payload("party", from.id());
         int w = plugin.gui().partyButtonWidth * 3 / 2;
+        // Escape / Close only closes it (the chat message can still accept); Deny tells the other leader
+        List<ActionButton> buttons = List.of(button(msg().get("party.dialog.accept"), null, w, "party/duel-accept", data),
+            button(msg().get("party.dialog.deny"), null, w, "party/duel-deny", data));
         leader.showDialog(dialog(msg().get("party.dialog.challenge-title"), body(null, info), List.of(),
-            DialogType.confirmation(button(msg().get("party.dialog.accept"), null, w, "party/duel-accept", data),
-                button(msg().get("party.dialog.deny"), null, w, "party/duel-deny", data))));
+            DialogType.multiAction(buttons).columns(2).exitAction(close()).build()));
     }
 
     public void openDisband(Player player) {
@@ -513,6 +522,10 @@ public final class PartyDialogs {
                 });
             }
             case "party/join-menu" -> openJoin(player, "", null);
+            case "party/invites" -> {
+                Outcome o = parties.toggleInvites(player);
+                openNone(player, o.ok() ? null : error(o));
+            }
             case "party/join" -> {
                 String leader = input(view, "leader");
                 String password = input(view, "password");
@@ -553,9 +566,11 @@ public final class PartyDialogs {
             case "party/invite-menu" -> openInvite(player, null);
             case "party/invite" -> {
                 String name = input(view, "name");
-                Player target = data.containsKey("target") ? player(data.get("target")) : name.isEmpty() ? null : Bukkit.getPlayerExact(name);
+                boolean picked = data.containsKey("target");
+                Player target = picked ? player(data.get("target")) : name.isEmpty() ? null : Bukkit.getPlayerExact(name);
                 if (target == null) {
-                    openInvite(player, name.isEmpty() && !data.containsKey("target") ? msg().get("party.dialog.name-missing")
+                    // a picked player who just went offline simply drops out of the refreshed list
+                    openInvite(player, picked ? null : name.isEmpty() ? msg().get("party.dialog.name-missing")
                         : error(Outcome.of(Result.OFFLINE, name)));
                     return;
                 }
@@ -596,16 +611,24 @@ public final class PartyDialogs {
             case "party/pvp-pick" -> openKits(player, Mode.PVP, data.get("party"));
             case "party/start" -> start(player, data);
             case "party/duel-accept" -> {
+                // from chat, the party menu ("menu") or the challenge dialog; a started match closes every dialog
                 Outcome o = parties.acceptChallenge(player, data.get("party"));
-                if (!o.ok()) {
+                if (o.ok()) return;
+                if ("menu".equals(data.get("from"))) {
+                    openMenu(player, 0, error(o));
+                } else {
                     feedback(player, o);
                     if (!fromChat) player.closeDialog();
                 }
             }
             case "party/duel-deny" -> {
                 Outcome o = parties.denyChallenge(player, data.get("party"));
-                if (!o.ok()) feedback(player, o);
-                if (!fromChat) player.closeDialog();
+                if ("menu".equals(data.get("from"))) {
+                    openMenu(player, 0, o.ok() ? null : error(o));
+                } else {
+                    if (!o.ok()) feedback(player, o);
+                    if (!fromChat) player.closeDialog();
+                }
             }
             default -> {
             }

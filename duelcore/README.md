@@ -321,6 +321,7 @@ Scripts:
 | `specsearch.js` | Spectate list sorted by Elo then name, search by name and kit, no-results text, spectating a result |
 | `tagcheck.js [kit] [icon]` | Tab header/footer, slur blocked, swearing masked, clean text untouched, tab tag switches to the match kit's icon during a match and back after, kit loadout |
 | `ping.js` | Server list MOTD and hover |
+| `party.js [kit]` | Party create/invite/accept, leader and member menus, party chat (`@`, `/pc`, toggle) only reaching members and passing the chat filter, a 3-bot Party FFA, leader succession, persistence across a rejoin, disband |
 
 Never install the test kit on a production server.
 

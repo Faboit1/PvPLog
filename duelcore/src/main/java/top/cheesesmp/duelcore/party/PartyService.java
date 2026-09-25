@@ -673,6 +673,17 @@ public final class PartyService implements Listener, Runnable {
         return Outcome.OK;
     }
 
+    /** Accept party invites from anyone, or from nobody (Setting.PARTY_INVITES; friends-only once friends exist). */
+    public Outcome toggleInvites(Player player) {
+        PlayerProfile profile = plugin.profiles().get(player);
+        if (profile == null) return Outcome.of(Result.NO_PROFILE);
+        boolean on = !profile.setting(Setting.PARTY_INVITES);
+        profile.setting(Setting.PARTY_INVITES, on);
+        plugin.profiles().saveSettings(profile);
+        plugin.messages().send(player, on ? "party.invites-on" : "party.invites-off");
+        return Outcome.OK;
+    }
+
     public Outcome setOpen(Player leader, boolean open) {
         Led led = led(leader);
         Party party = led.party();
@@ -831,30 +842,38 @@ public final class PartyService implements Listener, Runnable {
         return Outcome.OK;
     }
 
-    private @Nullable Challenge takeChallenge(String to, @Nullable String from) {
-        List<Challenge> list = challenges.get(to);
-        if (list == null) return null;
+    /** The newest open challenge to party {@code to} (from {@code from}, or from anyone). */
+    private @Nullable Challenge findChallenge(String to, @Nullable String from) {
         Challenge found = null;
-        for (Challenge c : list) if (from == null || c.from().equals(from)) found = c;
-        if (found == null) return null;
-        list.remove(found);
-        if (list.isEmpty()) challenges.remove(to);
-        return found.expires() < System.currentTimeMillis() ? null : found;
+        for (Challenge c : challenges(to)) if (from == null || c.from().equals(from)) found = c;
+        return found;
     }
 
-    /** The challenged leader accepts: their online members against the challenging party's. */
+    private void dropChallenge(Challenge challenge) {
+        List<Challenge> list = challenges.get(challenge.to());
+        if (list == null) return;
+        list.remove(challenge);
+        if (list.isEmpty()) challenges.remove(challenge.to());
+    }
+
+    /**
+     * The challenged leader accepts: their online members against the challenging party's. The challenge stays open
+     * when something that can change (a member still in a match, a leader offline) blocks the start.
+     */
     public Outcome acceptChallenge(Player leader, @Nullable String fromPartyId) {
         Led led = led(leader);
         Party own = led.party();
         if (own == null) return led.error();
-        Challenge challenge = takeChallenge(own.id(), fromPartyId);
+        Challenge challenge = findChallenge(own.id(), fromPartyId);
         if (challenge == null) return Outcome.of(Result.NO_CHALLENGE);
         Party from = parties.get(challenge.from());
-        if (from == null) return Outcome.of(Result.NO_PARTY, challenge.fromLeader());
+        Kit kit = plugin.kits().get(challenge.kit());
+        if (from == null || kit == null || !kit.enabled()) {
+            dropChallenge(challenge);
+            return from == null ? Outcome.of(Result.NO_PARTY, challenge.fromLeader()) : Outcome.of(Result.KIT_DISABLED);
+        }
         Player fromLeader = Bukkit.getPlayer(from.leader());
         if (fromLeader == null) return Outcome.of(Result.LEADER_OFFLINE);
-        Kit kit = plugin.kits().get(challenge.kit());
-        if (kit == null) return Outcome.of(Result.KIT_DISABLED);
         Outcome blocked = startable(leader, kit);
         if (blocked != null) return blocked;
         List<Player> a = new ArrayList<>();
@@ -863,6 +882,7 @@ public final class PartyService implements Listener, Runnable {
         if (busy == null) busy = fighters(own, b);
         if (busy != null) return busy;
         if (a.isEmpty() || b.isEmpty()) return Outcome.of(Result.TOO_FEW);
+        dropChallenge(challenge);
         Match match = plugin.matches().create(List.of(a, b), kit, false, Match.Origin.PARTY);
         if (match == null) return Outcome.of(Result.FAILED);
         announceTeams(match);
@@ -874,8 +894,9 @@ public final class PartyService implements Listener, Runnable {
         Led led = led(leader);
         Party own = led.party();
         if (own == null) return led.error();
-        Challenge challenge = takeChallenge(own.id(), fromPartyId);
+        Challenge challenge = findChallenge(own.id(), fromPartyId);
         if (challenge == null) return Outcome.of(Result.NO_CHALLENGE);
+        dropChallenge(challenge);
         Party from = parties.get(challenge.from());
         Player fromLeader = from == null ? null : Bukkit.getPlayer(from.leader());
         if (fromLeader != null) plugin.messages().send(fromLeader, "party.challenge-denied", Messages.text("leader", leader.getName()));
