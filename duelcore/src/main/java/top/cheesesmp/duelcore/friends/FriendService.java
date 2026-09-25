@@ -34,6 +34,7 @@ import top.cheesesmp.duelcore.db.dao.FollowDao.Person;
 import top.cheesesmp.duelcore.db.dao.PlayerDao;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.Setting;
+import top.cheesesmp.duelcore.ui.AlertPop;
 import top.cheesesmp.duelcore.ui.dialog.DialogService;
 
 /**
@@ -261,7 +262,11 @@ public final class FriendService implements Listener {
         List<String> names = new ArrayList<>();
         for (Player friend : online) {
             if (friend.equals(player)) continue;
-            if (alerts(friend)) plugin.messages().send(friend, "friends.online", Messages.text("player", player.getName()));
+            if (alerts(friend)) {
+                plugin.messages().send(friend, "friends.online", Messages.text("player", player.getName()));
+                plugin.alerts().pop(friend, AlertPop.Kind.FRIEND_ONLINE, "hub.alerts.friend-online",
+                    Messages.text("player", player.getName()));
+            }
             if (names.size() < 8) names.add(friend.getName());
         }
         if (!names.isEmpty() && alerts(player)) {
@@ -364,6 +369,8 @@ public final class FriendService implements Listener {
             plugin.messages().send(player, "friends.now-friends", Messages.text("player", targetName));
             if (targetOnline != null && alerts(targetOnline) && firstNotice("mutual:", uuid, target.uuid(), now)) {
                 plugin.messages().send(targetOnline, "friends.now-friends", Messages.text("player", player.getName()));
+                plugin.alerts().pop(targetOnline, AlertPop.Kind.NOW_FRIENDS, "hub.alerts.now-friends",
+                    Messages.text("player", player.getName()));
             }
         } else {
             plugin.messages().send(player, "friends.followed", Messages.text("player", targetName));
@@ -375,6 +382,8 @@ public final class FriendService implements Listener {
                         BinaryTagHolder.binaryTagHolder("{target:\"" + uuid + "\"}")));
                 plugin.messages().send(targetOnline, "friends.followed-you", Messages.text("player", player.getName()),
                     Messages.comp("follow_back", button));
+                plugin.alerts().pop(targetOnline, AlertPop.Kind.FOLLOWED, "hub.alerts.followed-you",
+                    Messages.text("player", player.getName()));
             }
         }
         if (then != null) then.run();

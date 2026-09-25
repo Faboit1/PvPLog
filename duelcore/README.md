@@ -295,6 +295,13 @@ setting. Texts are in `messages.yml` (`progress`, `tester`), colours and the bar
 | `spawn-rise` (+ `-depth`, `-ticks`) | Round 1: each fighter rises out of a hole at their spawn |
 | `death`, `round-win`, `match-win`, `fight-start` | Red burst on death, golden spiral for the round winner, fireworks for the match winner, white ring when a round starts |
 | `join-title` | Title on joining the hub |
+| `join-welcome` | With `join-title`: the title types out "Welcome back, name" with the best kit's tier and a soft chime ("Welcome to Cheese PvP" on a first join; `messages.yml` `hub.welcome-*`). Previews `welcome`, `welcome-first` |
+| `sidebar-title` | Every few seconds a bright band sweeps over the sidebar title (`gui.yml` `sidebar.title-shimmer`). Preview `sidebar-title` |
+| `tab-logo` | `<logo>` in the tab header is a colour wave that moves on with every tab refresh (`gui.yml` `tab.logo`) |
+| `hub-xp-bar`, `hub-xp-fill` | The hub XP bar shows overall progress (level = overall Elo, or placement games while unranked; bar = way to the next tier). After a match it fills from the old value to the new one with XP orb sounds; matches clear it. Preview `xp-fill`; testers see the fill after every match |
+| `tier-ring` | A sparkle ring in the tier's colour rises from the player's feet (only they see it) when a kit reaches a better tier. Preview `tier-ring` |
+| `alert-pops` | Friend online / followed / new friend / party invite / joined alerts also pop up briefly in the action bar with a small sound, in the lobby only (`messages.yml` `hub.alerts`). Previews `alert-friend`, `alert-party` |
+| `hub-sounds` | The sounds of the hub animations above |
 | `match-found-sounds`, `fight-start-sounds` | Sound pools (one line picked at random) for "match found" and a round's start |
 | `progress-reveal` | After a ranked match, back in the hub: the action bar counts up what the match changed (`+20% towards your tier ▰▰▰▰▱▱▱▱▱▱` during placement, `+18 Elo  1480 → 1498` after, a red `−12 Elo` counting down), then blinks and fades out. It runs under the results dialog; hotbar hints and the queue's "searching" bar wait for it |
 | `progress-fade-seconds` | How long that fade takes (3) |

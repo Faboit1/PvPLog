@@ -75,6 +75,18 @@ public final class MainConfig {
     public final boolean animMatchWin;
     public final boolean animFightStart;
     public final boolean animJoinTitle;
+    /** Hub ambience: the typed welcome title (with join-title), the sidebar title shimmer, the tab logo wave. */
+    public final boolean animJoinWelcome;
+    public final boolean animSidebarTitle;
+    public final boolean animTabLogo;
+    /** The hub XP bar showing overall progress, its animated fill after a match and the tier-up ring. */
+    public final boolean animHubXp;
+    public final boolean animHubXpFill;
+    public final boolean animTierRing;
+    /** Friend and party alerts: a short action bar pop next to the chat line. */
+    public final boolean animAlertPops;
+    /** Sounds of the hub animations above (welcome chime, XP orbs, alert pops, ring). */
+    public final boolean animHubSounds;
     public final boolean animSpawnRise;
     public final int animSpawnRiseDepth;
     public final int animSpawnRiseTicks;
@@ -209,6 +221,14 @@ public final class MainConfig {
         animMatchWin = c.getBoolean("animations.match-win", true);
         animFightStart = c.getBoolean("animations.fight-start", true);
         animJoinTitle = c.getBoolean("animations.join-title", true);
+        animJoinWelcome = c.getBoolean("animations.join-welcome", true);
+        animSidebarTitle = c.getBoolean("animations.sidebar-title", true);
+        animTabLogo = c.getBoolean("animations.tab-logo", true);
+        animHubXp = c.getBoolean("animations.hub-xp-bar", true);
+        animHubXpFill = c.getBoolean("animations.hub-xp-fill", true);
+        animTierRing = c.getBoolean("animations.tier-ring", true);
+        animAlertPops = c.getBoolean("animations.alert-pops", true);
+        animHubSounds = c.getBoolean("animations.hub-sounds", true);
         animSpawnRise = c.getBoolean("animations.spawn-rise", true);
         animSpawnRiseDepth = Math.clamp(c.getInt("animations.spawn-rise-depth", 3), 1, 6);
         animSpawnRiseTicks = Math.clamp(c.getInt("animations.spawn-rise-ticks", 50), 10, 60);

@@ -19,6 +19,11 @@ public final class GuiConfig {
     public final Map<String, HotbarItem> hotbar = new HashMap<>();
     public final boolean sidebarEnabled;
     public final String sidebarTitle;
+    /** Sidebar title sweep: band colour, half width in characters, sweep and pause length in ticks. */
+    public final net.kyori.adventure.text.format.TextColor sidebarShimmerColor;
+    public final double sidebarShimmerWidth;
+    public final int sidebarShimmerTicks;
+    public final int sidebarShimmerPause;
     public final List<String> sidebarHub;
     public final List<String> sidebarQueue;
     public final List<String> sidebarMatch;
@@ -40,6 +45,12 @@ public final class GuiConfig {
     public final java.util.List<String> tabHeader;
     public final java.util.List<String> tabFooter;
     public final java.util.List<String> tabFooterMatch;
+    /** {@code <logo>} in the tab header: text, the two colours of its wave, bold, wave shift per tab refresh. */
+    public final String tabLogoText;
+    public final net.kyori.adventure.text.format.TextColor tabLogoFrom;
+    public final net.kyori.adventure.text.format.TextColor tabLogoTo;
+    public final boolean tabLogoBold;
+    public final double tabLogoStep;
     public final int kitColumns;
     public final int kitButtonWidth;
     public final int wideWidth;
@@ -78,6 +89,10 @@ public final class GuiConfig {
         }
         sidebarEnabled = y.getBoolean("sidebar.enabled", true);
         sidebarTitle = y.getString("sidebar.title", "<accent>Duels</accent>");
+        sidebarShimmerColor = TextFx.color(y.getString("sidebar.title-shimmer.highlight"), net.kyori.adventure.text.format.TextColor.color(0xFFF4C8));
+        sidebarShimmerWidth = Math.clamp(y.getDouble("sidebar.title-shimmer.width", 1.6), 0.5, 10);
+        sidebarShimmerTicks = Math.clamp(y.getInt("sidebar.title-shimmer.sweep-ticks", 32), 8, 200);
+        sidebarShimmerPause = Math.clamp(y.getInt("sidebar.title-shimmer.pause-ticks", 160), 20, 12000);
         sidebarHub = y.getStringList("sidebar.hub");
         sidebarQueue = y.getStringList("sidebar.queue");
         sidebarMatch = y.getStringList("sidebar.match");
@@ -97,6 +112,12 @@ public final class GuiConfig {
         tabHeader = y.getStringList("tab.header");
         tabFooter = y.getStringList("tab.footer");
         tabFooterMatch = y.getStringList("tab.footer-match");
+        tabLogoText = y.getString("tab.logo.text", "Cheese PvP");
+        List<String> logoColors = y.getStringList("tab.logo.colors");
+        tabLogoFrom = TextFx.color(logoColors.isEmpty() ? null : logoColors.getFirst(), net.kyori.adventure.text.format.TextColor.color(0xF2C14E));
+        tabLogoTo = TextFx.color(logoColors.size() < 2 ? null : logoColors.get(1), net.kyori.adventure.text.format.TextColor.color(0xFFF1B8));
+        tabLogoBold = y.getBoolean("tab.logo.bold", true);
+        tabLogoStep = Math.clamp(y.getDouble("tab.logo.step", 0.12), 0, 1);
         kitColumns = Math.clamp(y.getInt("dialogs.kit-columns", 3), 1, 6);
         kitButtonWidth = Math.clamp(y.getInt("dialogs.kit-button-width", 110), 40, 400);
         wideWidth = Math.clamp(y.getInt("dialogs.wide-width", 310), 100, 1024);

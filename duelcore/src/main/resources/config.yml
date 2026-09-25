@@ -145,6 +145,25 @@ animations:
   fight-start: true
   # Title when joining the hub (text in messages.yml hub.join-title / hub.join-subtitle).
   join-title: true
+  # With join-title on: the title types out "Welcome back, <name>" with the player's best tier and a soft chime
+  # ("Welcome to Cheese PvP" on a first join; messages.yml hub.welcome-*). Off = the static join-title above.
+  join-welcome: true
+  # A bright band sweeps over the sidebar title every few seconds (colours and timing: gui.yml sidebar.title-shimmer).
+  sidebar-title: true
+  # The tab list logo (<logo> in gui.yml tab.header) slowly shifts its colour wave with every tab refresh.
+  tab-logo: true
+  # The hub XP bar shows overall progress: the level is the overall Elo (placement games until a kit is placed),
+  # the bar the way to the next tier. Matches clear it and the hub puts it back.
+  hub-xp-bar: true
+  # After a match the XP bar fills from the old value to the new one, with soft XP orb sounds.
+  hub-xp-fill: true
+  # A sparkle ring in the tier's colour rising from the player's feet (only they see it) when a kit reaches a better tier.
+  tier-ring: true
+  # Friend online / followed / party invite / joined alerts also pop up briefly in the action bar with a small sound
+  # (the chat lines stay; only in the lobby, never during a match).
+  alert-pops: true
+  # Sounds of the hub animations above (welcome chime, XP orbs, alert pops, ring). Players' own sound setting applies.
+  hub-sounds: true
   # Round 1 (and every round when respawn-throw is off): each fighter comes up out of a 2×2 hole at their spawn,
   # standing on the blocks that were there, which rise slowly back into place. The countdown waits for it.
   spawn-rise: true

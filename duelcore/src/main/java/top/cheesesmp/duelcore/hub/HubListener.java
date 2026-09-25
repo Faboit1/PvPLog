@@ -36,9 +36,11 @@ public final class HubListener implements Listener {
 
     private final DuelCorePlugin plugin;
     private final Map<UUID, Long> lastUse = new HashMap<>();
+    private final JoinWelcome welcome;
 
     public HubListener(DuelCorePlugin plugin) {
         this.plugin = plugin;
+        this.welcome = new JoinWelcome(plugin);
     }
 
     /** True when the player is in the lobby (not fighting, not spectating) and hub rules apply. */
@@ -74,7 +76,9 @@ public final class HubListener implements Listener {
         }
         plugin.hub().send(player);
         plugin.messages().send(player, "hub.welcome", top.cheesesmp.duelcore.config.Messages.text("player", player.getName()));
-        if (plugin.settings().animJoinTitle) {
+        if (plugin.settings().animJoinTitle && plugin.settings().animJoinWelcome) {
+            welcome.play(player);
+        } else if (plugin.settings().animJoinTitle) {
             player.showTitle(net.kyori.adventure.title.Title.title(plugin.messages().get("hub.join-title"),
                 plugin.messages().get("hub.join-subtitle"), net.kyori.adventure.title.Title.Times.times(
                     java.time.Duration.ofMillis(500), java.time.Duration.ofMillis(1800), java.time.Duration.ofMillis(700))));

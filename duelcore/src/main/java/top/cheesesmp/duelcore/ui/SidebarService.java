@@ -8,7 +8,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -30,18 +33,29 @@ import top.cheesesmp.duelcore.match.Participant;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.queue.QueueEntry;
+import top.cheesesmp.duelcore.ui.anim.Ease;
+import top.cheesesmp.duelcore.ui.anim.TextFx;
 
 /**
  * One scoreboard per player: the sidebar (blank numbers, one custom-named score per line) and the tier teams used
  * for nametags. Lines are only re-sent when their text changed.
+ *
+ * <p>The title shimmers ({@code animations.sidebar-title}): every few seconds a bright band sweeps over it, one
+ * frame every {@value #TITLE_PERIOD} ticks, for players whose sidebar is showing. Between sweeps nothing is sent.
  */
 public final class SidebarService implements Listener, Runnable {
 
     private static final String OBJECTIVE = "dc_side";
+    /** Ticks between two title shimmer frames ({@link #animateTitle} runs this often). */
+    public static final int TITLE_PERIOD = 4;
 
     private final DuelCorePlugin plugin;
     private final Map<UUID, Scoreboard> boards = new HashMap<>();
     private final Map<UUID, List<Component>> lastLines = new HashMap<>();
+    /** Position in the shimmer cycle (sweep, then pause), shared by everyone. */
+    private int titleTick = -TITLE_PERIOD;
+    /** A shimmer frame is on screen: the plain title has to be put back. */
+    private boolean titleShimmering;
 
     public SidebarService(DuelCorePlugin plugin) {
         this.plugin = plugin;
@@ -106,6 +120,55 @@ public final class SidebarService implements Listener, Runnable {
             score.customName(line);
         }
         lastLines.put(player.getUniqueId(), lines);
+    }
+
+    // ------------------------------------------------------------------ title shimmer
+
+    /** One step of the title shimmer; runs every {@value #TITLE_PERIOD} ticks. */
+    public void animateTitle() {
+        GuiConfig gui = plugin.gui();
+        Component frame;
+        if (!plugin.settings().animSidebarTitle || !gui.sidebarEnabled) {
+            if (!titleShimmering) return;
+            frame = plugin.messages().parse(gui.sidebarTitle); // switched off mid-sweep (reload)
+            titleShimmering = false;
+        } else {
+            titleTick = (titleTick + TITLE_PERIOD) % (gui.sidebarShimmerTicks + gui.sidebarShimmerPause);
+            if (titleTick < gui.sidebarShimmerTicks) {
+                frame = shimmer(gui, Ease.easeInOutSine(Ease.progress(titleTick, gui.sidebarShimmerTicks)));
+                titleShimmering = true;
+            } else if (titleShimmering) {
+                frame = plugin.messages().parse(gui.sidebarTitle);
+                titleShimmering = false;
+            } else {
+                return; // resting between sweeps
+            }
+        }
+        for (Scoreboard sb : boards.values()) {
+            Objective obj = sb.getObjective(OBJECTIVE);
+            if (obj != null) obj.displayName(frame);
+        }
+    }
+
+    /** Starts a sweep on the next title step (tester preview). */
+    public void sweepTitleNow() {
+        titleTick = -TITLE_PERIOD;
+    }
+
+    /** The title in its first colour with the highlight band at {@code phase} (0..1). */
+    private Component shimmer(GuiConfig gui, double phase) {
+        Component title = plugin.messages().parse(gui.sidebarTitle);
+        String text = PlainTextComponentSerializer.plainText().serialize(title);
+        TextColor base = TextFx.firstColor(title);
+        TextDecoration[] bold = hasBold(title) ? new TextDecoration[] {TextDecoration.BOLD} : new TextDecoration[0];
+        return TextFx.shimmer(text, base == null ? TextFx.WHITE : base, gui.sidebarShimmerColor, phase,
+            gui.sidebarShimmerWidth, bold);
+    }
+
+    private static boolean hasBold(Component c) {
+        if (c.decoration(TextDecoration.BOLD) == TextDecoration.State.TRUE) return true;
+        for (Component child : c.children()) if (hasBold(child)) return true;
+        return false;
     }
 
     private List<Component> render(Player player, @Nullable PlayerProfile profile) {
