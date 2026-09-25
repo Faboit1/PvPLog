@@ -49,4 +49,14 @@ class MusicTracksTest {
         assertEquals(1, kept.tracks().size());
         assertEquals(1, kept.problems().size());
     }
+
+    @org.junit.jupiter.api.Test
+    void speedHalvesThePlayTime() {
+        MusicTracks t = MusicTracks.parse(List.of("music_disc.tears 175 2x", "music_disc.cat 185 1.5", "bad 100 3x"));
+        assertEquals(2, t.tracks().size());
+        assertEquals(2f, t.tracks().get(0).speed());
+        assertEquals(87_500L, t.tracks().get(0).playMillis());
+        assertEquals(1.5f, t.tracks().get(1).speed());
+        assertEquals(1, t.problems().size());
+    }
 }

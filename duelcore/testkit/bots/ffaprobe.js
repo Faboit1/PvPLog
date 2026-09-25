@@ -12,12 +12,12 @@ async function main () {
   for (const o of [b, c]) { a.chat('/party invite ' + o.username); await L.sleep(500); o.chat('/party accept'); await L.sleep(600) }
   const marks = bots.map(L.mark)
   a.chat('/party ffa sword')
-  await L.waitTitle(a, /Match found/, 15000, marks[0].titles)
+  await L.waitTitle(a, /Match found/i, 15000, marks[0].titles)
   const series = bots.map(() => [])
   const t0 = Date.now()
   const iv = setInterval(() => bots.forEach((x, i) => x.entity && series[i].push([Date.now() - t0, +x.entity.position.y.toFixed(2)])), 100)
   bots.forEach(x => x._client.on('position', p => L.log(x.username, 'server-pos', { y: p.y, flags: p.flags, t: Date.now() - t0 })))
-  await L.waitTitle(a, /Fight/, 40000, marks[0].titles)
+  await L.waitTitle(a, /Fight/i, 40000, marks[0].titles)
   await L.sleep(4000)
   clearInterval(iv)
   bots.forEach((x, i) => {

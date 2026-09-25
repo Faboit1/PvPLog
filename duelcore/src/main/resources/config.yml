@@ -54,30 +54,23 @@ queue:
     enabled: true
     # 0.0-1.0
     volume: 0.5
-    # "<sound id> <length in seconds or m:ss>". The length decides when the next track starts. Unknown sounds are
-    # skipped with a warning.
+    # "<sound id> <length in seconds or m:ss> [speed]". The length (of the recording) decides when the next track
+    # starts; the optional speed (0.5x-2x, it is the pitch) plays it faster/slower. Unknown sounds are skipped with a
+    # warning.
     tracks:
-      - "music_disc.pigstep 148"
-      - "music_disc.otherside 195"
-      - "music_disc.relic 218"
-      - "music_disc.creator 176"
-      - "music_disc.creator_music_box 73"
-      - "music_disc.precipice 299"
-      - "music_disc.tears 175"
-      - "music_disc.lava_chicken 134"
       - "music_disc.cat 185"
       - "music_disc.blocks 345"
       - "music_disc.chirp 185"
-      - "music_disc.far 174"
-      - "music_disc.mall 197"
       - "music_disc.mellohi 96"
       - "music_disc.stal 150"
       - "music_disc.strad 188"
-      - "music_disc.ward 251"
-      - "music_disc.wait 238"
-      - "music_disc.5 178"
-      - "music_disc.13 178"
-      - "music_disc.11 71"
+      - "music_disc.pigstep 148"
+      - "music_disc.otherside 195"
+      - "music_disc.creator 176"
+      - "music_disc.tears 175 2x"
+      - "music_disc.lava_chicken 134"
+    # Stop Minecraft's own background music for everyone (on join and every 10 s), so it never plays over this.
+    stop-client-music: true
 
 matchmaking:
   # How often the matchmaker runs, in ticks (20 = every second).
@@ -236,9 +229,6 @@ animations:
   # Animated "searching" action bar: spinner, pulsing dots and slowly cycling colours (gui.yml searching). false =
   # the plain bar; queue.searching-action-bar switches the bar off completely.
   searching-bar: true
-  # Boss bar while searching ("Searching · Sword +2 · 0:12"): it fills as the rating window widens, then sweeps back
-  # and forth. Removed the moment the player leaves the queue or is matched.
-  searching-boss-bar: true
   # "Match found": MATCH FOUND sweeps in with a shimmer, then the opponent is typed out. false = the plain title.
   # The totem pop and match-found-sounds play either way.
   match-found-reveal: true

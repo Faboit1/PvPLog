@@ -38,6 +38,8 @@ public final class MainConfig {
     public final boolean queueUnranked;
     public final boolean queueSearchingActionBar;
     public final boolean queueMusicEnabled;
+    /** Keep Minecraft's own background music (the MUSIC sound source) off for everyone. */
+    public final boolean stopClientMusic;
     public final float queueMusicVolume;
     public final top.cheesesmp.duelcore.queue.MusicTracks queueMusicTracks;
 
@@ -107,7 +109,6 @@ public final class MainConfig {
      */
     public final boolean animQueueProgress;
     public final boolean animSearchingBar;
-    public final boolean animSearchingBossBar;
     public final boolean animMatchFound;
     public final boolean animQueueSounds;
     /**
@@ -211,6 +212,7 @@ public final class MainConfig {
         queueUnranked = c.getBoolean("queue.unranked", false);
         queueSearchingActionBar = c.getBoolean("queue.searching-action-bar", true);
         queueMusicEnabled = c.getBoolean("queue.music.enabled", true);
+        stopClientMusic = c.getBoolean("queue.music.stop-client-music", true);
         queueMusicVolume = (float) Math.clamp(c.getDouble("queue.music.volume", 0.5), 0.0, 1.0);
         queueMusicTracks = top.cheesesmp.duelcore.queue.MusicTracks.parse(c.getStringList("queue.music.tracks"));
         for (String p : queueMusicTracks.problems()) soundProblems.add("queue.music.tracks: " + p);
@@ -265,7 +267,6 @@ public final class MainConfig {
         animProgressSounds = c.getBoolean("animations.progress-sounds", true);
         animQueueProgress = c.getBoolean("animations.queue-progress", true);
         animSearchingBar = c.getBoolean("animations.searching-bar", true);
-        animSearchingBossBar = c.getBoolean("animations.searching-boss-bar", true);
         animMatchFound = c.getBoolean("animations.match-found-reveal", true);
         animQueueSounds = c.getBoolean("animations.queue-sounds", true);
         animCountdownPop = c.getBoolean("animations.countdown-pop", true);

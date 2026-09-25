@@ -15,7 +15,7 @@ function spawned (bot) {
 }
 
 function record (bot) {
-  const r = { sounds: [], stops: [], bars: [], flags: [], status: [], tab: {}, names: {}, footer: '' }
+  const r = { sounds: [], stops: [], bars: [], flags: [], status: [], tab: {}, names: {}, footer: '', boss: 0 }
   bot.dc.rec = r
   bot.once('login', () => {
     const byId = id => (bot.registry.sounds && bot.registry.sounds[id] && bot.registry.sounds[id].name) || ('#' + id)
@@ -28,6 +28,7 @@ function record (bot) {
     c.on('sound_effect', p => r.sounds.push({ t: Date.now(), name: soundName(p.sound), cat: p.soundCategory }))
     c.on('entity_sound_effect', p => r.sounds.push({ t: Date.now(), name: soundName(p.sound), cat: p.soundCategory, entity: p.entityId }))
     c.on('stop_sound', p => r.stops.push({ t: Date.now(), flags: p.flags, source: p.source, sound: p.sound }))
+    c.on('boss_bar', () => { r.boss++ })
     c.on('action_bar', p => r.bars.push({ t: Date.now(), text: L.plain(p.text) }))
     c.on('abilities', p => r.flags.push({ t: Date.now(), flags: p.flags }))
     c.on('entity_status', p => { if (bot.entity && p.entityId === bot.entity.id) r.status.push({ t: Date.now(), s: p.entityStatus }) })
@@ -85,7 +86,7 @@ async function main () {
   const mFrom = Date.now()
   const mb = L.mark(b)
   b.chat('/queue ' + kit)
-  await Promise.all([L.waitTitle(a, /Match found/, 20000, ma.titles), L.waitTitle(b, /Match found/, 20000, mb.titles)])
+  await Promise.all([L.waitTitle(a, /Match found/i, 20000, ma.titles), L.waitTitle(b, /Match found/i, 20000, mb.titles)])
   const foundAt = Date.now()
   // rising platform: sample our height and nearby block displays
   const ys = []
@@ -95,7 +96,7 @@ async function main () {
     const n = Object.values(a.entities).filter(e => e.name === 'block_display' && a.entity && e.position.distanceTo(a.entity.position) < 6).length
     displays = Math.max(displays, n)
   }, 100)
-  await L.waitTitle(a, /Fight/, 40000, ma.titles)
+  await L.waitTitle(a, /Fight/i, 40000, ma.titles)
   clearInterval(sampler)
   const after = ra.sounds.filter(s => s.t >= mFrom).map(s => s.name)
   const stops = ra.stops.filter(s => s.t >= mFrom)
@@ -129,8 +130,10 @@ async function main () {
   a.chat('/leave')
   await L.sleep(8000)
   results.hubFlightAfter = canFly(ra)
+  results.noBossBar = ra.boss === 0
+  results.clientMusicStopped = ra.stops.some(s => s.flags === 1 && s.source === 1)
   L.log('test', 'results', results)
-  const must = ['hubFlight', 'hint', 'hintCleared', 'musicStarted', 'musicStopped', 'totemPop', 'totemStopped', 'rise', 'spectatorItalic', 'hubFlightAfter']
+  const must = ['noBossBar', 'clientMusicStopped', 'hubFlight', 'hint', 'hintCleared', 'musicStarted', 'musicStopped', 'totemPop', 'totemStopped', 'rise', 'spectatorItalic', 'hubFlightAfter']
   const failed = must.filter(k => !results[k])
   if (failed.length) throw new Error('failed: ' + failed.join(', '))
   L.log('test', 'pass')

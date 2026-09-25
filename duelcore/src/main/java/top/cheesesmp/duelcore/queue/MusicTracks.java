@@ -8,9 +8,10 @@ import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The queue music pool from config.yml ({@code queue.music.tracks}): one line per track, {@code <sound id> <length>},
- * the length in seconds ({@code 148}) or minutes and seconds ({@code 2:28}). The next track starts when one ends, so
- * the length should match the recording. Pure parsing, no Bukkit; invalid lines are skipped and listed in
+ * The queue music pool from config.yml ({@code queue.music.tracks}): one line per track,
+ * {@code <sound id> <length> [speed]}, the length of the recording in seconds ({@code 148}) or minutes and seconds
+ * ({@code 2:28}) and an optional playback speed ({@code 2x}, 0.5-2; it is the sound's pitch, so 2x also plays an octave
+ * higher and takes half as long). The next track starts when one ends, so the length should match the recording. Pure parsing, no Bukkit; invalid lines are skipped and listed in
  * {@link #problems()}.
  */
 public final class MusicTracks {
@@ -19,8 +20,17 @@ public final class MusicTracks {
 
     private static final Pattern KEY = Pattern.compile("([a-z0-9_.-]+:)?[a-z0-9_./-]+");
 
-    /** A sound id ({@code minecraft:} added when missing) and how long it plays. */
-    public record Track(String key, int seconds) {
+    /** A sound id ({@code minecraft:} added when missing), the recording's length and the playback speed (pitch). */
+    public record Track(String key, int seconds, float speed) {
+
+        public Track(String key, int seconds) {
+            this(key, seconds, 1f);
+        }
+
+        /** How long it actually plays at its speed, in milliseconds. */
+        public long playMillis() {
+            return Math.round(seconds * 1000.0 / speed);
+        }
     }
 
     private final List<Track> tracks;
@@ -47,7 +57,7 @@ public final class MusicTracks {
 
     static Track track(String line) {
         String[] tokens = line.trim().split("\\s+");
-        if (tokens.length != 2) throw new IllegalArgumentException("expected <sound id> <seconds>");
+        if (tokens.length != 2 && tokens.length != 3) throw new IllegalArgumentException("expected <sound id> <seconds> [speed]");
         String key = tokens[0].toLowerCase(Locale.ROOT);
         if (!KEY.matcher(key).matches()) throw new IllegalArgumentException("bad sound key " + tokens[0]);
         if (key.indexOf(':') < 0) key = "minecraft:" + key;
@@ -61,7 +71,17 @@ public final class MusicTracks {
             throw new IllegalArgumentException("bad length " + tokens[1]);
         }
         if (seconds < 5 || seconds > 1800) throw new IllegalArgumentException("length must be 5-1800 seconds");
-        return new Track(key, seconds);
+        float speed = 1f;
+        if (tokens.length == 3) {
+            String t = tokens[2].toLowerCase(Locale.ROOT);
+            try {
+                speed = Float.parseFloat(t.endsWith("x") ? t.substring(0, t.length() - 1) : t);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("bad speed " + tokens[2]);
+            }
+            if (!(speed >= 0.5f && speed <= 2f)) throw new IllegalArgumentException("speed must be 0.5x-2x");
+        }
+        return new Track(key, seconds, speed);
     }
 
     /** The same pool without the tracks {@code keep} rejects (e.g. sounds this server version doesn't have). */

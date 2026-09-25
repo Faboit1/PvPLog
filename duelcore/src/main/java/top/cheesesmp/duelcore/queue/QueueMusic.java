@@ -71,8 +71,18 @@ public final class QueueMusic implements Listener, Runnable {
     }
 
     /** Checks every queued player: starts the next track when one ended, stops it for anyone no longer searching. */
+    /** Ticks between two "stop the game's background music" packets to everyone (the client starts a new song now and then). */
+    private static final int CLIENT_MUSIC_EVERY = 200;
+    private int clientMusicTicks;
+
     @Override
     public void run() {
+        // the timer runs every 10 ticks
+        clientMusicTicks += 10;
+        if (plugin.settings().stopClientMusic && clientMusicTicks >= CLIENT_MUSIC_EVERY) {
+            clientMusicTicks = 0;
+            for (Player p : Bukkit.getOnlinePlayers()) p.stopSound(org.bukkit.SoundCategory.MUSIC);
+        }
         for (Iterator<Map.Entry<UUID, Playing>> it = playing.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<UUID, Playing> e = it.next();
             Player p = Bukkit.getPlayer(e.getKey());
@@ -112,6 +122,11 @@ public final class QueueMusic implements Listener, Runnable {
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
+    public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) {
+        if (plugin.settings().stopClientMusic) event.getPlayer().stopSound(org.bukkit.SoundCategory.MUSIC);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onQuit(PlayerQuitEvent event) {
         playing.remove(event.getPlayer().getUniqueId());
     }
@@ -136,8 +151,8 @@ public final class QueueMusic implements Listener, Runnable {
         if (next == null) return;
         if (current != null) silence(player, current);
         Key key = Key.key(next.key());
-        player.playSound(Sound.sound(key, Sound.Source.RECORD, plugin.settings().queueMusicVolume, 1f), Sound.Emitter.self());
-        playing.put(player.getUniqueId(), new Playing(next, key, now + next.seconds() * 1000L + GAP_MILLIS));
+        player.playSound(Sound.sound(key, Sound.Source.RECORD, plugin.settings().queueMusicVolume, next.speed()), Sound.Emitter.self());
+        playing.put(player.getUniqueId(), new Playing(next, key, now + next.playMillis() + GAP_MILLIS));
     }
 
     private static void silence(Player player, Playing p) {

@@ -84,8 +84,6 @@ public final class GuiConfig {
     public final List<String> searchingSpinner;
     public final List<net.kyori.adventure.text.format.TextColor> searchingColors;
     public final int searchingCycleTicks;
-    public final List<net.kyori.adventure.bossbar.BossBar.Color> searchingBossColors;
-    public final net.kyori.adventure.bossbar.BossBar.Overlay searchingBossOverlay;
     /** In-match animation colours and confetti (match-fx). */
     public final top.cheesesmp.duelcore.ui.MatchFxStyle matchFx;
 
@@ -168,15 +166,6 @@ public final class GuiConfig {
         }
         searchingColors = colors.isEmpty() ? List.of(net.kyori.adventure.text.format.TextColor.color(0xF2C14E)) : List.copyOf(colors);
         searchingCycleTicks = (int) Math.round(Math.clamp(y.getDouble("searching.cycle-seconds", 6), 1, 60) * 20);
-        List<net.kyori.adventure.bossbar.BossBar.Color> bossColors = new java.util.ArrayList<>();
-        for (String name : y.getStringList("searching.boss-bar-colors")) {
-            var c = net.kyori.adventure.bossbar.BossBar.Color.NAMES.value(name.trim().toLowerCase(java.util.Locale.ROOT));
-            if (c != null) bossColors.add(c);
-        }
-        searchingBossColors = bossColors.isEmpty() ? List.of(net.kyori.adventure.bossbar.BossBar.Color.BLUE) : List.copyOf(bossColors);
-        var overlay = net.kyori.adventure.bossbar.BossBar.Overlay.NAMES.value(
-            y.getString("searching.boss-bar-overlay", "progress").trim().toLowerCase(java.util.Locale.ROOT));
-        searchingBossOverlay = overlay == null ? net.kyori.adventure.bossbar.BossBar.Overlay.PROGRESS : overlay;
         matchFx = top.cheesesmp.duelcore.ui.MatchFxStyle.parse(y);
     }
 

@@ -23,9 +23,9 @@ async function main () {
   await L.sleep(500)
   b.chat('/queue ' + kit + ' ranked')
 
-  await Promise.all([L.waitTitle(a, /Match found/, 20000, ma.titles), L.waitTitle(b, /Match found/, 20000, mb.titles)])
+  await Promise.all([L.waitTitle(a, /Match found/i, 20000, ma.titles), L.waitTitle(b, /Match found/i, 20000, mb.titles)])
   L.log('test', 'match-found')
-  await Promise.all([L.waitTitle(a, /Fight/, 30000, ma.titles), L.waitTitle(b, /Fight/, 30000, mb.titles)])
+  await Promise.all([L.waitTitle(a, /Fight/i, 30000, ma.titles), L.waitTitle(b, /Fight/i, 30000, mb.titles)])
   L.log('test', 'fight', { a: a.entity.position.floored(), b: b.entity.position.floored() })
 
   let corrections = 0

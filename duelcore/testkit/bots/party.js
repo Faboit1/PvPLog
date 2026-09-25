@@ -90,7 +90,7 @@ async function main () {
   mb = L.mark(b)
   mc = L.mark(c)
   a.chat('/party ffa ' + kit)
-  await Promise.all([[a, ma], [b, mb], [c, mc]].map(([bot, m]) => L.waitTitle(bot, /Fight/, 60000, m.titles)))
+  await Promise.all([[a, ma], [b, mb], [c, mc]].map(([bot, m]) => L.waitTitle(bot, /Fight/i, 60000, m.titles)))
   L.log('test', 'ffa-started')
   const fighters = [a, b, c].map(bot => L.fighter(bot))
   const over = await L.waitChat(a, /Party FFA over|Party match over/, 240000, ma.chat)

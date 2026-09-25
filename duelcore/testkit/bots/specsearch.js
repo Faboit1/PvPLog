@@ -16,7 +16,7 @@ async function main () {
   const marks = bots.map(b => L.mark(b))
   bots[0].chat('/queue sword ranked'); bots[1].chat('/queue sword ranked')
   bots[2].chat('/queue shield ranked'); bots[3].chat('/queue shield ranked')
-  await Promise.all(bots.map((b, i) => L.waitTitle(b, /Fight/, 60000, marks[i].titles)))
+  await Promise.all(bots.map((b, i) => L.waitTitle(b, /Fight/i, 60000, marks[i].titles)))
   L.log('test', 'both-matches-fighting')
 
   const d = await L.openFromHotbar(spec, 8, /Live/)

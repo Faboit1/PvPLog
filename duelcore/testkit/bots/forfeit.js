@@ -14,7 +14,7 @@ async function main () {
   a.chat('/queue ' + kit + ' ranked')
   await L.sleep(400)
   b.chat('/queue ' + kit + ' ranked')
-  await L.waitTitle(a, /Fight/, 60000, ma.titles)
+  await L.waitTitle(a, /Fight/i, 60000, ma.titles)
   L.log('test', 'fight-started')
   await L.sleep(2000)
   b.quit('forfeit test')

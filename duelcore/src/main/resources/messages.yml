@@ -55,10 +55,6 @@ queue:
   # below with pulsing dots); both slowly change colour (gui.yml searching).
   searching-animated: "<spinner> <searching> <kit_icon> <text><kit></text> <muted>· <wait> · ±<range></muted>"
   searching-word: "Searching"
-  # Boss bar while searching (animations.searching-boss-bar). <kits> = the first kit plus "+N" for the others
-  # (kits-more), <clock> = time searching (0:12). The action bar tags work here too.
-  searching-boss-bar: "<searching> <muted>·</muted> <text><kits></text> <muted>·</muted> <text><clock></text>"
-  kits-more: "<kit> <muted>+<more></muted>"
   # Keep Queuing re-joined the kits a player searched for before their match.
   requeued: "<muted>Searching again:</muted> <kit_icon>"
   result:

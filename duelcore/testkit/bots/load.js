@@ -28,14 +28,14 @@ async function runBot (i) {
       }
     }
     try {
-      await L.waitTitle(bot, /Match found/, 240000, m.titles)
+      await L.waitTitle(bot, /Match found/i, 240000, m.titles)
     } catch (e) {
       L.log(name, 'no-match', e.message)
       if (finished >= target) break
       bot.chat('/queue ' + kit + ' ranked')
       continue
     }
-    await L.waitTitle(bot, /Fight/, 60000, m.titles)
+    await L.waitTitle(bot, /Fight/i, 60000, m.titles)
     const f = L.fighter(bot, { slot: 0, cooldownMs: 600 + (i % 3) * 60 })
     // mineflayer can get stuck on terrain steps; a pair that makes no round progress for 60 s forfeits so the
     // load keeps cycling matches (create, paste/reuse, reset, persist, release)

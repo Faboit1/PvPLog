@@ -122,18 +122,14 @@ queue-menu:
     # "atlas:path" sprite, tinted with the progress-reveal bar colours (head-color, settling to filled-color).
     highlight: "blocks:block/white_concrete"
 
-# The animated searching action bar and boss bar (config.yml animations.searching-bar / searching-boss-bar; texts
-# in messages.yml queue.searching-animated / searching-boss-bar).
+# The animated searching action bar (config.yml animations.searching-bar; text in messages.yml
+# queue.searching-animated).
 searching:
   # Spinner frames, one every 4 ticks.
   spinner: ["◐", "◓", "◑", "◒"]
   # Colours the spinner and the word "Searching" slowly cycle through, and how long one cycle takes.
   colors: ["#f2c14e", "#7fd99a", "#6fc3ff", "#c89bff"]
   cycle-seconds: 6
-  # Boss bar colours (pink, blue, red, green, yellow, purple, white), stepped through as the rating window widens,
-  # and its style (progress, notched_6, notched_10, notched_12, notched_20).
-  boss-bar-colors: [blue, green, yellow, purple]
-  boss-bar-overlay: progress
 
 # The post-match progress action bar (config.yml animations.progress-reveal; texts in messages.yml progress).
 progress-reveal:
