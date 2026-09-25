@@ -153,7 +153,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         pm.registerEvents(results, this);
         pm.registerEvents(respawnPull, this);
         pm.registerEvents(spawnRise, this);
-        animations.fx().registerPreviews(tester); // /tester play countdown, fight, round-won, combo, heartbeat, …
+        animations.fx().registerPreviews(tester); // /animtest play countdown, fight, round-won, combo, heartbeat, …
         pm.registerEvents(new top.cheesesmp.duelcore.ui.MotdService(this), this);
         pm.registerEvents(anim, this);
         pm.registerEvents(progress, this);
@@ -407,7 +407,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         return progressReveal;
     }
 
-    /** /tester: tester mode, animation previews, simulated reveals. */
+    /** /animtest: tester mode, animation previews, simulated reveals. */
     public top.cheesesmp.duelcore.debug.TesterMode tester() {
         return tester;
     }

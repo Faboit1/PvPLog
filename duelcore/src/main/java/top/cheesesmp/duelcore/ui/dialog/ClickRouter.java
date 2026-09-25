@@ -59,14 +59,17 @@ public final class ClickRouter implements Listener {
         if (!event.getIdentifier().namespace().equals(DialogService.NS)) return;
         if (!(event.getCommonConnection() instanceof PlayerGameConnection connection)) return;
         Player player = connection.getPlayer();
-        long now = System.currentTimeMillis();
-        Long last = lastClick.get(player.getUniqueId());
-        if (last != null && now - last < 150) return; // double-click / spam guard
-        lastClick.put(player.getUniqueId(), now);
-        if (lastClick.size() > 512) lastClick.keySet().removeIf(u -> Bukkit.getPlayer(u) == null);
+        String action = event.getIdentifier().value();
+        // closing is harmless to repeat and must never be dropped (an animating menu would open again)
+        if (!action.equals("queue/close")) {
+            long now = System.currentTimeMillis();
+            Long last = lastClick.get(player.getUniqueId());
+            if (last != null && now - last < 150) return; // double-click / spam guard
+            lastClick.put(player.getUniqueId(), now);
+            if (lastClick.size() > 512) lastClick.keySet().removeIf(u -> Bukkit.getPlayer(u) == null);
+        }
         DialogResponseView view = event.getDialogResponseView();
         Map<String, String> data = parse(event.getTag());
-        String action = event.getIdentifier().value();
         try {
             handle(player, action, data, view);
         } catch (RuntimeException e) {

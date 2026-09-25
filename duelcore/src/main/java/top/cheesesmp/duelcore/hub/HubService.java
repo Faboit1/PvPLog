@@ -138,6 +138,7 @@ public final class HubService {
             if (!player.isOnline()) return;
             player.setWorldBorder(null);
             plugin.sidebar().refresh(player);
+            if (plugin.matches().match(player.getUniqueId()) != null) return; // matched again meanwhile: no reveal mid-match
             plugin.results().showPending(player);
             plugin.progressReveal().playPending(player); // runs under the results dialog (action bar + title)
         });

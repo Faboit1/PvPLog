@@ -28,16 +28,16 @@ import top.cheesesmp.duelcore.rating.Tier;
 import top.cheesesmp.duelcore.rating.TierLadder;
 
 /**
- * {@code /tester on|off} ({@code duelcore.tester}): a per-player tester mode for trying the animations without
+ * {@code /animtest on|off} ({@code duelcore.animtest}): a per-player tester mode for trying the animations without
  * grinding ranked games. While it is on:
  * <ul>
- *   <li>{@code /tester play <preview>} plays an animation on yourself. Features register their own previews with
+ *   <li>{@code /animtest play <preview>} plays an animation on yourself. Features register their own previews with
  *       {@link #preview(String, Consumer)}; the built-in ones are the post-match progress reveals.</li>
  *   <li>Unranked matches, duels and party matches end with a <em>simulated</em> progress reveal (as if the match had
  *       been ranked; ratings don't change), in the hub action bar and for the queue menu
  *       ({@link Reveal#simulated()}).</li>
  * </ul>
- * Memory only: the mode lasts until {@code /tester off} or a restart.
+ * Memory only: the mode lasts until {@code /animtest off} or a restart.
  */
 public final class TesterMode {
 
@@ -64,7 +64,7 @@ public final class TesterMode {
         else testers.remove(player);
     }
 
-    /** Registers (or replaces) a preview for {@code /tester play <name>}. Runs on the main thread. */
+    /** Registers (or replaces) a preview for {@code /animtest play <name>}. Runs on the main thread. */
     public void preview(String name, Consumer<Player> action) {
         previews.put(name, action);
     }
@@ -140,8 +140,8 @@ public final class TesterMode {
     // ------------------------------------------------------------------ command
 
     public LiteralCommandNode<CommandSourceStack> command() {
-        return Commands.literal("tester")
-            .requires(src -> src.getSender().hasPermission("duelcore.tester"))
+        return Commands.literal("animtest")
+            .requires(src -> src.getSender().hasPermission("duelcore.animtest"))
             .executes(ctx -> {
                 Player p = self(ctx.getSource());
                 if (p != null) status(p);
@@ -163,12 +163,12 @@ public final class TesterMode {
         Player p = self(src);
         if (p == null) return 0;
         set(p.getUniqueId(), on);
-        plugin.messages().send(p, on ? "tester.turned-on" : "tester.turned-off", Messages.text("previews", String.join(", ", previews.keySet())));
+        plugin.messages().send(p, on ? "animtest.turned-on" : "animtest.turned-off", Messages.text("previews", String.join(", ", previews.keySet())));
         return Command.SINGLE_SUCCESS;
     }
 
     private void status(Player p) {
-        plugin.messages().send(p, enabled(p.getUniqueId()) ? "tester.status-on" : "tester.status-off",
+        plugin.messages().send(p, enabled(p.getUniqueId()) ? "animtest.status-on" : "animtest.status-off",
             Messages.text("previews", String.join(", ", previews.keySet())));
     }
 
@@ -176,17 +176,17 @@ public final class TesterMode {
         Player p = self(src);
         if (p == null) return 0;
         if (!enabled(p.getUniqueId())) {
-            plugin.messages().send(p, "tester.needs-on");
+            plugin.messages().send(p, "animtest.needs-on");
             return 0;
         }
         Consumer<Player> action = previews.get(name);
         if (action == null) {
-            plugin.messages().send(p, "tester.unknown-preview", Messages.text("preview", name),
+            plugin.messages().send(p, "animtest.unknown-preview", Messages.text("preview", name),
                 Messages.text("previews", String.join(", ", previews.keySet())));
             return 0;
         }
         action.accept(p);
-        plugin.messages().send(p, "tester.playing", Messages.text("preview", name));
+        plugin.messages().send(p, "animtest.playing", Messages.text("preview", name));
         return Command.SINGLE_SUCCESS;
     }
 

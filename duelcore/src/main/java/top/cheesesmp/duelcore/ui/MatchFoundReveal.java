@@ -95,7 +95,7 @@ public final class MatchFoundReveal {
     }
 
     /**
-     * {@code /tester play match-found}: the whole moment on yourself, with yourself as the opponent in the first
+     * {@code /animtest play match-found}: the whole moment on yourself, with yourself as the opponent in the first
      * kit: the totem pop, the sound pool and the reveal (or the plain title when the reveal is switched off).
      */
     public void preview(Player player) {

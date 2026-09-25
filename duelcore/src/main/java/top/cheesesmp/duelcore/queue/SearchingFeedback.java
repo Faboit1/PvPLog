@@ -115,7 +115,7 @@ public final class SearchingFeedback implements Runnable {
     }
 
     /**
-     * {@code /tester play searching}: ten seconds of both bars for a made-up search in the first three kits (the
+     * {@code /animtest play searching}: ten seconds of both bars for a made-up search in the first three kits (the
      * window widens in five seconds, then the boss bar sweeps). Follows the animation switches like the real bars.
      */
     public void preview(Player player) {

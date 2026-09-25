@@ -28,6 +28,8 @@ public final class Participant {
     long lastDamagedAt;
     /** Round tick of the last low-health heartbeat (presentation only). */
     int lastBeat = -1000;
+    /** A heartbeat frame may still be on the action bar (cleared once the beats stop). */
+    boolean beating;
 
     double ratingAfter = Double.NaN;
     @Nullable Tier tierAfter;

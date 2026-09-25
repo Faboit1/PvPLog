@@ -33,7 +33,7 @@ import top.cheesesmp.duelcore.queue.QueueService;
 class ResourcesTest {
 
     private static final Pattern LITERAL = Pattern.compile(
-        "\"((?:admin|arena|command|dialog|duel|hub|kit|match|mode|profile|progress|queue|results|season|settings|spectate|tester|tier)\\.[a-z0-9_.-]+)\"");
+        "\"((?:admin|arena|command|dialog|duel|hub|kit|match|mode|profile|progress|queue|results|season|settings|spectate|animtest|tier)\\.[a-z0-9_.-]+)\"");
 
     @SuppressWarnings("unchecked")
     private static Map<String, Object> yaml(String name) throws IOException {

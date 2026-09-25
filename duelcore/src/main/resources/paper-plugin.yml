@@ -73,8 +73,8 @@ permissions:
   duelcore.tier:
     description: Staff tier overrides (/tier set|clear|info)
     default: op
-  duelcore.tester:
-    description: Tester mode (/tester on|off, /tester play <preview>)
+  duelcore.animtest:
+    description: Animation test mode (/animtest on|off, /animtest play <preview>)
     default: op
   duelcore.bypass.commands:
     description: Use any command during a match
@@ -102,7 +102,7 @@ permissions:
       duelcore.admin.match: true
       duelcore.admin.tournament: true
       duelcore.tier: true
-      duelcore.tester: true
+      duelcore.animtest: true
       duelcore.spectate.bypass: true
       duelcore.bypass.commands: true
       duelcore.hub.build: true

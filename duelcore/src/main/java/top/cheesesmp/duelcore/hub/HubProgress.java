@@ -33,7 +33,7 @@ import top.cheesesmp.duelcore.ui.anim.Sfx;
  * with soft XP orb sounds ({@code animations.hub-xp-fill}), and a kit that reached a better tier gets a sparkle ring
  * in the tier's colour rising from the player's feet ({@code animations.tier-ring}; only they see it). Both run on
  * this service's own 2-tick timer, stop as soon as the player leaves the lobby, and everything is per-player memory
- * cleared on quit. Testers (/tester) see the fill on every return to the hub, even after unrated matches.
+ * cleared on quit. Testers (/animtest) see the fill on every return to the hub, even after unrated matches.
  */
 public final class HubProgress implements Listener, Runnable {
 

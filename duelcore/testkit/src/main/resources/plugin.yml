@@ -11,9 +11,10 @@ commands:
     description: "Offline-mode join guard: on = testers only, off = open testing (anyone, IP-locked on first use)"
     usage: /tester on | off | status | add <player> | remove <player> | list
     aliases: [testers]
-    permission: duelcore.tester
+    permission: duelcore.testkit.guard
 permissions:
-  duelcore.tester:
+  duelcore.testkit.guard:
+    description: The join guard (/tester); op only, not part of duelcore.admin
     default: op
   duelcore.testkit:
     default: op

@@ -77,7 +77,7 @@ public final class MatchService implements Runnable {
         this.foundReveal = new MatchFoundReveal(plugin);
     }
 
-    /** The animated "match found" title (also played by {@code /tester play match-found}). */
+    /** The animated "match found" title (also played by {@code /animtest play match-found}). */
     public MatchFoundReveal foundReveal() {
         return foundReveal;
     }
@@ -164,9 +164,15 @@ public final class MatchService implements Runnable {
             if (player == null) continue;
             if (plugin.spectate().spectating(p.uuid()) != null) plugin.spectate().leave(player, false);
             plugin.anim().cancel(player, Channel.DIALOG); // an animating queue menu must not open again
+            // a post-match progress reveal still running from the last match makes way for this one
+            plugin.anim().cancel(player, Channel.TITLE);
+            plugin.anim().cancel(player, Channel.ACTION_BAR);
+            plugin.anim().cancel(player, Channel.SOUND);
             player.closeDialog();
             player.setInvulnerable(true);
             player.getInventory().clear();
+            player.setLevel(0); // the hub XP bar (matches never show it)
+            player.setExp(0f);
             if (plugin.settings().totemPop) TotemPop.play(plugin, player, kit.icon());
             MatchSounds.play(plugin, player, foundSounds, 1);
             Participant opp = match.opponentOf(p);
@@ -510,15 +516,27 @@ public final class MatchService implements Runnable {
     private void heartbeats(Match m) {
         double threshold = plugin.settings().animHeartbeatHearts * 2;
         for (Participant p : m.participants()) {
-            if (!p.alive || p.left()) continue;
             Player player = Bukkit.getPlayer(p.uuid());
             if (player == null) continue;
             double hp = player.getHealth() + player.getAbsorptionAmount();
-            if (!MatchFxMath.lowHealth(hp, threshold)) continue;
+            if (!p.alive || p.left() || !MatchFxMath.lowHealth(hp, threshold)) {
+                clearBeat(p, player); // healed or dead: the last beat's HP is out of date
+                continue;
+            }
             if (m.roundTicks - p.lastBeat < MatchFxMath.heartbeatInterval(hp, threshold)) continue;
             p.lastBeat = m.roundTicks;
-            plugin.animations().fx().heartbeat(player, hp);
+            p.beating = plugin.animations().fx().heartbeat(player, hp);
         }
+    }
+
+    /**
+     * Takes a heartbeat's last (dim) frame off the action bar once no further beat follows, unless something else
+     * is showing there now (it then replaced the frame; tried again on the next check).
+     */
+    private void clearBeat(Participant p, Player player) {
+        if (!p.beating || plugin.anim().busy(player, Channel.ACTION_BAR)) return;
+        p.beating = false;
+        player.sendActionBar(Component.empty());
     }
 
     private Component killerHealth(@Nullable Participant credited) {
@@ -594,6 +612,7 @@ public final class MatchService implements Runnable {
             int you = self == null ? m.score[0] : m.score[self.team()];
             int opp = self == null ? m.score[1] : Teams.bestOther(m.score, self.team());
             plugin.anim().cancel(p, Channel.ACTION_BAR); // combo and heartbeat bars make way for the result
+            if (self != null) clearBeat(self, p);
             if (banner && roundBanner(m, p, self, winnerTeam, you, opp)) {
                 plugin.sidebar().refresh(p);
                 continue;
@@ -659,6 +678,7 @@ public final class MatchService implements Runnable {
                 back.setYaw(loc.getYaw());
                 back.setPitch(loc.getPitch());
                 player.teleportAsync(back);
+                p.beating = false; // (this replaced a heartbeat frame: not to be cleared later)
                 plugin.messages().actionBar(player, "match.out-of-bounds");
             }
         }
@@ -729,6 +749,14 @@ public final class MatchService implements Runnable {
             plugin.profiles().persistMatch(null, writes, uuids(m));
         }
         Bukkit.getPluginManager().callEvent(new MatchEndEvent(m));
+        // countdown, FIGHT!, round banner and bar animations still running would draw over the results title (and
+        // keep the victory / defeat animations from starting)
+        for (Player p : online(m)) {
+            plugin.anim().cancel(p, Channel.TITLE);
+            plugin.anim().cancel(p, Channel.ACTION_BAR);
+            Participant self = m.participant(p.getUniqueId());
+            if (self != null) clearBeat(self, p);
+        }
         plugin.results().show(m);
         if (reason != Match.EndReason.CANCELLED && reason != Match.EndReason.NO_ARENA) celebrate(m);
         verbose("ended match #" + m.id() + " winner=" + winnerTeam + " reason=" + reason + " score=" + m.score[0] + "-"

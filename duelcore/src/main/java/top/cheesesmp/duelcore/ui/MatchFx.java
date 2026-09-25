@@ -382,7 +382,7 @@ public final class MatchFx {
     // ------------------------------------------------------------------ tester previews
 
     /**
-     * {@code /tester play <name>} for each of these, on the tester alone (switched-off ones show nothing), plus
+     * {@code /animtest play <name>} for each of these, on the tester alone (switched-off ones show nothing), plus
      * {@code match}: the whole sequence one after another (countdown, fight, combo, heartbeat, kill, round won, match
      * point, victory).
      */

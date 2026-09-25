@@ -57,7 +57,7 @@ public final class ProgressReveal {
         play(player, reveal);
     }
 
-    /** Plays a reveal now (also used by /tester previews). */
+    /** Plays a reveal now (also used by /animtest previews). */
     public void play(Player player, Reveal reveal) {
         Kit kit = plugin.kits().get(reveal.kit());
         Component kitName = kit == null ? Component.text(reveal.kit()) : kit.displayName();

@@ -703,12 +703,12 @@ progress:
   # Demotion: only a subtitle. <before> and <after> are the tiers.
   tier-down-subtitle: "<muted><kit> ·</muted> <before> <muted>→</muted> <after>"
 
-# /tester (duelcore.tester): tester mode.
-tester:
-  turned-on: "<good>Tester mode on.</good> <muted>Unranked matches end with a simulated progress reveal. Previews: /tester play <text><previews></text></muted>"
-  turned-off: "<muted>Tester mode off.</muted>"
-  status-on: "<muted>Tester mode is <good>on</good>. Previews: /tester play <text><previews></text></muted>"
-  status-off: "<muted>Tester mode is <text>off</text>. Turn it on with /tester on.</muted>"
-  needs-on: "<bad>Turn tester mode on first:</bad> <text>/tester on</text>"
+# /animtest (duelcore.animtest): animation test mode.
+animtest:
+  turned-on: "<good>Animation test mode on.</good> <muted>Unranked matches end with a simulated progress reveal. Previews: /animtest play <text><previews></text></muted>"
+  turned-off: "<muted>Animation test mode off.</muted>"
+  status-on: "<muted>Animation test mode is <good>on</good>. Previews: /animtest play <text><previews></text></muted>"
+  status-off: "<muted>Animation test mode is <text>off</text>. Turn it on with /animtest on.</muted>"
+  needs-on: "<bad>Turn animation test mode on first:</bad> <text>/animtest on</text>"
   unknown-preview: "<bad>No preview <text><preview></text>.</bad> <muted>Try: <previews></muted>"
   playing: "<muted>Playing <text><preview></text>.</muted>"

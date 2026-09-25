@@ -184,7 +184,7 @@ Staff:
 | `/duelcore season info\|reset <name> confirm\|recalc` | `duelcore.admin.season` | New season: ratings reset, the old season stays viewable as "legacy". `recalc` rebuilds the overall tiers after changing tiers.yml |
 | `/duelcore player <name> setrating <kit> <r>\|setgames <kit> <n>\|setregion <r>\|setcountry <cc>` | `duelcore.admin.rating` | Edit a player |
 | `/duelcore forceend <player>` | `duelcore.admin.match` | End a match without rating changes |
-| `/tester [on\|off\|play <preview>]` | `duelcore.tester` | Tester mode (see *Animations*): preview animations on yourself, simulated progress after unranked matches |
+| `/animtest [on\|off\|play <preview>]` | `duelcore.animtest` | Animation test mode (see *Animations*): preview animations on yourself, simulated progress after unranked matches |
 | `/duelcore debug [gc\|trace\|matches\|player <name>]` | `duelcore.admin.debug` | Health numbers (instances, chunks, entities, tasks, caches, heap, DB threads), live matches, one player's client version, brand, ping and state |
 
 `/duelcore` has the alias `/dc`.
@@ -204,7 +204,7 @@ arrives after the join).
 | `duelcore.tournament` | true | Reserved for tournaments (not in this build yet) |
 | `duelcore.spectate.bypass` | op | Spectate players who turned spectators off |
 | `duelcore.tier` | op | `/tier` |
-| `duelcore.tester` | op | `/tester` |
+| `duelcore.animtest` | op | `/animtest` |
 | `duelcore.bypass.commands` | op | Any command during a match (others are limited to `match.allowed-commands`) |
 | `duelcore.hub.build` | op | Build in the hub (in creative) |
 | `duelcore.chatfilter.notify` | op | See messages the chat filter blocked |
@@ -287,7 +287,7 @@ top, so recolouring means editing five lines.
 ## Animations
 
 Every animation has its own switch in `config.yml` `animations`; sound effects also follow each player's *Sounds*
-setting. Texts are in `messages.yml` (`progress`, `tester`), colours and the bar in `gui.yml` (`progress-reveal`).
+setting. Texts are in `messages.yml` (`progress`, `animtest`), colours and the bar in `gui.yml` (`progress-reveal`).
 
 | Key | What it does |
 | --- | --- |
@@ -325,14 +325,14 @@ setting. Texts are in `messages.yml` (`progress`, `tester`), colours and the bar
 | `victory-confetti` | Confetti raining around the match winner (colours in `gui.yml` `match-fx.confetti`) |
 | `players-left` | Party FFA: `3 players left` pops when someone is eliminated |
 
-**Tester mode** (`/tester on`, `duelcore.tester`): `/tester play <preview>` plays an animation on yourself
+**Animation test mode** (`/animtest on`, `duelcore.animtest`): `/animtest play <preview>` plays an animation on yourself
 (`placement`, `placed`, `elo-up`, `elo-down`, `tier-up`, `tier-down`; the queue menu's `queue-placement`, `queue-placed`,
 `queue-elo-up`, `queue-elo-down`, `queue-tier-up`; `searching` (ten seconds of both searching bars) and `match-found`;
 the in-match ones `countdown`, `fight`, `match-point`, `round-won`, `round-lost`, `round-spectator`, `combo`, `kill`,
 `heartbeat`, `victory`, `defeat`, `spectator-result`, `players-left`, and `match` for all of them in a row;
 plus any a feature registers), and unranked
 matches, duels and party matches end with a simulated progress reveal (ratings don't change). It lasts until
-`/tester off` or a restart.
+`/animtest off` or a restart.
 
 For developers, `ui/anim` has the shared toolkit: `plugin.anim()` runs one animation per player and channel
 (action bar, title, dialog, boss bar, sound; a new one replaces the old, all end on quit, world change and disable,
@@ -395,14 +395,15 @@ your own pairing rules. `MatchStartEvent` and `MatchEndEvent` are fired for ever
 - `/dctest run <id> <script> [args]`, `/dctest stop <id>`, `/dctest ps`. These are console only.
 - Bots log in through an offline-mode guard that only admits loopback `dcbot*` names and the names listed in
   `duelcore-test/allow.txt`.
-- `/tester on|off|status|add <player>|remove <player>|list` (`duelcore.tester`, alias `/testers`) runs that guard.
-  `off` is open testing: anyone can join. `on` goes back to testers only. The mode is saved in
+- `/tester on|off|status|add <player>|remove <player>|list` (`duelcore.testkit.guard`, op only, alias `/testers`)
+  runs that guard. `off` is open testing: anyone can join. `on` goes back to testers only. The mode is saved in
   `duelcore-test/mode.txt`. Offline mode can't verify names, so every name is locked to the IP it first joins from,
-  in both modes. In open mode, joiners are saved as `guest` in `allow.txt`, and those guests are refused again once
-  the guard is back `on`. An operator name can only join open testing from an IP it is already locked to. To lock it,
-  join once while the guard is `on`.
-  DuelCore's own `/tester` (tester mode) uses the same label. When it takes `/tester`, use `/testers` or
-  `/duelcoretestkit:tester` for the guard. The test kit logs a warning at startup when this happens.
+  in both modes. In open mode, new names are saved as `guest` in `allow.txt`, and those guests are refused again
+  once the guard is back `on` (`/tester add` makes one a tester). Only names nobody has used can be claimed in open
+  testing: operator names, whitelisted names and names that joined this server before only get in from an IP they
+  are already locked to. To lock one, join once while the guard is `on` (`/tester add` also lets a name that isn't an
+  operator lock on its next join). Staff whose rights come from a permission plugin and who never joined are not
+  protected, so lock them before opening. When `allow.txt` can't be read, every login is refused.
 
 Scripts:
 

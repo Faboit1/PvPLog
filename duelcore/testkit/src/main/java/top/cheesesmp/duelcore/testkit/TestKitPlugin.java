@@ -43,14 +43,6 @@ public final class TestKitPlugin extends JavaPlugin implements Listener {
         getLogger().info("TestKit ready, root=" + root + " onlineMode=" + Bukkit.getOnlineMode()
             + " joinMode=" + (open ? "open" : "testers"));
         if (open && !Bukkit.getOnlineMode()) getLogger().warning("[testkit] " + OPEN_NOTICE + " (/tester on for testers only)");
-        // DuelCore's tester mode is also /tester: name the way to this one if that one took the label
-        getServer().getScheduler().runTask(this, () -> {
-            org.bukkit.command.PluginCommand owner = Bukkit.getPluginCommand("tester");
-            if (owner == null || owner.getPlugin() != this) {
-                getLogger().warning("[testkit] /tester is handled by another plugin; the join guard is /testers "
-                    + "(or /duelcoretestkit:tester) on|off|status|add|remove|list");
-            }
-        });
     }
 
     @Override
@@ -67,12 +59,13 @@ public final class TestKitPlugin extends JavaPlugin implements Listener {
      * Offline mode can't verify names, so in both modes each name is locked to the IP it first joins from (trust on
      * first use). allow.txt has one "name [ip] [guest]" per line and is re-read on every login; "guest" marks a name
      * that first joined during open testing (not a tester: refused again once the server is back to testers only).
-     * /tester add clears a name's lock. Operator names are never trusted on first use in open testing: they must
-     * already be locked (join once while testers only), so nobody can take an op's name while the server is open.
+     * /tester add clears a name's lock. Only names nobody has used are trusted on first use in open testing:
+     * operator names, whitelisted names and names that joined before must already be locked (join once while testers
+     * only), so nobody can take them while the server is open. An unreadable allow.txt refuses every login.
      */
     private static final Pattern NAME = Pattern.compile("[A-Za-z0-9_]{1,16}");
     private static final String OPEN_NOTICE =
-        "Open testing: anyone can join; names are not verified in offline mode, ops stay IP-locked.";
+        "Open testing: anyone can join; names are not verified in offline mode, ops and known names stay IP-locked.";
 
     /** An allow.txt line: the locked IP ("" = locks on the next join) and whether it is an open-testing guest. */
     private record Entry(String ip, boolean guest) {}
@@ -87,6 +80,7 @@ public final class TestKitPlugin extends JavaPlugin implements Listener {
         return new File(root, "mode.txt");
     }
 
+    /** Throws when the file exists but can't be read: the login guard then refuses (fails closed, never overwrites it). */
     private synchronized Map<String, Entry> readAllow() {
         Map<String, Entry> map = new LinkedHashMap<>();
         File file = allowFile();
@@ -100,7 +94,8 @@ public final class TestKitPlugin extends JavaPlugin implements Listener {
                 map.put(parts[0], new Entry(ip, guest));
             }
         } catch (IOException e) {
-            getLogger().warning("[testkit] cannot read allow.txt: " + e.getMessage());
+            getLogger().warning("[testkit] cannot read allow.txt: " + e);
+            throw new UncheckedIOException(e);
         }
         return map;
     }
@@ -111,7 +106,11 @@ public final class TestKitPlugin extends JavaPlugin implements Listener {
         map.forEach((name, e) -> lines.add(name + (e.ip().isEmpty() ? "" : " " + e.ip()) + (e.guest() ? " guest" : "")));
         try {
             root.mkdirs();
-            Files.write(allowFile().toPath(), lines);
+            // write a copy and move it over: a crash mid-write can't leave a truncated lock list
+            java.nio.file.Path tmp = new File(root, "allow.txt.tmp").toPath();
+            Files.write(tmp, lines);
+            Files.move(tmp, allowFile().toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                java.nio.file.StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException e) {
             getLogger().warning("[testkit] cannot write allow.txt: " + e.getMessage());
             throw new UncheckedIOException(e);
@@ -176,13 +175,13 @@ public final class TestKitPlugin extends JavaPlugin implements Listener {
         String k = key(map, name);
         Entry entry = k == null ? null : map.get(k);
         if (!open) {
-            if (entry == null || entry.guest()) {
-                boolean whitelisted = Bukkit.getWhitelistedPlayers().stream().anyMatch(o -> name.equalsIgnoreCase(o.getName()));
-                if (!whitelisted) return "Server is in maintenance for testing. Ask an op to /tester add you.";
-                if (entry == null) {
-                    k = name;
-                    entry = new Entry("", false);
-                }
+            // a guest's lock was taken by whoever came first during open testing: never tester access, even for a
+            // whitelisted name (an op re-adds the real owner)
+            if (entry != null && entry.guest()) return "This name joined open testing as a guest. Ask an op to /tester add you.";
+            if (entry == null) {
+                if (!isWhitelisted(name)) return "Server is in maintenance for testing. Ask an op to /tester add you.";
+                k = name;
+                entry = new Entry("", false);
             }
             return lock(map, k, entry, ip, "tester");
         }
@@ -194,7 +193,16 @@ public final class TestKitPlugin extends JavaPlugin implements Listener {
         }
         if (entry != null) return lock(map, k, entry, ip, "tester");
         if (!NAME.matcher(name).matches() || name.toLowerCase().startsWith("dcbot")) return "This name can't join open testing.";
+        // a tester's or a known player's name (permission plugins keep their rights under it) isn't free to claim
+        if (isWhitelisted(name) || Bukkit.getOfflinePlayer(uuid).hasPlayedBefore()) {
+            getLogger().warning("[testkit] refused known name " + name + " from " + ip + " (not IP-locked, open testing)");
+            return "This name has played here before. It can only join open testing once it is IP-locked: ask an op to /tester add you.";
+        }
         return lock(map, name, new Entry("", true), ip, "guest");
+    }
+
+    private static boolean isWhitelisted(String name) {
+        return Bukkit.getWhitelistedPlayers().stream().anyMatch(o -> name.equalsIgnoreCase(o.getName()));
     }
 
     /** Admits a name from its locked IP, or locks an unlocked name to this IP (saved before admitting). */
@@ -271,7 +279,7 @@ public final class TestKitPlugin extends JavaPlugin implements Listener {
                 }
             }
         } catch (UncheckedIOException e) {
-            sender.sendMessage("Could not save allow.txt: " + e.getCause().getMessage());
+            sender.sendMessage("Could not read/save allow.txt: " + e.getCause().getMessage());
         }
         return true;
     }
@@ -343,7 +351,13 @@ public final class TestKitPlugin extends JavaPlugin implements Listener {
         if (!command.getName().equalsIgnoreCase("tester")) return List.of();
         if (args.length == 1) return List.of("on", "off", "status", "add", "remove", "list").stream()
             .filter(s -> s.startsWith(args[0].toLowerCase())).toList();
-        if (args.length == 2 && args[0].equalsIgnoreCase("remove")) return new ArrayList<>(readAllow().keySet());
+        if (args.length == 2 && args[0].equalsIgnoreCase("remove")) {
+            try {
+                return new ArrayList<>(readAllow().keySet());
+            } catch (UncheckedIOException e) {
+                return List.of();
+            }
+        }
         if (args.length == 2 && args[0].equalsIgnoreCase("add")) return Bukkit.getOnlinePlayers().stream().map(org.bukkit.entity.Player::getName).toList();
         return List.of();
     }

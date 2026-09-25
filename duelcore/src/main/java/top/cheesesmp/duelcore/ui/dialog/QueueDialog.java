@@ -34,6 +34,7 @@ import net.kyori.adventure.text.object.ObjectContents;
 import net.kyori.adventure.text.object.PlayerHeadObjectContents;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
+import org.bukkit.Input;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -118,7 +119,7 @@ public final class QueueDialog {
     QueueDialog(DuelCorePlugin plugin) {
         this.plugin = plugin;
         plugin.getServer().getPluginManager().registerEvents(new Interrupts(), plugin);
-        // /tester play <name>: the queue experience (the searching bars and match found too: QueueService and
+        // /animtest play <name>: the queue experience (the searching bars and match found too: QueueService and
         // MatchService are created before plugin.tester())
         TesterMode tester = plugin.tester();
         tester.preview("queue-placement", p -> preview(p, Sample.PLACEMENT));
@@ -460,6 +461,12 @@ public final class QueueDialog {
      * frames don't open a closed menu again. LOWEST, so an action that opens the menu again (the Play item, /queue)
      * finds the old animation already gone.
      */
+    /** Any movement key, jump, sneak or sprint held (all released = a screen just opened). */
+    static boolean anyPressed(Input in) {
+        return in.isForward() || in.isBackward() || in.isLeft() || in.isRight() || in.isJump() || in.isSneak()
+            || in.isSprint();
+    }
+
     private final class Interrupts implements Listener {
 
         @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -496,10 +503,13 @@ public final class QueueDialog {
             stopAnimation(event.getPlayer());
         }
 
-        /** Movement keys, jump, sneak or sprint changed: they do nothing while a dialog is open, so it is closed. */
+        /**
+         * A movement key, jump, sneak or sprint pressed: they do nothing while a dialog is open, so it is closed. All
+         * keys released is what the client sends when a screen opens (the menu itself), so that doesn't count.
+         */
         @EventHandler(priority = EventPriority.LOWEST)
         public void onInput(PlayerInputEvent event) {
-            stopAnimation(event.getPlayer());
+            if (anyPressed(event.getInput())) stopAnimation(event.getPlayer());
         }
 
         @EventHandler(priority = EventPriority.LOWEST)
@@ -518,7 +528,7 @@ public final class QueueDialog {
     private enum Sample { PLACEMENT, PLACED, ELO_UP, ELO_DOWN, TIER_UP }
 
     /**
-     * {@code /tester play queue-...}: opens the menu on the first queueable kit's tab and animates a made-up change in
+     * {@code /animtest play queue-...}: opens the menu on the first queueable kit's tab and animates a made-up change in
      * it (nothing is recorded or consumed; the next open shows the real standing again).
      */
     private void preview(Player player, Sample sample) {

@@ -30,7 +30,7 @@ public final class ProgressTracker implements Listener {
 
     /**
      * One kit's change. Elo values are rounded ratings; a tier is null while unranked. {@code simulated} marks
-     * reveals made up for testers (/tester) whose ratings did not really change.
+     * reveals made up for testers (/animtest) whose ratings did not really change.
      */
     public record Reveal(String kit, int oldGames, int newGames, int placementMatches, int oldElo, int newElo,
                          @Nullable Tier oldTier, @Nullable Tier newTier, boolean wasPlaced, boolean placed,
