@@ -135,6 +135,12 @@ A server shutdown during a match cancels it without any rating change. `/duelcor
   teleport), high-ping players are teleported instead, the touch-down wait grows with ping, a throw the server never
   sees move is ended after `respawn-throw-stall-ticks` + ping, and the final snap sends a zero velocity one tick before
   the teleport so no velocity packet reaches the client after it.
+* **Animations toolkit** (`ui/anim`): `AnimationService` (`plugin.anim()`) gives every player one animation slot per
+  channel (ACTION_BAR, TITLE, DIALOG, BOSS_BAR, SOUND), driven by one shared 1-tick timer; frames run at most every
+  2 ticks on visual channels, and animations end on quit, world change and disable. The hotbar hints and the queue's
+  searching bar check `busy(player, ACTION_BAR)`. Pure helpers (`Ease`, `TextFx`, `BlinkFade`, `ProgressBar`, the
+  `Sfx` phrase builders) are unit tested. `ProgressTracker` (`plugin.progress()`) records each rated match's
+  before/after per player and kit (memory only) for the post-match `ProgressReveal` and the queue menu.
 * **Match found**: a totem-pop animation shows an item that represents the kit. The client displays the held `death_protection` item, so for two ticks the offhand gets an item with `death_protection` + `item_model = <kit icon>`, then an `EntityEffect.PROTECTED_FROM_DEATH` plays.
 
 ## Testing approach

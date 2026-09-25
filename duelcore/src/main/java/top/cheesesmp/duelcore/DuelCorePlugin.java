@@ -71,6 +71,10 @@ public final class DuelCorePlugin extends JavaPlugin {
     private CommandService commands;
     private Diagnostics diagnostics;
     private top.cheesesmp.duelcore.party.PartyService parties;
+    private top.cheesesmp.duelcore.ui.anim.AnimationService anim;
+    private top.cheesesmp.duelcore.profile.ProgressTracker progress;
+    private top.cheesesmp.duelcore.ui.anim.ProgressReveal progressReveal;
+    private top.cheesesmp.duelcore.debug.TesterMode tester;
     private boolean papiHooked;
 
     @Override
@@ -110,6 +114,10 @@ public final class DuelCorePlugin extends JavaPlugin {
         respawnPull = new top.cheesesmp.duelcore.ui.RespawnPull(this);
         spawnRise = new top.cheesesmp.duelcore.ui.SpawnRise(this);
         animations = new top.cheesesmp.duelcore.ui.Animations(this);
+        anim = new top.cheesesmp.duelcore.ui.anim.AnimationService(this);
+        progress = new top.cheesesmp.duelcore.profile.ProgressTracker();
+        progressReveal = new top.cheesesmp.duelcore.ui.anim.ProgressReveal(this);
+        tester = new top.cheesesmp.duelcore.debug.TesterMode(this);
         dialogs = new DialogService(this);
         hints = new top.cheesesmp.duelcore.hub.HotbarHints(this);
         leaderboards = new LeaderboardService(this, database);
@@ -141,6 +149,8 @@ public final class DuelCorePlugin extends JavaPlugin {
         pm.registerEvents(respawnPull, this);
         pm.registerEvents(spawnRise, this);
         pm.registerEvents(new top.cheesesmp.duelcore.ui.MotdService(this), this);
+        pm.registerEvents(anim, this);
+        pm.registerEvents(progress, this);
         friends = new top.cheesesmp.duelcore.friends.FriendService(this);
         friends.enable();
 
@@ -148,6 +158,7 @@ public final class DuelCorePlugin extends JavaPlugin {
 
         var scheduler = getServer().getScheduler();
         scheduler.runTaskTimer(this, matches, 1L, 1L);
+        scheduler.runTaskTimer(this, anim, 1L, 1L);
         scheduler.runTaskTimer(this, arenas.queue(), 1L, 1L);
         scheduler.runTaskTimer(this, queue, 20L, cfg.mmIntervalTicks);
         scheduler.runTaskTimer(this, queueMusic, 20L, 10L);
@@ -182,6 +193,7 @@ public final class DuelCorePlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         try {
+            if (anim != null) anim.cancelAll();
             if (queueMusic != null) queueMusic.stopAll();
             if (respawnPull != null) respawnPull.cancelAll();
             if (spawnRise != null) spawnRise.cancelAll();
@@ -367,6 +379,26 @@ public final class DuelCorePlugin extends JavaPlugin {
 
     public Diagnostics diagnostics() {
         return diagnostics;
+    }
+
+    /** Per-player animation channels (action bar, title, dialog, boss bar, sound), see ui/anim. */
+    public top.cheesesmp.duelcore.ui.anim.AnimationService anim() {
+        return anim;
+    }
+
+    /** Before/after of the last ranked matches per player and kit, waiting to be animated. */
+    public top.cheesesmp.duelcore.profile.ProgressTracker progress() {
+        return progress;
+    }
+
+    /** The post-match progress animation (action bar count, tier celebrations). */
+    public top.cheesesmp.duelcore.ui.anim.ProgressReveal progressReveal() {
+        return progressReveal;
+    }
+
+    /** /tester: tester mode, animation previews, simulated reveals. */
+    public top.cheesesmp.duelcore.debug.TesterMode tester() {
+        return tester;
     }
 
     /** Persistent parties: /party, party chat, party matches. */

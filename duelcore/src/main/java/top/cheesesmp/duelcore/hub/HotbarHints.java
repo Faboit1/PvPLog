@@ -17,13 +17,14 @@ import org.bukkit.inventory.ItemStack;
 import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.config.GuiConfig;
+import top.cheesesmp.duelcore.ui.anim.Channel;
 
 /**
  * Action bar hints for the hub hotbar: while a hub item is held its gui.yml {@code action-bar} text shows (e.g.
  * "Right-click to play"), switching to another item shows that one's, and switching to an empty slot clears it.
  * The hint is also shown when items are given (join, leaving a match, starting to spectate). While queued the
  * "searching" action bar has priority, except for a moment right after switching items. Players in a match are never
- * touched.
+ * touched, and neither is a running action bar animation ({@code plugin.anim().busy(player, Channel.ACTION_BAR)}).
  */
 public final class HotbarHints implements Listener, Runnable {
 
@@ -52,7 +53,7 @@ public final class HotbarHints implements Listener, Runnable {
             showing.remove(uuid); // match action bars (round results, bounds) must never be touched
             return;
         }
-        if (searching(player)) return; // the queue's searching bar has priority
+        if (searching(player) || animating(player)) return; // the queue's searching bar and animations have priority
         Component hint = hint(player, player.getInventory().getItemInMainHand());
         if (hint != null) {
             showing.add(uuid);
@@ -70,6 +71,7 @@ public final class HotbarHints implements Listener, Runnable {
             showing.remove(uuid);
             return;
         }
+        if (animating(player)) return; // a running action bar animation (post-match progress) isn't cut off
         Component hint = hint(player, player.getInventory().getItem(event.getNewSlot()));
         if (hint != null) {
             switchedAt.put(uuid, System.currentTimeMillis());
@@ -102,6 +104,7 @@ public final class HotbarHints implements Listener, Runnable {
                 showing.remove(uuid);
                 continue;
             }
+            if (animating(player)) continue; // shown again once the animation has cleared the bar
             Component hint = hint(player, player.getInventory().getItemInMainHand());
             if (hint == null) {
                 if (showing.remove(uuid) && !searching(player)) player.sendActionBar(Component.empty());
@@ -129,6 +132,11 @@ public final class HotbarHints implements Listener, Runnable {
     /** True when the queue shows its searching action bar to this player. */
     private boolean searching(Player player) {
         return plugin.settings().queueSearchingActionBar && plugin.queue().isQueued(player.getUniqueId());
+    }
+
+    /** True while an action bar animation runs for this player (see ui/anim/AnimationService). */
+    private boolean animating(Player player) {
+        return plugin.anim().busy(player, Channel.ACTION_BAR);
     }
 
     private boolean inLobby(Player player) {

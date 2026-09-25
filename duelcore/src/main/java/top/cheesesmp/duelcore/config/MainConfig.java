@@ -78,6 +78,17 @@ public final class MainConfig {
     public final boolean animSpawnRise;
     public final int animSpawnRiseDepth;
     public final int animSpawnRiseTicks;
+    /** Post-match progress in the hub action bar (count up, blink, fade) and its fade time in ticks. */
+    public final boolean animProgressReveal;
+    public final int animProgressFadeTicks;
+    /** Title celebrations for a better tier / the first tier after placement, and the quiet demotion subtitle. */
+    public final boolean animTierUp;
+    public final boolean animPlaced;
+    public final boolean animTierDown;
+    /** Fireworks around the player (only they see them) during the tier-up and placed celebrations. */
+    public final boolean animCelebrationParticles;
+    /** Tick sounds while counting, flourishes (players' own sound setting still applies). */
+    public final boolean animProgressSounds;
     public final top.cheesesmp.duelcore.ui.SoundPool matchFoundSounds;
     public final top.cheesesmp.duelcore.ui.SoundPool fightStartSounds;
     /** Sound lines (match-found-sounds, fight-start-sounds, queue music) that could not be read (reported on load and reload). */
@@ -201,6 +212,13 @@ public final class MainConfig {
         animSpawnRise = c.getBoolean("animations.spawn-rise", true);
         animSpawnRiseDepth = Math.clamp(c.getInt("animations.spawn-rise-depth", 3), 1, 6);
         animSpawnRiseTicks = Math.clamp(c.getInt("animations.spawn-rise-ticks", 50), 10, 60);
+        animProgressReveal = c.getBoolean("animations.progress-reveal", true);
+        animProgressFadeTicks = (int) Math.round(Math.clamp(c.getDouble("animations.progress-fade-seconds", 3), 0.5, 10) * 20);
+        animTierUp = c.getBoolean("animations.tier-up", true);
+        animPlaced = c.getBoolean("animations.placed", true);
+        animTierDown = c.getBoolean("animations.tier-down", true);
+        animCelebrationParticles = c.getBoolean("animations.celebration-particles", true);
+        animProgressSounds = c.getBoolean("animations.progress-sounds", true);
         matchFoundSounds = top.cheesesmp.duelcore.ui.SoundPool.parse(c.getStringList("animations.match-found-sounds"));
         var fightStart = top.cheesesmp.duelcore.ui.SoundPool.parse(c.getStringList("animations.fight-start-sounds"));
         for (String p : matchFoundSounds.problems()) soundProblems.add("animations.match-found-sounds: " + p);

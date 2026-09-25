@@ -40,6 +40,7 @@ import top.cheesesmp.duelcore.kit.KitManager;
 import top.cheesesmp.duelcore.profile.KitStats;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.ProfileService;
+import top.cheesesmp.duelcore.profile.ProgressTracker;
 import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.rating.RatingSystem;
 import top.cheesesmp.duelcore.rating.Tier;
@@ -634,6 +635,7 @@ public final class MatchService implements Runnable {
             && (winnerTeam >= 0 || reason == Match.EndReason.DRAW);
         List<ProfileService.RatingWrite> writes = new ArrayList<>();
         if (rated) applyRatings(m, winnerTeam, writes);
+        else plugin.tester().afterMatch(m);
         for (Participant p : m.participants()) {
             Player player = Bukkit.getPlayer(p.uuid());
             if (player == null) continue;
@@ -678,6 +680,9 @@ public final class MatchService implements Runnable {
             stats.updatedAt = now;
             p.ratingAfter = stats.rating;
             p.tierAfter = plugin.tiers().kitTier(m.kit().id(), stats);
+            // remembered for the post-match action bar and the queue menu's progress animation
+            plugin.progress().record(p.uuid(), ProgressTracker.Reveal.of(m.kit().id(), p.before(), stats,
+                plugin.tiers().placementMatches(), p.tierBefore(), p.tierAfter, false));
             plugin.tiers().refresh(profile);
             writes.add(new ProfileService.RatingWrite(profile.id(), m.kit().id(), stats.snapshot(), profile.elo(),
                 profile.overall()));

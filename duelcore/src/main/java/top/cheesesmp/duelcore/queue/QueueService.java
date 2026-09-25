@@ -27,6 +27,7 @@ import top.cheesesmp.duelcore.match.Participant;
 import top.cheesesmp.duelcore.profile.KitStats;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.Setting;
+import top.cheesesmp.duelcore.ui.anim.Channel;
 
 /**
  * Queues per kit and the matchmaking tick. A player can search in several kit queues at once
@@ -390,6 +391,7 @@ public final class QueueService implements Listener, Runnable {
                 if (e.getValue().isEmpty()) continue;
                 Player p = Bukkit.getPlayer(e.getKey());
                 if (p == null || plugin.hints().recent(p.getUniqueId())) continue; // a hotbar hint is showing
+                if (plugin.anim().busy(p, Channel.ACTION_BAR)) continue; // e.g. the post-match progress count
                 plugin.messages().actionBar(p, "queue.searching", searchTags(e.getKey(), now).toArray(TagResolver[]::new));
             }
         }

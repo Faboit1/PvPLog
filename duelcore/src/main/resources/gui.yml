@@ -119,6 +119,23 @@ queue-menu:
     done: "366a5c98928fa5d4b5d5b8efb490155b4dda3956bcaa9371177814532cfc"
     todo: "967a2f218a6e6e38f2b545f6c17733f4ef9bbb288e75402949c052189ee"
 
+# The post-match progress action bar (config.yml animations.progress-reveal; texts in messages.yml progress).
+progress-reveal:
+  # The bar in "+20% towards your tier ▰▰▰▱▱▱▱▱▱▱": segments, glyphs and colours. The segment being filled
+  # while the bar animates is drawn in head-color.
+  bar:
+    segments: 10
+    filled: "▰"
+    empty: "▱"
+    filled-color: "#5bd46a"
+    empty-color: "#4b4f57"
+    head-color: "#d8ffd8"
+  # When the count is done the text flashes flash-color a few times, then fades to fade-color and disappears.
+  flash-color: "#ffffff"
+  fade-color: "#6b7078"
+  # The bright band sweeping over the tier in the tier-up and placed titles.
+  shimmer-color: "#ffffff"
+
 sidebar:
   enabled: true
   title: "<accent>Duels</accent>"

@@ -139,6 +139,7 @@ public final class HubService {
             player.setWorldBorder(null);
             plugin.sidebar().refresh(player);
             plugin.results().showPending(player);
+            plugin.progressReveal().playPending(player); // runs under the results dialog (action bar + title)
         });
     }
 

@@ -7,6 +7,7 @@ import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.jspecify.annotations.Nullable;
+import top.cheesesmp.duelcore.ui.anim.TextFx;
 
 /** Typed view of gui.yml. */
 public final class GuiConfig {
@@ -58,6 +59,11 @@ public final class GuiConfig {
     public final int queueProgressSegments;
     public final String queueProgressDone;
     public final String queueProgressTodo;
+    /** Post-match progress animation: the action bar's bar, the blink colour, the colour it fades to, the shimmer. */
+    public final top.cheesesmp.duelcore.ui.anim.ProgressBar revealBar;
+    public final net.kyori.adventure.text.format.TextColor revealFlash;
+    public final net.kyori.adventure.text.format.TextColor revealFade;
+    public final net.kyori.adventure.text.format.TextColor revealShimmer;
 
     public GuiConfig(YamlConfiguration y) {
         ConfigurationSection hb = y.getConfigurationSection("hotbar");
@@ -109,6 +115,15 @@ public final class GuiConfig {
         queueProgressSegments = Math.clamp(y.getInt("queue-menu.progress.segments", 10), 1, 30);
         queueProgressDone = y.getString("queue-menu.progress.done", "");
         queueProgressTodo = y.getString("queue-menu.progress.todo", "");
+        var std = top.cheesesmp.duelcore.ui.anim.ProgressBar.standard();
+        revealBar = new top.cheesesmp.duelcore.ui.anim.ProgressBar(y.getInt("progress-reveal.bar.segments", std.count()),
+            y.getString("progress-reveal.bar.filled", std.filled()), y.getString("progress-reveal.bar.empty", std.empty()),
+            TextFx.color(y.getString("progress-reveal.bar.filled-color"), std.filledColor()),
+            TextFx.color(y.getString("progress-reveal.bar.empty-color"), std.emptyColor()),
+            TextFx.color(y.getString("progress-reveal.bar.head-color"), std.headColor()));
+        revealFlash = TextFx.color(y.getString("progress-reveal.flash-color"), TextFx.WHITE);
+        revealFade = TextFx.color(y.getString("progress-reveal.fade-color"), net.kyori.adventure.text.format.TextColor.color(0x6B7078));
+        revealShimmer = TextFx.color(y.getString("progress-reveal.shimmer-color"), TextFx.WHITE);
     }
 
     public @Nullable HotbarItem item(String key) {

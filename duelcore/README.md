@@ -184,6 +184,7 @@ Staff:
 | `/duelcore season info\|reset <name> confirm\|recalc` | `duelcore.admin.season` | New season: ratings reset, the old season stays viewable as "legacy". `recalc` rebuilds the overall tiers after changing tiers.yml |
 | `/duelcore player <name> setrating <kit> <r>\|setgames <kit> <n>\|setregion <r>\|setcountry <cc>` | `duelcore.admin.rating` | Edit a player |
 | `/duelcore forceend <player>` | `duelcore.admin.match` | End a match without rating changes |
+| `/tester [on\|off\|play <preview>]` | `duelcore.tester` | Tester mode (see *Animations*): preview animations on yourself, simulated progress after unranked matches |
 | `/duelcore debug [gc\|trace\|matches\|player <name>]` | `duelcore.admin.debug` | Health numbers (instances, chunks, entities, tasks, caches, heap, DB threads), live matches, one player's client version, brand, ping and state |
 
 `/duelcore` has the alias `/dc`.
@@ -203,6 +204,7 @@ arrives after the join).
 | `duelcore.tournament` | true | Reserved for tournaments (not in this build yet) |
 | `duelcore.spectate.bypass` | op | Spectate players who turned spectators off |
 | `duelcore.tier` | op | `/tier` |
+| `duelcore.tester` | op | `/tester` |
 | `duelcore.bypass.commands` | op | Any command during a match (others are limited to `match.allowed-commands`) |
 | `duelcore.hub.build` | op | Build in the hub (in creative) |
 | `duelcore.chatfilter.notify` | op | See messages the chat filter blocked |
@@ -226,7 +228,7 @@ to false when they still have the old defaults (false / true). Main settings:
 | `queue` | `allow-multiple` (several kit queues at once, default on), ranked on/off, `unranked` (off: no unranked queue; `/duel` is unaffected), "searching" action bar, `music` (`enabled`, `volume`, `tracks`: `"<sound id> <seconds>"` music discs played to a player while searching; players can turn it off in their settings) |
 | `matchmaking` | `interval-ticks`, rating window (`initial`, `growth-per-second`, `max`), region and ping penalties, `max-ranked-rematches-per-day`, `log-pairings` |
 | `match` | countdowns, `round-end-delay-ticks`, `return-delay-seconds`, `timeout-decision: health\|draw`, `max-rounds`, `allowed-commands`, `totem-pop`, `void-depth` |
-| `animations` | `respawn-throw` (+ `-height`, `-max-ping`: teleport players above 350 ms instead, `-stall-ticks`: give up a throw the server never sees move), `spawn-rise` (+ `-depth`, `-ticks`), `death`, `round-win`, `match-win`, `fight-start`, `join-title`, `match-found-sounds`, `fight-start-sounds` |
+| `animations` | see *Animations* below |
 | `rating` | `system: elo\|glicko2`, `default`, `floor`, Elo K-factors (normal and provisional), Glicko-2 tau/RD/volatility |
 | `season` | first season name |
 | `arena` | `world`, `persistent-world`, `pregenerate-slots`, `slot-spacing`, `base-y`, `max-instances`, `keep-idle-per-template`, `prewarm`, `block-budget-ms`, `reset-between-rounds`, `view-distance` |
@@ -281,6 +283,37 @@ still see the original of a *masked* message (blocked messages never reach anyon
 
 **messages.yml**: every player-facing text. The theme tags `<accent> <text> <muted> <good> <bad>` are defined at the
 top, so recolouring means editing five lines.
+
+## Animations
+
+Every animation has its own switch in `config.yml` `animations`; sound effects also follow each player's *Sounds*
+setting. Texts are in `messages.yml` (`progress`, `tester`), colours and the bar in `gui.yml` (`progress-reveal`).
+
+| Key | What it does |
+| --- | --- |
+| `respawn-throw` (+ `-height`, `-max-ping`, `-stall-ticks`) | From round 2 on, fighters are thrown back to their spawn along an arc. Players above `-max-ping` ms (350) are teleported instead; a throw the server never sees move is ended after `-stall-ticks` + ping |
+| `spawn-rise` (+ `-depth`, `-ticks`) | Round 1: each fighter rises out of a hole at their spawn |
+| `death`, `round-win`, `match-win`, `fight-start` | Red burst on death, golden spiral for the round winner, fireworks for the match winner, white ring when a round starts |
+| `join-title` | Title on joining the hub |
+| `match-found-sounds`, `fight-start-sounds` | Sound pools (one line picked at random) for "match found" and a round's start |
+| `progress-reveal` | After a ranked match, back in the hub: the action bar counts up what the match changed (`+20% towards your tier ▰▰▰▰▱▱▱▱▱▱` during placement, `+18 Elo  1480 → 1498` after, a red `−12 Elo` counting down), then blinks and fades out. It runs under the results dialog; hotbar hints and the queue's "searching" bar wait for it |
+| `progress-fade-seconds` | How long that fade takes (3) |
+| `tier-up` | Title celebration for a better tier: the tier in its `tiers.yml` colour, typed in and swept by a shimmer, with a flourish |
+| `placed` | The same for the first tier in a kit after the placement matches (`Placed: HT3!`) |
+| `tier-down` | A quiet subtitle when a tier drops |
+| `celebration-particles` | Firework bursts in front of the player (only they see them) for `tier-up` and `placed` |
+| `progress-sounds` | Count ticks, flourish and demotion notes |
+
+**Tester mode** (`/tester on`, `duelcore.tester`): `/tester play <preview>` plays an animation on yourself
+(`placement`, `placed`, `elo-up`, `elo-down`, `tier-up`, `tier-down`, plus any a feature registers), and unranked
+matches, duels and party matches end with a simulated progress reveal (ratings don't change). It lasts until
+`/tester off` or a restart.
+
+For developers, `ui/anim` has the shared toolkit: `plugin.anim()` runs one animation per player and channel
+(action bar, title, dialog, boss bar, sound; a new one replaces the old, all end on quit, world change and disable,
+`busy()` tells other systems to wait), `Ease` (easings, count up/down), `TextFx` (colour lerp, typewriter, shimmer,
+fade), `BlinkFade`, `ProgressBar` and `Sfx` (arpeggios, ticks, flourish). `plugin.progress()` keeps each player's
+before/after per kit from their last ranked matches until the queue menu has shown it.
 
 ## Parties
 

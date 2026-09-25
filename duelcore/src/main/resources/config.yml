@@ -152,6 +152,23 @@ animations:
   spawn-rise-depth: 3
   # How long the rise takes, in ticks (10-60; 20 ticks = 1 second).
   spawn-rise-ticks: 50
+  # After a ranked match, back in the hub: the action bar counts up what the match changed ("+20% towards your tier"
+  # with a filling bar during placement, "+18 Elo 1480 → 1498" after it, a red "−12 Elo" counting down), blinks and
+  # fades out. Texts: messages.yml progress; bar and colours: gui.yml progress-reveal.
+  progress-reveal: true
+  # How long the progress action bar takes to fade out after blinking, in seconds (0.5-10).
+  progress-fade-seconds: 3
+  # Title celebration when a kit's tier goes up: the new tier in its tiers.yml colour, typed in with a shimmer.
+  tier-up: true
+  # Celebration for the first tier in a kit when its placement matches are done ("Placed: HT3!").
+  placed: true
+  # A quiet subtitle when a kit's tier drops.
+  tier-down: true
+  # Firework bursts in front of the player (only they see them) for tier-up and placed.
+  celebration-particles: true
+  # Ticks while the progress counts, the flourish and the demotion notes. Players can also turn sounds off in
+  # their settings.
+  progress-sounds: true
   # Sounds when a match is found (instead of the totem sound) and when a round's fight starts. One line is picked at
   # random each time. A line is one or more sounds played together, joined with "+". Each sound:
   #   <sound id> [pitch or min-max] [volume, default 0.7] [@delay in ticks]

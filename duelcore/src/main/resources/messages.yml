@@ -627,3 +627,29 @@ dialog:
   results:
     again: "<kit_icon> <text>Play again</text>"
     profile: "<muted>Profile</muted>"
+
+# Post-match progress (config.yml animations): the hub action bar counts up, then blinks and fades out.
+progress:
+  # During placement: <percent> counts up to what this match added, <bar> fills (gui.yml progress-reveal.bar).
+  placement: "<good>+<percent>%</good> <text>towards your tier</text>  <bar>"
+  # Once placed: <delta> counts up to the change, <after> counts from <before> to the new rating.
+  elo-up: "<good>+<delta> Elo</good>  <muted><before> →</muted> <text><after></text>"
+  elo-down: "<bad>−<delta> Elo</bad>  <muted><before> →</muted> <text><after></text>"
+  elo-same: "<muted>±0 Elo  <after></muted>"
+  # Titles. <tier> is the new tier in its tiers.yml colour (shimmering in the title), <kit> the kit.
+  tier-up-title: "<tier>"
+  tier-up-subtitle: "<good>Tier up</good> <muted>· <kit></muted>"
+  placed-title: "<text>Placed:</text> <tier><text>!</text>"
+  placed-subtitle: "<muted>Your first tier in <kit></muted>"
+  # Demotion: only a subtitle. <before> and <after> are the tiers.
+  tier-down-subtitle: "<muted><kit> ·</muted> <before> <muted>→</muted> <after>"
+
+# /tester (duelcore.tester): tester mode.
+tester:
+  turned-on: "<good>Tester mode on.</good> <muted>Unranked matches end with a simulated progress reveal. Previews: /tester play <text><previews></text></muted>"
+  turned-off: "<muted>Tester mode off.</muted>"
+  status-on: "<muted>Tester mode is <good>on</good>. Previews: /tester play <text><previews></text></muted>"
+  status-off: "<muted>Tester mode is <text>off</text>. Turn it on with /tester on.</muted>"
+  needs-on: "<bad>Turn tester mode on first:</bad> <text>/tester on</text>"
+  unknown-preview: "<bad>No preview <text><preview></text>.</bad> <muted>Try: <previews></muted>"
+  playing: "<muted>Playing <text><preview></text>.</muted>"
