@@ -36,6 +36,14 @@ queue:
   # Action bar while queued. <kit> is "<count> kits" (kit-count) when searching several; <kit_icon> shows them all.
   searching: "<kit_icon> <text><kit></text> <muted>· <wait> · ±<range></muted>"
   kit-count: "<count> kits"
+  # The animated action bar (config.yml animations.searching-bar). Extra tags: <spinner>, and <searching> (the word
+  # below with pulsing dots); both slowly change colour (gui.yml searching).
+  searching-animated: "<spinner> <searching> <kit_icon> <text><kit></text> <muted>· <wait> · ±<range></muted>"
+  searching-word: "Searching"
+  # Boss bar while searching (animations.searching-boss-bar). <kits> = the first kit plus "+N" for the others
+  # (kits-more), <clock> = time searching (0:12). The action bar tags work here too.
+  searching-boss-bar: "<searching> <muted>·</muted> <text><kits></text> <muted>·</muted> <text><clock></text>"
+  kits-more: "<kit> <muted>+<more></muted>"
   # Keep Queuing re-joined the kits a player searched for before their match.
   requeued: "<muted>Searching again:</muted> <kit_icon>"
   result:
@@ -52,6 +60,9 @@ queue:
 match:
   found-title: "<accent>Match found</accent>"
   found-subtitle: "<kit_icon> <text><opponent></text> <muted>· <tier> · <mode></muted>"
+  # Animated "match found" (config.yml animations.match-found-reveal): this sweeps in with a shimmer in its first
+  # colour, then found-subtitle is typed out.
+  found-reveal: "<accent>MATCH FOUND</accent>"
   countdown: "<text><seconds></text>"
   countdown-sub: "<muted>Round <round> · first to <first_to></muted>"
   fight: "<accent>Fight</accent>"
@@ -547,6 +558,14 @@ dialog:
     # Once placement is done: the kit tier and rating. Before: the progress bar (hover: progress-hover).
     kit-rank: "<tier> <muted>· <rating> Elo</muted>"
     progress-hover: "<text>Play <remaining> more matches to get a tier.</text><newline><muted><games>/<placement> placement matches played</muted>"
+    # After a match the menu animates what changed (config.yml animations.queue-progress): <standing> is the bar or
+    # the tier and Elo, <change> one of the texts below, counting up.
+    standing-change: "<standing>  <change>"
+    change-progress: "<good>+<percent>%</good>"
+    change-elo-up: "<good>+<delta> Elo</good>"
+    change-elo-down: "<bad>−<delta> Elo</bad>"
+    change-elo-same: "<muted>±0 Elo</muted>"
+    change-placed: "<good>Placed!</good>"
     progress-done: "<#5bd46a>■</#5bd46a>"
     progress-todo: "<#26282c>■</#26282c>"
     star-on: "<accent>★</accent>"

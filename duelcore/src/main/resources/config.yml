@@ -186,6 +186,22 @@ animations:
     - "block.note_block.pling 1.5-1.6 + block.note_block.bell 1.9-2.0 0.4"
     - "block.note_block.chime 1.4-1.6 + block.note_block.pling 1.6-1.7 0.5"
     - "entity.experience_orb.pickup 1.2-1.4 0.5 + block.note_block.pling 1.6 0.6"
+  # Queue menu: when a kit's progress changed since the menu was last opened (a ranked match, or a simulated one in
+  # tester mode), its bar fills from the old to the new value ("+20%"), or its Elo counts up ("+18 Elo"). Plays
+  # once, and stops as soon as the player clicks, moves or is matched.
+  queue-progress: true
+  # Animated "searching" action bar: spinner, pulsing dots and slowly cycling colours (gui.yml searching). false =
+  # the plain bar; queue.searching-action-bar switches the bar off completely.
+  searching-bar: true
+  # Boss bar while searching ("Searching · Sword +2 · 0:12"): it fills as the rating window widens, then sweeps back
+  # and forth. Removed the moment the player leaves the queue or is matched.
+  searching-boss-bar: true
+  # "Match found": MATCH FOUND sweeps in with a shimmer, then the opponent is typed out. false = the plain title.
+  # The totem pop and match-found-sounds play either way.
+  match-found-reveal: true
+  # Sounds of the above: ticks and a flourish in the queue menu, a whoosh and a chime when a match is found.
+  # Players can also turn sounds off in their settings.
+  queue-sounds: true
 
 rating:
   # elo or glicko2

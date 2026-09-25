@@ -64,6 +64,17 @@ public final class GuiConfig {
     public final net.kyori.adventure.text.format.TextColor revealFlash;
     public final net.kyori.adventure.text.format.TextColor revealFade;
     public final net.kyori.adventure.text.format.TextColor revealShimmer;
+    /** Queue menu animation: the "atlas:path" sprite drawn (tinted) for newly filled and filling segments. */
+    public final String queueProgressHighlight;
+    /**
+     * The animated searching bars: spinner frames, the colours the spinner and word cycle through (one cycle in
+     * {@code searchingCycleTicks}), the boss bar colours stepped through as the search widens and its overlay.
+     */
+    public final List<String> searchingSpinner;
+    public final List<net.kyori.adventure.text.format.TextColor> searchingColors;
+    public final int searchingCycleTicks;
+    public final List<net.kyori.adventure.bossbar.BossBar.Color> searchingBossColors;
+    public final net.kyori.adventure.bossbar.BossBar.Overlay searchingBossOverlay;
 
     public GuiConfig(YamlConfiguration y) {
         ConfigurationSection hb = y.getConfigurationSection("hotbar");
@@ -124,6 +135,25 @@ public final class GuiConfig {
         revealFlash = TextFx.color(y.getString("progress-reveal.flash-color"), TextFx.WHITE);
         revealFade = TextFx.color(y.getString("progress-reveal.fade-color"), net.kyori.adventure.text.format.TextColor.color(0x6B7078));
         revealShimmer = TextFx.color(y.getString("progress-reveal.shimmer-color"), TextFx.WHITE);
+        queueProgressHighlight = y.getString("queue-menu.progress.highlight", "blocks:block/white_concrete");
+        List<String> spinner = y.getStringList("searching.spinner").stream().filter(f -> !f.isEmpty()).toList();
+        searchingSpinner = spinner.isEmpty() ? List.of("◐", "◓", "◑", "◒") : spinner;
+        List<net.kyori.adventure.text.format.TextColor> colors = new java.util.ArrayList<>();
+        for (String hex : y.getStringList("searching.colors")) {
+            net.kyori.adventure.text.format.TextColor c = net.kyori.adventure.text.format.TextColor.fromHexString(hex.trim());
+            if (c != null) colors.add(c);
+        }
+        searchingColors = colors.isEmpty() ? List.of(net.kyori.adventure.text.format.TextColor.color(0xF2C14E)) : List.copyOf(colors);
+        searchingCycleTicks = (int) Math.round(Math.clamp(y.getDouble("searching.cycle-seconds", 6), 1, 60) * 20);
+        List<net.kyori.adventure.bossbar.BossBar.Color> bossColors = new java.util.ArrayList<>();
+        for (String name : y.getStringList("searching.boss-bar-colors")) {
+            var c = net.kyori.adventure.bossbar.BossBar.Color.NAMES.value(name.trim().toLowerCase(java.util.Locale.ROOT));
+            if (c != null) bossColors.add(c);
+        }
+        searchingBossColors = bossColors.isEmpty() ? List.of(net.kyori.adventure.bossbar.BossBar.Color.BLUE) : List.copyOf(bossColors);
+        var overlay = net.kyori.adventure.bossbar.BossBar.Overlay.NAMES.value(
+            y.getString("searching.boss-bar-overlay", "progress").trim().toLowerCase(java.util.Locale.ROOT));
+        searchingBossOverlay = overlay == null ? net.kyori.adventure.bossbar.BossBar.Overlay.PROGRESS : overlay;
     }
 
     public @Nullable HotbarItem item(String key) {
