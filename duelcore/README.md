@@ -221,7 +221,10 @@ Every file is commented, and new keys are added to your files automatically on u
 `config-version` upgrades the old value once: version 2 switches `queue.allow-multiple` to true and `queue.unranked`
 to false when they still have the old defaults (false / true); version 3 replaces `queue.music.tracks` with the new
 11-disc list when it is still the old 21-disc default (a list you edited is kept; delete the key to get the new
-default). Main settings:
+default); version 4 turns `animations.countdown-pop`, `fight-sweep` and `match-point` off, so the classic start
+countdown is back (they were on by default, so a server that turned them on on purpose gets them switched off too: set
+them back to true after updating to keep the animated countdown). A file with a YAML error is never rewritten: the
+plugin runs on the bundled defaults for it and logs the error until you fix it. Main settings:
 
 **config.yml**
 

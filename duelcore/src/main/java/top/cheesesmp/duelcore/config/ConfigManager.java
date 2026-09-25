@@ -52,10 +52,14 @@ public final class ConfigManager {
         File file = new File(plugin.getDataFolder(), name);
         if (!file.exists()) plugin.saveResource(name, false);
         YamlConfiguration yml = new YamlConfiguration();
+        // a file that doesn't parse is never written back: saving the merged defaults would wipe the admin's settings
+        boolean broken = false;
         try {
             yml.load(file);
         } catch (Exception e) {
-            plugin.getLogger().severe(name + " is invalid, using defaults: " + e.getMessage());
+            broken = true;
+            plugin.getLogger().severe(name + " is invalid, using the bundled defaults until it is fixed (the file was not"
+                + " changed): " + e.getMessage());
             yml = new YamlConfiguration();
         }
         try (InputStream in = plugin.getResource(name)) {
@@ -71,7 +75,7 @@ public final class ConfigManager {
                         changed = true;
                     }
                 }
-                if (changed && file.exists()) yml.save(file);
+                if (changed && !broken && file.exists()) yml.save(file);
             }
         } catch (Exception e) {
             plugin.getLogger().warning("Could not merge defaults into " + name + ": " + e.getMessage());
