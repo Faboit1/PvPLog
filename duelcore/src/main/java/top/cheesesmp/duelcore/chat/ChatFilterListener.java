@@ -19,7 +19,7 @@ public final class ChatFilterListener implements Listener {
 
     /** Commands whose arguments are someone's words (private messages, /me, …). */
     private static final Set<String> MESSAGE_COMMANDS = Set.of("msg", "tell", "w", "whisper", "r", "reply", "me",
-        "say", "m", "pm", "dm", "message", "teammsg", "tm", "mail");
+        "say", "m", "pm", "dm", "message", "teammsg", "tm", "mail", "pc");
 
     private final DuelCorePlugin plugin;
 

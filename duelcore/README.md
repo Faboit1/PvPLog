@@ -18,7 +18,7 @@ everything is in YAML with MiniMessage.
 2. Stand where players should spawn and run `/duelcore sethub`. If the hub world is empty, a small platform is
    generated.
 3. That's it. 15 kits and 7 terrain maps are created on the first start, and players get the hub hotbar
-   (Play, Leaderboard, Profile, Settings, Spectate).
+   (Play, Party, Leaderboard, Profile, Settings, Spectate).
 
 Optional:
 
@@ -164,6 +164,8 @@ Player commands (all players by default):
 | `/profile [player]` | `/stats` | Profile: overall tier and Elo, per-kit tier/rating/record, recent matches. `/profile <p> legacy` shows last season |
 | `/leaderboard [kit\|overall] [region]` | `/lb`, `/top` | Leaderboards, global or per region |
 | `/spectate [player]` | `/spec` | Watch a match. Without a name it opens the live list (search; highest Elo first, then by name). `/spectate stop` |
+| `/party` | `/p` | Party menu (see *Parties*). `create`, `invite <player>`, `accept\|deny [player]`, `join <leader> [password]`, `leave`, `kick <player>`, `promote <player>`, `disband`, `chat`, `open`, `private`, `password [pw]`, `list`, `ffa [kit]`, `split [kit]`, `duel [leader] [kit]`, `duel accept\|deny [leader]` |
+| `/pc <message>` | | Party chat. Starting a chat message with `@` does the same |
 | `/duel [player] [kit]` | | Unranked challenge. Without arguments it opens a player picker. `/duel accept\|deny <player>` |
 | `/settings` | | Duel requests, sidebar, sounds, chat tags, hub visibility, spectators, friend alerts, party invites, region, country, max ping |
 | `/friends [add\|remove <player>\|list]` | `/f`, `/friend` | Friends dialog: follows, followers and friends (mutual follows), online first, filter, add back, duel or spectate a friend. `add` works for offline players by exact name |
@@ -190,9 +192,10 @@ Staff:
 | Permission | Default | |
 | --- | --- | --- |
 | `duelcore.player` | true | Parent of everything below marked "true" |
+| `duelcore.party` | true | Parties: `/party`, `/pc` and the Party hotbar item (the 2v2 party queue is still to come) |
 | `duelcore.queue`, `.leave`, `.profile`, `.profile.others`, `.leaderboard`, `.spectate`, `.duel`, `.settings` | true | The matching commands and hotbar items |
 | `duelcore.friends` | true | `/friends`, `/follow`, `/unfollow`, the Friends hotbar item |
-| `duelcore.party`, `duelcore.tournament` | true | Reserved for the 2v2 queue and tournaments (not in this build yet) |
+| `duelcore.tournament` | true | Reserved for tournaments (not in this build yet) |
 | `duelcore.spectate.bypass` | op | Spectate players who turned spectators off |
 | `duelcore.tier` | op | `/tier` |
 | `duelcore.bypass.commands` | op | Any command during a match (others are limited to `match.allowed-commands`) |
@@ -222,6 +225,7 @@ Every file is commented, and new keys are added to your files automatically on u
 | `arena` | `world`, `persistent-world`, `pregenerate-slots`, `slot-spacing`, `base-y`, `max-instances`, `keep-idle-per-template`, `prewarm`, `block-budget-ms`, `reset-between-rounds`, `view-distance` |
 | `leaderboard` | `refresh-seconds`, `size`, `regions` |
 | `display` | tier tags in chat, tab and above heads |
+| `party` | `max-size` (20), `invite-seconds` (invites and party challenges, 60), `open-by-default` |
 | `debug` | `verbose` logging |
 
 **The queue menu** (Play item, `/queue`) lists the kits by tab: Favorites (kits starred with ☆, saved per
@@ -256,6 +260,8 @@ the overall Elo: the average rating of every kit a player has finished placement
   Existing servers keep their old `footer`; add the `<spectators>` line from the bundled gui.yml to show it in the hub.
 - Dialog sizes (`kit-columns`, `wide-width`, `leaderboard-lines`, `spectate-limit`).
 - `motd`: two server-list lines, centered automatically, plus the hover text.
+- `party-menu`: members per page, list lengths and widths of the party menu; `sidebar.match-ffa` and
+  `sidebar.spectate-ffa` are the sidebars of a Party FFA.
 
 **chat-filter.yml**: blocks slurs and harassment, masks swearing, in chat and private messages (`/msg`, `/tell`,
 `/r`, `/me`, …). Terms are written plainly and also catch leetspeak (`n1gg3r`, `f@g`), look-alike letters from
@@ -267,6 +273,37 @@ still see the original of a *masked* message (blocked messages never reach anyon
 
 **messages.yml**: every player-facing text. The theme tags `<accent> <text> <muted> <good> <bad>` are defined at the
 top, so recolouring means editing five lines.
+
+## Parties
+
+The Party item (second hotbar slot, `hotbar.party` in gui.yml) and `/party` open the party menu. Without a party it offers *Create Party* (with an
+optional password), *Join Party* (by the leader's name, plus the password when the party has one), pending
+invitations with Accept/Deny, and the open parties to join with one click.
+
+- **Persistent.** Parties are stored in the database (`dc_parties`, `dc_party_members`) and loaded at startup.
+  Members stay in their party when they log out or the server restarts; offline members are shown as offline. When
+  the leader leaves, the longest-standing member takes over (online members first). The last one to leave deletes
+  the party. Up to `party.max-size` members (20).
+- **Joining.** An invite always works (`/party invite <name>`, or the menu's list of online players who aren't in a
+  party; the invite is a clickable [Accept] [Deny] chat message that expires after `invite-seconds`). *Open*
+  parties are listed in everyone's menu; a password, if set, is asked from anyone who joins without an invite, also
+  for private parties. Passwords are stored as salted PBKDF2 hashes. Players who turned off *party invites from
+  anyone* (setting `PARTY_INVITES`) can only be invited by their friends (mutual follows); friends are listed first
+  in the menu's invite list.
+- **The menu** shows the members (leader ★, head, online / offline / in match, pages of 8) and the buttons *Invite
+  Player*, *Party Chat*, *Party FFA*, *Party Duel*, *Party vs Party*, *Privacy* and *Disband* / *Leave*. Buttons that
+  can't be used right now are struck through and their tooltip says why. The leader clicks a member to kick them or
+  make them leader.
+- **Party chat.** `/pc <message>`, a chat message starting with `@`, or every message while *Party Chat* is on (saved
+  per member) goes to the online party members only, with a `[Party]` prefix. It passes the chat filter like normal
+  chat: blocked stays blocked, masked stays masked.
+- **Party matches** (leader only, unranked, the leader picks the kit). Everyone online must be free of matches;
+  queues and spectating are left automatically. *Party FFA*: everyone for themselves, one round, last one standing
+  wins (spawns on a ring between the arena spawns). *Party Duel*: the online members in two random teams of equal
+  size (±1). *Party vs Party*: the other leader gets a request (dialog and chat) and the match is party against
+  party. Team mates can't hurt each other. The party is told the result afterwards and stays together.
+- **Notices.** The party hears about joins, leaves, kicks, leader changes, members coming online or going offline
+  and disbanding. Someone removed or disbanded while offline is told on their next join.
 
 ## PlaceholderAPI
 
@@ -302,6 +339,7 @@ Scripts:
 | `specsearch.js` | Spectate list sorted by Elo then name, search by name and kit, no-results text, spectating a result |
 | `tagcheck.js [kit] [icon]` | Tab header/footer, slur blocked, swearing masked, clean text untouched, tab tag switches to the match kit's icon during a match and back after, kit loadout |
 | `ping.js` | Server list MOTD and hover |
+| `party.js [kit]` | Party create/invite/accept, leader and member menus, party chat (`@`, `/pc`, toggle) only reaching members and passing the chat filter, a 3-bot Party FFA, leader succession, persistence across a rejoin, disband |
 
 Never install the test kit on a production server.
 

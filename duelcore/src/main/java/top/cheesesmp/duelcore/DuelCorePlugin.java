@@ -69,6 +69,7 @@ public final class DuelCorePlugin extends JavaPlugin {
     private LeaderboardService leaderboards;
     private CommandService commands;
     private Diagnostics diagnostics;
+    private top.cheesesmp.duelcore.party.PartyService parties;
     private boolean papiHooked;
 
     @Override
@@ -112,6 +113,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         editor = new ArenaEditor(this, arenas);
         commands = new CommandService(this);
         diagnostics = new Diagnostics(this);
+        parties = new top.cheesesmp.duelcore.party.PartyService(this);
 
         arenas.enable();
         hub.enable();
@@ -149,6 +151,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         scheduler.runTaskTimer(this, duels, 20L, 20L);
         scheduler.runTaskTimer(this, leaderboards, 200L, 200L);
         scheduler.runTaskTimer(this, profiles::sweep, 1200L, 1200L);
+        parties.enable(); // listeners, "party" clicks, hub item and timers; loads the parties once the database is ready
 
         getServer().getServicesManager().register(DuelCoreApi.class, new DuelCoreApi(this), this, ServicePriority.Normal);
 
@@ -179,6 +182,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         } catch (Throwable t) {
             getLogger().log(Level.WARNING, "Cancelling matches failed", t);
         }
+        if (parties != null) parties.disable();
         if (papiHooked) {
             try {
                 top.cheesesmp.duelcore.hook.PapiHook.unregister();
@@ -341,5 +345,10 @@ public final class DuelCorePlugin extends JavaPlugin {
 
     public Diagnostics diagnostics() {
         return diagnostics;
+    }
+
+    /** Persistent parties: /party, party chat, party matches. */
+    public top.cheesesmp.duelcore.party.PartyService parties() {
+        return parties;
     }
 }

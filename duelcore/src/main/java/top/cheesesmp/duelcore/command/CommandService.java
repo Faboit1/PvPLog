@@ -54,6 +54,9 @@ public final class CommandService {
         commands.register(leaderboard(), "Show leaderboards", List.of("lb", "top"));
         commands.register(spectate(), "Watch a live match", List.of("spec"));
         commands.register(duel(), "Challenge a player (unranked)", List.of());
+        top.cheesesmp.duelcore.party.PartyCommands party = new top.cheesesmp.duelcore.party.PartyCommands(plugin);
+        commands.register(party.party(), "Parties: invite players, party chat, party duels and FFA", List.of("p"));
+        commands.register(party.chat(), "Talk to your party", List.of());
         commands.register(Commands.literal("settings").requires(perm("duelcore.settings"))
             .executes(ctx -> {
                 Player p = player(ctx);

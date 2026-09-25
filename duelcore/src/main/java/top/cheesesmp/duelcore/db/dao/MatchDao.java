@@ -81,6 +81,9 @@ public final class MatchDao {
                 + "FROM dc_match_players me "
                 + "JOIN dc_matches m ON m.id = me.match_id "
                 + "JOIN dc_match_players op ON op.match_id = me.match_id AND op.team <> me.team "
+                // one opponent row per match, so big party matches (FFA) don't use up the limit
+                + "AND op.player_id = (SELECT MIN(o.player_id) FROM dc_match_players o WHERE o.match_id = me.match_id "
+                + "AND o.team <> me.team) "
                 + "JOIN dc_players p ON p.id = op.player_id "
                 + "WHERE me.player_id = ? ORDER BY me.match_id DESC LIMIT ?")) {
             ps.setInt(1, playerId);

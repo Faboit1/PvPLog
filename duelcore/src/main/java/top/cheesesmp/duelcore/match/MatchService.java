@@ -14,13 +14,17 @@ import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.Tag;
+import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlotGroup;
 import org.jspecify.annotations.Nullable;
@@ -109,6 +113,20 @@ public final class MatchService implements Runnable {
      * Queue entries, spectating and pending duel requests of every player are cleared.
      */
     public @Nullable Match create(List<List<Player>> teams, Kit kit, boolean ranked, Match.Origin origin) {
+        return create(teams, kit, ranked, origin, false);
+    }
+
+    /**
+     * Starts an unranked free-for-all: every player is their own team, one round, last one standing wins
+     * ({@link Match#ffa()}). Returns null if a player is unavailable.
+     */
+    public @Nullable Match createFfa(List<Player> players, Kit kit, Match.Origin origin) {
+        List<List<Player>> teams = new ArrayList<>();
+        for (Player p : players) teams.add(List.of(p));
+        return create(teams, kit, false, origin, true);
+    }
+
+    private @Nullable Match create(List<List<Player>> teams, Kit kit, boolean ranked, Match.Origin origin, boolean ffa) {
         List<Participant> participants = new ArrayList<>();
         for (int team = 0; team < teams.size(); team++) {
             for (Player p : teams.get(team)) {
@@ -121,7 +139,7 @@ public final class MatchService implements Runnable {
             }
         }
         if (participants.size() < 2) return null;
-        Match match = new Match(nextId++, kit, ranked && participants.size() == 2, origin, participants);
+        Match match = new Match(nextId++, kit, ranked && participants.size() == 2 && !ffa, origin, participants, ffa);
         matches.put(match.id(), match);
         created++;
         // both sides hear the same combination; it varies from match to match
@@ -142,13 +160,14 @@ public final class MatchService implements Runnable {
             PlayerProfile oppProfile = opp == null ? null : plugin.profiles().get(opp.uuid());
             player.showTitle(Title.title(
                 plugin.messages().get("match.found-title"),
-                plugin.messages().get("match.found-subtitle",
+                plugin.messages().get(match.ffa() ? "party.match.found-ffa" : "match.found-subtitle",
                     Messages.text("opponent", match.teamName(1 - p.team())),
                     Messages.comp("tier", plugin.tiers().format(opp == null ? null : opp.tierBefore())),
                     Messages.comp("kit", kit.displayName()),
                     Messages.comp("kit_icon", kit.sprite()),
                     Messages.text("mode", plugin.messages().raw("mode." + (match.ranked() ? "ranked" : "unranked"))),
-                    Messages.text("region", oppProfile == null || oppProfile.region() == null ? "" : oppProfile.region())),
+                    Messages.text("region", oppProfile == null || oppProfile.region() == null ? "" : oppProfile.region()),
+                    Messages.num("players", participants.size())),
                 Title.Times.times(Duration.ofMillis(150), Duration.ofMillis(1600), Duration.ofMillis(300))));
             plugin.sidebar().refresh(player);
             plugin.tags().update(player); // the tag now shows this match's kit and tier
@@ -321,6 +340,7 @@ public final class MatchService implements Runnable {
 
     private Location spawnFor(Match m, Participant p) {
         ArenaInstance arena = m.arena;
+        if (m.teamCount() > 2) return ringSpawn(arena, p.team(), m.teamCount());
         Location base = arena.spawn(p.team());
         List<Participant> team = m.team(p.team());
         int index = team.indexOf(p);
@@ -331,6 +351,51 @@ public final class MatchService implements Runnable {
             base.add(Math.cos(yaw) * offset, 0, Math.sin(yaw) * offset);
         }
         return base;
+    }
+
+    /**
+     * Spawn of one team of a free-for-all: evenly spread on a ring between the two arena spawns ({@link Teams#ring}),
+     * facing the middle, at least 6 blocks inside the arena, on the nearest ground where a player fits.
+     */
+    private static Location ringSpawn(ArenaInstance arena, int team, int teams) {
+        Location a = arena.spawn(0);
+        Location b = arena.spawn(1);
+        double cx = (a.getX() + b.getX()) / 2;
+        double cz = (a.getZ() + b.getZ()) / 2;
+        double minX = arena.originX();
+        double minZ = arena.originZ();
+        double maxX = minX + arena.template().sizeX();
+        double maxZ = minZ + arena.template().sizeZ();
+        double room = Math.min(Math.min(cx - minX, maxX - cx), Math.min(cz - minZ, maxZ - cz)) - 6;
+        double[] pos = Teams.ring(a.getX(), a.getZ(), b.getX(), b.getZ(), team, teams, room);
+        int x = (int) Math.floor(pos[0]);
+        int z = (int) Math.floor(pos[1]);
+        int y = groundY(arena, x, z, (int) Math.floor((a.getY() + b.getY()) / 2));
+        return new Location(arena.world(), x + 0.5, y, z + 0.5, (float) pos[2], 0f);
+    }
+
+    /** The feet Y nearest {@code startY} (±16) with solid ground below and two free blocks, inside the arena. */
+    private static int groundY(ArenaInstance arena, int x, int z, int startY) {
+        World world = arena.world();
+        int min = arena.originY() + 1;
+        int max = arena.originY() + arena.template().sizeY() - 2;
+        for (int d = 0; d <= 16; d++) {
+            int up = startY + d;
+            if (up >= min && up <= max && standable(world, x, up, z)) return up;
+            int down = startY - d;
+            if (d > 0 && down >= min && down <= max && standable(world, x, down, z)) return down;
+        }
+        return Math.clamp(startY, min, Math.max(min, max));
+    }
+
+    private static boolean standable(World world, int x, int y, int z) {
+        Material ground = world.getBlockAt(x, y - 1, z).getType();
+        return ground.isSolid() && ground != Material.BARRIER && !Tag.LEAVES.isTagged(ground)
+            && free(world.getBlockAt(x, y, z)) && free(world.getBlockAt(x, y + 1, z));
+    }
+
+    private static boolean free(Block block) {
+        return block.isPassable() && !block.isLiquid();
     }
 
     private void applyBorder(Player player, ArenaInstance arena) {
@@ -406,12 +471,12 @@ public final class MatchService implements Runnable {
         return plugin.messages().get("match.hearts", Messages.text("hp", String.format(java.util.Locale.ROOT, "%.1f", hp / 2.0)));
     }
 
+    /** The round is over when at most one team has someone standing (none standing = a draw). */
     private void checkRoundOver(Match m) {
-        boolean team0 = anyAlive(m, 0);
-        boolean team1 = anyAlive(m, 1);
-        if (team0 && team1) return;
-        if (!team0 && !team1) roundOver(m, -1);
-        else roundOver(m, team0 ? 0 : 1);
+        boolean[] alive = new boolean[m.teamCount()];
+        for (int t = 0; t < alive.length; t++) alive[t] = anyAlive(m, t);
+        int outcome = Teams.outcome(alive);
+        if (outcome != Teams.ONGOING) roundOver(m, outcome);
     }
 
     private static boolean anyAlive(Match m, int team) {
@@ -419,12 +484,20 @@ public final class MatchService implements Runnable {
         return false;
     }
 
+    /** Teams that still have someone in the match (who hasn't quit or forfeited). */
+    private static boolean[] present(Match m) {
+        boolean[] present = new boolean[m.teamCount()];
+        for (Participant p : m.participants()) if (!p.left()) present[p.team()] = true;
+        return present;
+    }
+
     private void timeout(Match m) {
         int winner = -1;
         if ("health".equals(plugin.settings().timeoutDecision)) {
-            double h0 = healthFraction(m, 0);
-            double h1 = healthFraction(m, 1);
-            if (Math.abs(h0 - h1) > 0.001) winner = h0 > h1 ? 0 : 1;
+            // the clearly healthiest team takes the round; a tie (within 0.1 %) is a draw
+            double[] health = new double[m.teamCount()];
+            for (int t = 0; t < health.length; t++) health[t] = healthFraction(m, t);
+            winner = Teams.best(health, 0.001);
         }
         for (Player p : online(m)) plugin.messages().send(p, "match.timeout");
         roundOver(m, winner);
@@ -459,9 +532,12 @@ public final class MatchService implements Runnable {
         for (Player p : online(m)) {
             Participant self = m.participant(p.getUniqueId());
             int you = self == null ? m.score[0] : m.score[self.team()];
-            int opp = self == null ? m.score[1] : m.score[1 - self.team()];
+            int opp = self == null ? m.score[1] : Teams.bestOther(m.score, self.team());
             String key = winnerTeam < 0 ? "match.round-draw" : (self != null && self.team() == winnerTeam ? "match.round-won" : "match.round-lost");
             if (self == null) key = "match.round-spectator";
+            if (m.ffa() && winnerTeam >= 0) {
+                key = self != null && self.team() == winnerTeam ? "party.match.ffa-won" : "party.match.ffa-lost";
+            }
             p.sendActionBar(plugin.messages().get(key, Messages.num("you", you), Messages.num("opp", opp),
                 Messages.num("round", m.round), Messages.text("winner", winnerTeam < 0 ? "" : m.teamName(winnerTeam))));
             sound(p, winnerTeam >= 0 && self != null && self.team() == winnerTeam ? Sound.ENTITY_PLAYER_LEVELUP : Sound.BLOCK_NOTE_BLOCK_BASS, 1f);
@@ -478,7 +554,7 @@ public final class MatchService implements Runnable {
         if (decided) {
             end(m, winnerTeam, Match.EndReason.SCORE);
         } else if (capped) {
-            int w = m.score[0] == m.score[1] ? -1 : (m.score[0] > m.score[1] ? 0 : 1);
+            int w = Teams.leader(m.score);
             end(m, w, w < 0 ? Match.EndReason.DRAW : Match.EndReason.SCORE);
         }
     }
@@ -526,8 +602,10 @@ public final class MatchService implements Runnable {
         }
         boolean teamLeft = true;
         for (Participant mate : m.team(p.team())) if (!mate.left()) teamLeft = false;
-        if (teamLeft) {
-            end(m, 1 - p.team(), quit ? Match.EndReason.FORFEIT_QUIT : Match.EndReason.FORFEIT_COMMAND);
+        // with two teams the other one wins; with more (free-for-all) only once a single team is still there
+        int winner = !teamLeft ? Teams.ONGOING : m.teamCount() == 2 ? 1 - p.team() : Teams.outcome(present(m));
+        if (winner != Teams.ONGOING) {
+            end(m, winner, quit ? Match.EndReason.FORFEIT_QUIT : Match.EndReason.FORFEIT_COMMAND);
         } else if (m.state == Match.State.FIGHTING) {
             checkRoundOver(m);
         }

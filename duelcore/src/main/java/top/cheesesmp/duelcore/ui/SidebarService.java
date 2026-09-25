@@ -125,7 +125,7 @@ public final class SidebarService implements Listener, Runnable {
         Match spectating = plugin.spectate().spectating(player.getUniqueId());
         QueueEntry queued = plugin.queue().firstEntry(player.getUniqueId());
         if (match != null) {
-            template = gui.sidebarMatch;
+            template = match.ffa() && !gui.sidebarMatchFfa.isEmpty() ? gui.sidebarMatchFfa : gui.sidebarMatch;
             Participant self = match.participant(player.getUniqueId());
             int team = self == null ? 0 : self.team();
             Participant opp = self == null ? null : match.opponentOf(self);
@@ -138,8 +138,13 @@ public final class SidebarService implements Listener, Runnable {
             tags.add(Messages.num("first_to", match.firstTo()));
             tags.add(Messages.text("time", time(match)));
             tags.add(Messages.num("opp_ping", oppPlayer == null ? 0 : oppPlayer.getPing()));
+            tags.add(Messages.num("alive", match.alive()));
+            tags.add(Messages.num("players", match.participants().size()));
+            tags.add(Messages.num("kills", self == null ? 0 : self.kills()));
         } else if (spectating != null) {
-            template = gui.sidebarSpectate;
+            template = spectating.ffa() && !gui.sidebarSpectateFfa.isEmpty() ? gui.sidebarSpectateFfa : gui.sidebarSpectate;
+            tags.add(Messages.num("alive", spectating.alive()));
+            tags.add(Messages.num("players", spectating.participants().size()));
             addKit(tags, spectating.kit(), spectating.ranked() ? "ranked" : "unranked");
             tags.add(Messages.text("red_name", spectating.teamName(0)));
             tags.add(Messages.text("blue_name", spectating.teamName(1)));

@@ -38,8 +38,14 @@ top.cheesesmp.duelcore
 ├── command/                  Brigadier tree registered in LifecycleEvents.COMMANDS
 ├── hook/                     PlaceholderHook (loaded only when PlaceholderAPI exists)
 ├── debug/                    Diagnostics (/duelcore debug: matches, instances, chunks, entities, tasks, heap, DB)
-└── (phase 2) feed/, tournament/, web/ (REST), party/
+├── party/                    Party, PartyService (persistent parties, invites, chat routing, party matches),
+│                             PartyDialogs, PartyCommands (/party, /pc), PartyChatListener, OrderedWrites
+└── (phase 2) feed/, tournament/, web/ (REST)
 ```
+
+Matches have any number of teams: a 1v1 has two, party duels two teams of several players, and a Party FFA one team
+per fighter (`Match.ffa()`: one round, spawns on a ring between the two arena spawns, see `match/Teams`). Ratings
+only ever apply to ranked 1v1s.
 
 ## Data model (SQLite default, MySQL optional)
 
@@ -63,7 +69,13 @@ dc_matches       (id BIGINT PK AUTO, season_id, kit_id, ranked TINYINT, arena VA
 dc_match_players (match_id, player_id, team TINYINT, rounds_won TINYINT, hits INT, damage_dealt FLOAT,
                   damage_taken FLOAT, rating_before FLOAT, rating_after FLOAT, PK(match_id, player_id))
                   IDX (player_id, match_id)                              -- recent history
+dc_parties       (id VARCHAR(36) PK, leader_id INT, open TINYINT, password VARCHAR(64) NULL, created_at BIGINT)
+dc_party_members (player_id INT PK, party_id VARCHAR(36) IDX, joined_at BIGINT, chat TINYINT)  -- one party each
 ```
+
+Parties are loaded once at startup and changed in memory; their writes go through `party/OrderedWrites`, which keeps
+them in order on the MySQL pool. Passwords are salted PBKDF2 hashes. A player removed from a party while offline gets
+a `dc_meta` row `party-notice:<player id>` that is shown (and deleted) on their next join.
 
 A **season reset ("beta reset")** creates a new `dc_seasons` row and marks the old one `legacy=1`. Nothing is copied. Old rows stay as the archive and can be read with `/profile <player> legacy`. Every read and write is scoped to the current season id.
 

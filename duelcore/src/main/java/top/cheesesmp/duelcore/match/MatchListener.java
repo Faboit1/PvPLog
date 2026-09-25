@@ -447,6 +447,7 @@ public final class MatchListener implements Listener {
         int colon = label.indexOf(':');
         if (colon >= 0) label = label.substring(colon + 1);
         if (label.equals("leave") || label.equals("spectate") || plugin.settings().allowedCommands.contains(label)) return;
+        if (label.equals("pc") || label.equals("party") || label.equals("p")) return; // party chat and menu work anywhere
         event.setCancelled(true);
         plugin.messages().send(player, "match.command-blocked");
     }
