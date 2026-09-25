@@ -84,6 +84,17 @@ function createBot (name, opts = {}) {
   bot.on('error', e => log(name, 'error', e.message))
   bot.on('end', r => log(name, 'end', r))
   bot.on('messagestr', m => { bot.dc.chat.push(m); if (bot.dc.chat.length > 200) bot.dc.chat.shift(); log(name, 'chat', m) })
+  // player chat the server re-rendered (party chat, filtered words): real clients show the unsigned content, mineflayer
+  // only the signed body, so record what a client would display too
+  bot.once('login', () => {
+    bot._client.on('player_chat', p => {
+      if (!p.unsignedChatContent) return
+      const shown = plain(p.unsignedChatContent)
+      bot.dc.chat.push(shown)
+      if (bot.dc.chat.length > 200) bot.dc.chat.shift()
+      log(name, 'chat-shown', shown)
+    })
+  })
   bot.on('title', (text, type) => {
     let t
     try { t = plain(text) } catch (e) { t = JSON.stringify(text) }

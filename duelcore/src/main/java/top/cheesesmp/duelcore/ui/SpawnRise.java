@@ -410,13 +410,14 @@ public final class SpawnRise implements Listener {
                 v.playSound(target, Sound.BLOCK_PISTON_CONTRACT, 0.3f, 0.7f);
                 if (top != null) v.spawnParticle(Particle.BLOCK, target.clone().add(0, 0.1, 0), 12, 0.8, 0.05, 0.8, 0, top);
             }
-            if (!sameWorld || player.getLocation().distanceSquared(target) > 0.01) {
-                Location exact = target.clone();
-                exact.setYaw(player.getLocation().getYaw());
-                exact.setPitch(player.getLocation().getPitch());
-                player.teleportAsync(exact).whenComplete((ok, err) -> r.done.run());
-                return;
-            }
+            // always snap, even when the server thinks they're already there: the client is a tick or so behind and
+            // falls a little in the tick before the real blocks are back, which would leave its feet inside the top
+            // block (it then sinks onto the block below). The teleport arrives after the block changes.
+            Location exact = target.clone();
+            exact.setYaw(player.getLocation().getYaw());
+            exact.setPitch(player.getLocation().getPitch());
+            player.teleportAsync(exact).whenComplete((ok, err) -> r.done.run());
+            return;
         }
         r.done.run();
     }

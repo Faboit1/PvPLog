@@ -59,7 +59,9 @@ async function main () {
   await L.sleep(700)
   b.chat('/queue ' + kit + ' ranked')
   await Promise.all([L.waitTitle(a, /Match found/, 20000, ma.titles), L.waitTitle(b, /Match found/, 20000, mb.titles)])
-  await L.sleep(2500)
+  // the kit is given once the player is up on the spawn (after the rising platform), before the countdown ends
+  await L.waitTitle(a, /Fight/, 40000, ma.titles)
+  await L.sleep(500)
   L.log('test', 'tab-match', tab)
   for (const n of ['dcbot_alpha', 'dcbot_bravo']) {
     if (!tab[n] || !tab[n].includes(icon)) throw new Error('tab name of ' + n + ' lacks ' + icon + ': ' + tab[n])

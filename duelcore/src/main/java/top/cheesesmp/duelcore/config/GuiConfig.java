@@ -48,6 +48,8 @@ public final class GuiConfig {
     public final boolean motdCenter;
     public final java.util.List<String> motdLines;
     public final java.util.List<String> motdHover;
+    /** Random pick per ping, shown where a MOTD line has {@code <tagline>}. */
+    public final java.util.List<String> motdTaglines;
     public final int historyLines;
     /** Queue menu: row width, kit description width, tab icons, placement bar (segments + head textures). */
     public final int queueWidth;
@@ -98,6 +100,7 @@ public final class GuiConfig {
         motdCenter = y.getBoolean("motd.center", true);
         motdLines = y.getStringList("motd.lines");
         motdHover = y.getStringList("motd.hover");
+        motdTaglines = y.getStringList("motd.taglines");
         historyLines = Math.clamp(y.getInt("dialogs.history-lines", 5), 0, 20);
         queueWidth = Math.clamp(y.getInt("queue-menu.width", 310), 100, 1024);
         queueKitWidth = Math.clamp(y.getInt("queue-menu.kit-width", 250), 50, 1024);

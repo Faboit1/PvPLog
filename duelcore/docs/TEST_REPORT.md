@@ -9,7 +9,7 @@ ViaBackwards) could join next to the human testers.
 | Area | Result |
 | --- | --- |
 | Gradle build | ✅ Clean, 0 compiler warnings (`-Xlint:deprecation,unchecked,removal`) |
-| Unit tests | ✅ 24/24: chat filter (slurs and evasions blocked, 29 clean look-alikes untouched, swearing masked), kit YAML parsing, Glicko-2 paper example, Elo, overall Elo, tier ladder, DB round trip on SQLite incl. migrations v1→v3, matchmaker windows/policies, snapshot RLE + Sponge import, bedrock floor, generated maps (fenced, spawns playable, distinct biomes), resource/message key cross-check |
+| Unit tests | ✅ 65/65 (party, friends, follow/party DAOs, ordered writes, settings/config upgrades, rise geometry, music tracks, sound pools, …) plus the earlier 24: chat filter (slurs and evasions blocked, 29 clean look-alikes untouched, swearing masked), kit YAML parsing, Glicko-2 paper example, Elo, overall Elo, tier ladder, DB round trip on SQLite incl. migrations v1→v3, matchmaker windows/policies, snapshot RLE + Sponge import, bedrock floor, generated maps (fenced, spawns playable, distinct biomes), resource/message key cross-check |
 | Boot | ✅ Enables in under 1.3 s. DuelCore logs no errors or warnings (other plugins' errors listed under *Environment notes*) |
 | Full match through the real UI | ✅ `duel1.js`: queue dialog click → match found → countdown → first-to-3 → results dialog → hub hotbar restored → profile and leaderboard dialogs |
 | Arena instances | ✅ Paste, reuse, per-round reset and post-match reset. Every reset in every run ended clean (`dirtyResets=0`) |
@@ -30,6 +30,15 @@ ViaBackwards) could join next to the human testers.
 | Tab header/footer | ✅ `Cheese PvP` / online · live · queued / ping · TPS, refreshed every 2 s |
 | Chat filter | ✅ `tagcheck.js`: `n1gg.3r` blocked (sender told, other player receives nothing, logged); `fuuuck` masked for the other player; `spicy` passes |
 | All 15 kits | ✅ Bots queued every kit: correct items, potion counts (Pot 35 splash, Netherite Pot 30, SMP 27, Mace 21, Diamond SMP 18), stacked TNT carts, tipped arrows; `/data get` confirms enchantments (Sharp V, Sweeping III, Prot IV) |
+| Queue menu (MCPVP style) | ✅ `duel1.js`: kit row click in the new menu → match → results "Play again" → hub, profile and leaderboard dialogs |
+| Parties | ✅ `party.js`: create, invite + accept, party menu for leader and member, party chat (`@`, `/pc`, toggle) only reaching members and passing the chat filter, Party FFA with 3 bots decided ("last one standing"), leader succession, persistence across a rejoin, disband |
+| Friends | ✅ `friends.js`: follow, clickable [Follow back] → friends, Friends dialog (entries, Mutual tooltip, filter cycling, "Add Back" for followers), `/friends list`, offline/online alerts, friendship kept across a rejoin |
+| Rising spawn platform | ✅ `visuals.js` / `ffaprobe.js`: players start 3 blocks down, 12–14 block displays rise with them, all end exactly on the spawn (1v1 and 3-player FFA); 0 displays left in the arena world afterwards |
+| Match sounds | ✅ Totem pop (entity status 35) followed by a stop_sound for `item.totem.use` in the same tick; varied found/fight sounds |
+| Queue music | ✅ A music disc starts for the searching player (records source) and a named stop_sound is sent when the match is found |
+| Hub flight, hotbar hints | ✅ Flight allowed in the hub and again after a match; holding a hub item shows its action-bar hint, an empty slot clears it |
+| Tab spectators | ✅ A spectator's tab entry is gray italic and sorted last; footer shows "1 watching this match · 1 spectating"; back to normal after `/spectate stop` |
+| MOTD | ✅ Server-list ping shows the logo line and a tagline that changes between pings |
 | Persistent arena world | ✅ After a restart all arenas are reused in about 3 s with 0 blocks changed; changed templates are cleared and re-pasted |
 
 ## Leak check
@@ -67,6 +76,9 @@ identical run is the way to confirm a flat heap. Not done yet.
 | Unit test | `TierService` crashed when `tiers.yml` had no `format` entries | Copy into an explicit `EnumMap` |
 | Review | Old tier *points* still existed next to Elo | Removed; schema v3 renames the column and rebuilds standings |
 | Kit check | **Kit enchantments were never applied**: Bukkit returns nested YAML maps as `MemorySection`s, so every `enchants:` block was skipped silently | `ItemParser.asMap` accepts sections; regression test; confirmed in game with `/data get` |
+| Bot run (FFA) | Rising platform: in the tick before the real blocks came back the client fell ~0.08 blocks and ended with its feet inside the top block, sinking one block (bots stuck in the ground for a whole FFA round) | The rise always ends with an exact teleport onto the spawn, sent after the block changes |
+| Review workflow | 25 findings from 5 adversarial reviewers, 23 fixed (2 partly) — e.g. offline party leader never replaced, follow/unfollow alert spam, writes reordered on MySQL, rise into walls on slopes, Keep Queuing edge cases, old config defaults kept on existing servers | See the fix commit; unit tests added (65 total) |
+| Live report | Long respawn throws (47–63 blocks) never moved high-ping players server-side, then snapped and got flagged by Grim AntiKB | Throw gated by ping (teleport above 350 ms), settle wait scales with ping, stall watchdog, clearance-checked arc, zero velocity flushed before the final teleport |
 | Deploy | Test-kit edit dropped the login guard (about 1 min, only Faboit joined) | Guard restored, fails closed, covered by `guard.js` |
 
 ## Environment notes (not DuelCore)

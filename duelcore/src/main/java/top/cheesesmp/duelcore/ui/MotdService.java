@@ -17,8 +17,9 @@ import top.cheesesmp.duelcore.config.GuiConfig;
 import top.cheesesmp.duelcore.config.Messages;
 
 /**
- * Server list MOTD from gui.yml {@code motd}: two MiniMessage lines with live numbers, optionally centered
- * (by the pixel widths of the default font), plus the hover text shown over the player count.
+ * Server list MOTD from gui.yml {@code motd}: two MiniMessage lines with live numbers and a {@code <tagline>} picked at
+ * random on every ping, optionally centered (by the pixel widths of the default font), plus the hover text shown over
+ * the player count.
  */
 public final class MotdService implements Listener {
 
@@ -42,6 +43,10 @@ public final class MotdService implements Listener {
             Messages.num("fighting", plugin.matches().playersInMatches()),
             Messages.num("queued", plugin.queue().totalQueued()),
             Messages.num("kits", plugin.kits().enabled().size()));
+        if (!gui.motdTaglines.isEmpty()) {
+            String tagline = gui.motdTaglines.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(gui.motdTaglines.size()));
+            tags = TagResolver.resolver(tags, Messages.comp("tagline", plugin.messages().parse(tagline, tags)));
+        }
         List<Component> lines = new ArrayList<>();
         for (String raw : gui.motdLines.subList(0, Math.min(2, gui.motdLines.size()))) {
             Component line = plugin.messages().parse(raw, tags);

@@ -79,16 +79,25 @@ hotbar:
 # Server list entry. Placeholders: <online> <max> <live> (matches) <fighting> <queued> <kits>
 motd:
   enabled: true
-  # Center each line in the server list (by character widths of the default font).
-  center: true
+  # Center each line in the server list (by character widths of the default font). Off for the logo + arrow look.
+  center: false
+  # Placeholders: <online> <max> <live> <fighting> <queued> <kits> and <tagline> (one of the taglines below, picked at
+  # random on every server-list refresh).
   lines:
-    - "<#f2c14e>Cheese</#f2c14e> <#f7e3a1>PvP</#f7e3a1>"
-    - "<#8b9099>Ranked duels</#8b9099> <#4b4f57>·</#4b4f57> <#8b9099><kits> kits</#8b9099> <#4b4f57>·</#4b4f57> <#d8dbe0><live></#d8dbe0> <#8b9099>live</#8b9099>"
+    - "<b><gradient:#ffe45c:#ffab2e>CHEESE</gradient><#ff4545>PVP</#ff4545></b> <#4b4f57>|</#4b4f57> <gradient:#9bf6ff:#b8a4ff>Ranked Duels</gradient> <#6b7078>26.2</#6b7078>"
+    - " <#6b7078>└➤</#6b7078> <tagline>"
+  taglines:
+    - "<#ff5f5f><b>BETA</b></#ff5f5f> <#8b9099>· <#d8dbe0><live></#d8dbe0> live · <#d8dbe0><queued></#d8dbe0> queued</#8b9099>"
+    - "<#ffd84d><b>NEW</b></#ffd84d> <#d8dbe0>Parties, friends & Party FFA</#d8dbe0>"
+    - "<#7fd99a><b><kits> KITS</b></#7fd99a> <#d8dbe0>Sword, Mace, Crystal, SMP, Pot…</#d8dbe0>"
+    - "<#9bf6ff><b>TIERS</b></#9bf6ff> <#d8dbe0>Climb from LT5 to HT1</#d8dbe0>"
+    - "<#ff9df5><b>QUEUE UP</b></#ff9df5> <#d8dbe0><fighting> fighting right now</#d8dbe0>"
   # Replaces the player list shown when hovering the player count. Empty list = the normal player list.
   hover:
-    - "<#f2c14e>Cheese PvP</#f2c14e>"
+    - "<b><gradient:#ffe45c:#ffab2e>CHEESE</gradient><#ff4545>PVP</#ff4545></b>"
     - "<#8b9099>Fighting</#8b9099> <#d8dbe0><fighting></#d8dbe0>"
     - "<#8b9099>In queue</#8b9099> <#d8dbe0><queued></#d8dbe0>"
+    - "<#8b9099>Live matches</#8b9099> <#d8dbe0><live></#d8dbe0>"
 
 # The queue menu (Play item, /queue). Texts are in messages.yml (dialog.queue).
 queue-menu:
