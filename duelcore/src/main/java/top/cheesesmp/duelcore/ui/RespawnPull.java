@@ -24,11 +24,10 @@ import top.cheesesmp.duelcore.DuelCorePlugin;
 /**
  * The between-round respawn: the player is thrown back to their spawn along a real ballistic arc.
  *
- * <p>The arc is a true projectile path under Minecraft's player gravity (0.08 blocks/tick²): constant horizontal speed,
- * a parabola vertically, peaking well above both ends. The flight time follows from the height of the arc the same
- * way it would for a thrown player. It is driven through the player's own velocity every tick, so the client moves
- * them with its normal physics and interpolation (no teleport stutter). Their own input is overwritten each tick, so
- * they can look around but not steer. On landing they are put exactly on the spawn.
+ * <p>The player gets one launch velocity, computed from Minecraft's own player physics (gravity 0.08, vertical drag
+ * 0.98, horizontal drag 0.91, ground friction on the first tick) so that the client's normal physics carries them
+ * along a natural arc onto the spawn ({@link ThrowMath#launch}). Nothing steers them after that; on landing they are
+ * put exactly on the spawn, which only corrects the little their own air control moved them.
  *
  * <p>Robustness, because the client runs a round trip behind the server and an anticheat checks every velocity:
  * <ul>
@@ -39,9 +38,10 @@ import top.cheesesmp.duelcore.DuelCorePlugin;
  *       server has seen the player move (a position that never changed is still on the ground at the start);</li>
  *   <li>a throw the server never sees the player follow (movement lost or ignored, e.g. a teleport the client has not
  *       confirmed yet) is ended after {@code respawn-throw-stall-ticks} plus the ping with a teleport;</li>
- *   <li>no velocity is sent once a throw is over, and before the final teleport a zero velocity goes out one tick ahead
- *       (entity velocity packets leave with the end-of-tick entity updates, a teleport immediately), so no velocity
- *       packet can reach the client after the snap and launch it again.</li>
+ *   <li>a launch faster than {@link #MAX_SPEED} blocks per tick (a very long throw) becomes a teleport;</li>
+ *   <li>before the final teleport a zero velocity goes out one tick ahead (entity velocity packets leave with the
+ *       end-of-tick entity updates, a teleport immediately), so no velocity packet can reach the client after the
+ *       snap and launch it again.</li>
  * </ul>
  */
 public final class RespawnPull implements Listener {
@@ -54,10 +54,13 @@ public final class RespawnPull implements Listener {
     private static final double[] BODY = {0.1, 0.9, 1.7};
     /** Half the player's width, for the corners of the path check. */
     private static final double HALF_WIDTH = 0.3;
+    /** Fastest launch (blocks per tick, horizontally) before a throw becomes a teleport. */
+    static final double MAX_SPEED = 6.0;
 
     private enum Stage { FLYING, SNAPPING, DONE }
 
-    private record Arc(double bulge, int ticks, double top, double raise) {
+    /** A planned flight: the launch velocity, how long it takes and where the player is after each tick. */
+    private record Arc(Vector launch, int ticks, double top, double raise, double[][] path) {
     }
 
     private final DuelCorePlugin plugin;
@@ -118,7 +121,7 @@ public final class RespawnPull implements Listener {
         Location start = freeSpot(player.getLocation()); // the death cam may end inside terrain
         Arc arc = plan(start, target, minHeight);
         if (arc == null) {
-            verbose("[throw] %s teleported instead: no arc clears the terrain", player.getName());
+            verbose("[throw] %s teleported instead: no arc clears the terrain or it would be too fast", player.getName());
             snap(t, false);
             return;
         }
@@ -132,11 +135,9 @@ public final class RespawnPull implements Listener {
             player.getName(), Math.hypot(b.getX() - a.getX(), b.getZ() - a.getZ()), arc.top() - a.getY(),
             arc.raise() > 0 ? String.format(java.util.Locale.ROOT, " (raised %.0f over terrain)", arc.raise()) : "",
             arc.ticks(), ping, settleMax, stallAfter);
-        for (Player v : viewers) {
-            if (!v.isOnline() || v.getWorld() != start.getWorld()) continue;
-            v.playSound(start, Sound.ENTITY_WIND_CHARGE_WIND_BURST, 0.7f, 0.9f);
-            v.spawnParticle(Particle.GUST, start.clone().add(0, 0.2, 0), 1);
-        }
+        // one launch; from here on the client's own physics flies the arc
+        player.setVelocity(arc.launch());
+        player.setFallDistance(0);
         t.task = plugin.getServer().getScheduler().runTaskTimer(plugin, new Runnable() {
             int k;
             int settle;
@@ -163,9 +164,6 @@ public final class RespawnPull implements Listener {
                         snap(t, false);
                         return;
                     }
-                    Vector here = point(a, b, arc.bulge(), (double) k / arc.ticks());
-                    Vector next = point(a, b, arc.bulge(), (double) (k + 1) / arc.ticks());
-                    player.setVelocity(next.subtract(here));
                     player.setFallDistance(0);
                     if (k % 2 == 0) {
                         Location trail = now.add(0, 0.2, 0);
@@ -178,9 +176,9 @@ public final class RespawnPull implements Listener {
                     k++;
                     return;
                 }
-                // done steering (no more velocity from here on): the client is a round trip behind and finishes the
-                // arc on its own momentum; wait for it to touch down, then stand it exactly on the spawn. A position
-                // the server never saw move is not a landing, even if it is on the ground.
+                // the flight time is up: the client is a round trip behind and finishes the arc on its own momentum;
+                // wait for it to touch down, then stand it exactly on the spawn. A position the server never saw move
+                // is not a landing, even if it is on the ground.
                 boolean grounded = moved && now.subtract(0, 0.08, 0).getBlock().isSolid();
                 if (!grounded && settle++ < settleMax) return;
                 landingEffects(viewers, target);
@@ -189,38 +187,49 @@ public final class RespawnPull implements Listener {
         }, 1L, 1L);
     }
 
-    /** Point at progress {@code u} (0..1): straight chord plus a parabolic bulge of height {@code bulge}. */
-    private static Vector point(Vector a, Vector b, double bulge, double u) {
-        Vector p = a.clone().add(b.clone().subtract(a).multiply(u));
-        return p.setY(ThrowMath.y(a.getY(), b.getY(), bulge, u));
-    }
-
     /**
      * The lowest arc (at least {@code minHeight} above the higher end, a bit more for long throws) whose path the
-     * player's body fits through, raising it over trees and hills; null when none does (the barrier ceiling).
+     * player's body fits through, raising it over trees and hills; null when none does (the barrier ceiling) or the
+     * launch would be faster than {@link #MAX_SPEED}.
      */
     private static @Nullable Arc plan(Location start, Location target, double minHeight) {
         World world = start.getWorld();
-        double horizontal = Math.hypot(target.getX() - start.getX(), target.getZ() - start.getZ());
+        double dx = target.getX() - start.getX();
+        double dz = target.getZ() - start.getZ();
+        double horizontal = Math.hypot(dx, dz);
         double base = Math.max(start.getY(), target.getY()) + Math.clamp(minHeight + horizontal * 0.2, minHeight, minHeight + 16);
+        boolean onGround = start.clone().subtract(0, 0.08, 0).getBlock().isSolid();
         for (double raise : RAISE) {
             double top = base + raise;
             if (top + 2 >= world.getMaxHeight()) break;
             double bulge = top - (start.getY() + target.getY()) / 2;
             int ticks = ThrowMath.ticks(bulge);
-            if (clear(world, start, target, bulge, ticks)) return new Arc(bulge, ticks, top, raise);
+            double[] v = ThrowMath.launch(dx, target.getY() - start.getY(), dz, ticks, onGround);
+            if (Math.hypot(v[0], v[2]) > MAX_SPEED) return null;
+            double[][] path = ThrowMath.path(v, ticks, onGround);
+            if (clear(world, start, target, path)) return new Arc(new Vector(v[0], v[1], v[2]), ticks, top, raise, path);
         }
         return null;
     }
 
-    /** True when the player's body fits along the arc, sampled every half tick of flight. */
-    private static boolean clear(World world, Location a, Location b, double bulge, int ticks) {
-        int samples = ticks * 2;
-        for (int i = 1; i < samples; i++) {
-            double u = (double) i / samples;
-            double x = a.getX() + (b.getX() - a.getX()) * u;
-            double z = a.getZ() + (b.getZ() - a.getZ()) * u;
-            double y = ThrowMath.y(a.getY(), b.getY(), bulge, u);
+    /** True when the player's body fits along the flight path, sampled every half tick. */
+    private static boolean clear(World world, Location a, Location b, double[][] path) {
+        double px = 0, py = 0, pz = 0;
+        for (int i = 0; i < path.length * 2 - 1; i++) {
+            double[] at = path[i / 2];
+            double x, y, z;
+            if (i % 2 == 0) { // halfway into tick i/2
+                x = a.getX() + (px + at[0]) / 2;
+                y = a.getY() + (py + at[1]) / 2;
+                z = a.getZ() + (pz + at[2]) / 2;
+            } else { // at the end of tick i/2
+                x = a.getX() + at[0];
+                y = a.getY() + at[1];
+                z = a.getZ() + at[2];
+                px = at[0];
+                py = at[1];
+                pz = at[2];
+            }
             // right at the ends the player stands next to whatever is there; only the middle of the body must be free
             boolean nearEnd = distanceSq(x, y, z, a) < 1.5 * 1.5 || distanceSq(x, y, z, b) < 1.5 * 1.5;
             if (!fits(world, x, y, z, nearEnd ? 0 : HALF_WIDTH)) return false;

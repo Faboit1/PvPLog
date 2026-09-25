@@ -234,7 +234,10 @@ public final class HubService {
     public ItemStack build(Player player, String action, GuiConfig.HotbarItem def) {
         ItemStack stack = ItemStack.of(def.material());
         ItemMeta meta = stack.getItemMeta();
-        meta.itemName(plugin.messages().parse(def.name()));
+        Component name = plugin.messages().parse(def.name());
+        meta.itemName(name);
+        // a player head with a skin shows "<name>'s Head" over item_name, so heads get the name as a custom name
+        if (meta instanceof SkullMeta) meta.customName(name.decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE));
         List<Component> lore = new ArrayList<>();
         for (String line : def.lore()) lore.add(plugin.messages().parse(line).decoration(TextDecoration.ITALIC, false));
         meta.lore(lore);

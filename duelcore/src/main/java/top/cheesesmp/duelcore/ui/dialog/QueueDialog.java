@@ -101,6 +101,11 @@ public final class QueueDialog {
     private static final int ANIM_DELAY = 6;
     private static final int ANIM_COUNT = 20;
     private static final int ANIM_SETTLE = 8;
+    /** After the count, the change ("+20%", "+18 Elo") stays this long, then fades out over CHANGE_FADE and is gone. */
+    private static final int CHANGE_HOLD = 120;
+    private static final int CHANGE_FADE = 80;
+    /** What the change fades towards (the menu's dark background) before it disappears. */
+    private static final TextColor CHANGE_FADED = TextColor.color(0x3A3A3A);
     /** Elo changes are counted in at most this many audible steps. */
     private static final int ELO_STEPS = 8;
     /** Ticks after the start during which walking on the ground doesn't stop the animation (the player settling). */
@@ -110,10 +115,13 @@ public final class QueueDialog {
         new Sfx.Note(Sfx.CHIME, 1.59f, 0.45f, 2), new Sfx.Note(Sfx.CHIME, 2.0f, 0.45f, 4), new Sfx.Note(Sfx.AMETHYST, 1.7f, 0.8f, 5));
 
     /**
-     * One frame of the progress animation: the reveals being animated (by kit), the eased count progress (0..1) and
-     * how far the settle is (0..1).
+     * One frame of the progress animation: the reveals being animated (by kit), the eased count progress (0..1),
+     * how far the settle is (0..1) and how far the change has faded out (0..1).
      */
-    private record MenuFrame(Map<String, Reveal> reveals, double count, double settle) {
+    private record MenuFrame(Map<String, Reveal> reveals, double count, double settle, double fade) {
+        MenuFrame(Map<String, Reveal> reveals, double count, double settle) {
+            this(reveals, count, settle, 0);
+        }
     }
 
     private final DuelCorePlugin plugin;
@@ -195,20 +203,38 @@ public final class QueueDialog {
                 plugin.progress().consume(uuid, kit.id()); // plays once, even when cut short
             }
         }
-        render(player, tab, reveals.isEmpty() ? null : new MenuFrame(reveals, 0, 0), reveals);
-        if (!reveals.isEmpty()) animate(player, tab, reveals);
+        int fadeStart = changeFadeStart();
+        render(player, tab, reveals.isEmpty() ? null : new MenuFrame(reveals, 0, 0), reveals, fadeStart);
+        if (!reveals.isEmpty()) animate(player, tab, reveals, fadeStart);
     }
 
     /**
      * Shows the menu; {@code frame} (animation only) replaces the standing of its kits. While open it is refreshed
-     * with the current state; after an animation of {@code reveals} the refresh keeps its final frame.
+     * with the current state; after an animation of {@code reveals} the refresh keeps its final frame, with the
+     * change fading out from server tick {@code fadeStart} and gone after that (the plain standing again).
      */
-    private void render(Player player, String tab, @Nullable MenuFrame frame, Map<String, Reveal> reveals) {
-        MenuFrame settled = reveals.isEmpty() ? null : new MenuFrame(reveals, 1, 1);
+    private void render(Player player, String tab, @Nullable MenuFrame frame, Map<String, Reveal> reveals, int fadeStart) {
         UUID uuid = player.getUniqueId();
         // (a match closes the menu; until the close is seen, nothing is re-sent)
         plugin.openDialogs().show(player, OpenDialogs.Kind.QUEUE, build(player, tab, frame),
-            p -> plugin.matches().match(uuid) != null ? null : build(p, tab, settled));
+            p -> plugin.matches().match(uuid) != null ? null : build(p, tab, settled(reveals, fadeStart)));
+    }
+
+    /** The server tick the change of an animation starting now begins to fade out. */
+    private static int changeFadeStart() {
+        return Bukkit.getCurrentTick() + ANIM_DELAY + ANIM_COUNT + CHANGE_HOLD;
+    }
+
+    /** The final frame of an animation as of now: its change fading, or null (the plain menu) once it is gone. */
+    private static @Nullable MenuFrame settled(Map<String, Reveal> reveals, int fadeStart) {
+        if (reveals.isEmpty()) return null;
+        double fade = Ease.progress(Bukkit.getCurrentTick() - fadeStart, CHANGE_FADE);
+        return fade >= 1 ? null : new MenuFrame(reveals, 1, 1, Math.max(0, fade));
+    }
+
+    /** The change text of a frame, faded out as far as the frame says. */
+    private static Component fading(Component change, MenuFrame f) {
+        return f.fade() <= 0 ? change : TextFx.fade(change, CHANGE_FADED, Ease.easeInOutSine(f.fade()), TextFx.WHITE);
     }
 
     /** Builds the menu with its fingerprint (everything shown: texts, hovers, clicks, the rows' items). */
@@ -383,7 +409,7 @@ public final class QueueDialog {
         if (placement && !(r.placedNow() && f.count() >= 1)) {
             int gained = (int) Math.round((r.newProgress() - r.oldProgress()) * 100);
             Component change = msg().get("dialog.queue.change-progress", Messages.num("percent", Math.round(gained * f.count())));
-            return msg().get("dialog.queue.standing-change", Messages.comp("standing", animatedBar(r, f)), Messages.comp("change", change))
+            return msg().get("dialog.queue.standing-change", Messages.comp("standing", animatedBar(r, f)), Messages.comp("change", fading(change, f)))
                 .hoverEvent(progressHover(r.newGames(), r.placementMatches()));
         }
         boolean switched = f.count() >= 1;
@@ -401,7 +427,7 @@ public final class QueueDialog {
         Component change = r.placedNow() ? msg().get("dialog.queue.change-placed")
             : msg().get(delta > 0 ? "dialog.queue.change-elo-up" : delta < 0 ? "dialog.queue.change-elo-down" : "dialog.queue.change-elo-same",
                 Messages.num("delta", shown));
-        return msg().get("dialog.queue.standing-change", Messages.comp("standing", standing), Messages.comp("change", change));
+        return msg().get("dialog.queue.standing-change", Messages.comp("standing", standing), Messages.comp("change", fading(change, f)));
     }
 
     /**
@@ -431,6 +457,14 @@ public final class QueueDialog {
         return Component.join(JoinConfiguration.noSeparators(), parts);
     }
 
+    /**
+     * The queue menu's placement bar for a reveal at count progress {@code count} and settle {@code settle} (0..1), so
+     * other places (the post-match action bar) draw exactly the same bar.
+     */
+    public Component placementBar(Reveal r, double count, double settle) {
+        return animatedBar(r, new MenuFrame(Map.of(), count, settle));
+    }
+
     /** A segment in {@code color}: the gui.yml highlight sprite tinted (with head textures), else the plain square. */
     private Component highlight(TextColor color) {
         GuiConfig gui = plugin.gui();
@@ -443,7 +477,7 @@ public final class QueueDialog {
     }
 
     /** Re-shows the menu frame by frame on the {@link Channel#DIALOG} channel. */
-    private void animate(Player player, String tab, Map<String, Reveal> reveals) {
+    private void animate(Player player, String tab, Map<String, Reveal> reveals, int fadeStart) {
         UUID uuid = player.getUniqueId();
         GuiConfig gui = plugin.gui();
         Reveal lead = reveals.values().iterator().next(); // the one the sounds follow
@@ -469,8 +503,20 @@ public final class QueueDialog {
                 double e = Ease.easeOutCubic(Ease.progress(t, ANIM_COUNT));
                 double settle = t < ANIM_COUNT ? 0 : Ease.progress(t - ANIM_COUNT, ANIM_SETTLE);
                 if (plugin.settings().animQueueSounds) sounds(p, t, e);
-                render(p, tab, new MenuFrame(reveals, e, settle), reveals);
-                return t < ANIM_COUNT + ANIM_SETTLE;
+                if (t <= ANIM_COUNT + ANIM_SETTLE) {
+                    render(p, tab, new MenuFrame(reveals, e, settle), reveals, fadeStart);
+                    return true;
+                }
+                // then the change holds, fades out (a frame every 2 ticks) and disappears
+                int now = Bukkit.getCurrentTick();
+                if (now < fadeStart) return true;
+                MenuFrame fading = settled(reveals, fadeStart);
+                if (fading == null) {
+                    render(p, tab, null, Map.of(), fadeStart);
+                    return false;
+                }
+                if ((now - fadeStart) % 2 == 0) render(p, tab, fading, reveals, fadeStart);
+                return true;
             }
 
             /** A rising tick per new segment (or Elo step), a flourish once the count is done. */
@@ -600,8 +646,9 @@ public final class QueueDialog {
         stopAnimation(player);
         Map<String, Reveal> reveals = new LinkedHashMap<>();
         reveals.put(kit.id(), r);
-        render(player, tab, new MenuFrame(reveals, 0, 0), reveals);
-        animate(player, tab, reveals);
+        int fadeStart = changeFadeStart();
+        render(player, tab, new MenuFrame(reveals, 0, 0), reveals, fadeStart);
+        animate(player, tab, reveals, fadeStart);
     }
 
     private Reveal sample(String kit, int oldGames, int newGames, double oldRating, double newRating) {

@@ -125,9 +125,9 @@ public final class ProgressReveal {
         Messages msg = plugin.messages();
         if (r.inPlacement() || r.placedNow()) {
             int gained = (int) Math.round((r.newProgress() - r.oldProgress()) * 100);
-            double progress = Ease.lerp(r.oldProgress(), r.newProgress(), e);
-            return msg.get("progress.placement", Messages.num("percent", Math.round(gained * e)),
-                Messages.comp("bar", plugin.gui().revealBar.render(progress)));
+            // the same bar as the queue menu's (head segments, new ones highlighted while it fills)
+            Component bar = plugin.dialogs().queueMenu().placementBar(r, e, e >= 1 ? 1 : 0);
+            return msg.get("progress.placement", Messages.num("percent", Math.round(gained * e)), Messages.comp("bar", bar));
         }
         int delta = r.eloDelta();
         long shown = Math.round(Math.abs(delta) * e);
