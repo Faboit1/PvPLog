@@ -134,6 +134,7 @@ public final class QueueService implements Listener, Runnable {
         if (!kits.contains(bucket)) kits.add(bucket);
         plugin.hub().giveItems(player);
         plugin.sidebar().refresh(player);
+        plugin.queueMusic().refresh(player);
         return switched ? JoinResult.SWITCHED : JoinResult.OK;
     }
 
@@ -158,6 +159,7 @@ public final class QueueService implements Listener, Runnable {
             byPlayer.computeIfAbsent(p.getUniqueId(), k -> new ArrayList<>());
             if (!p.equals(leader)) byPlayer.get(p.getUniqueId()).add(entry);
             plugin.hub().giveItems(p);
+            plugin.queueMusic().refresh(p);
         }
         return JoinResult.OK;
     }
@@ -201,6 +203,7 @@ public final class QueueService implements Listener, Runnable {
             removed = true;
         }
         if (entries.isEmpty()) byPlayer.remove(uuid);
+        if (removed) silenceIfIdle(uuid);
         if (removed && plugin.matches().match(uuid) == null) {
             plugin.hub().giveItems(player);
             plugin.sidebar().refresh(player);
@@ -211,17 +214,30 @@ public final class QueueService implements Listener, Runnable {
     /** Removes every queue entry of a player (a match starts, they quit, …). Their chosen kits are kept. */
     public boolean removeAll(UUID uuid) {
         List<QueueEntry> entries = byPlayer.remove(uuid);
-        if (entries == null || entries.isEmpty()) return false;
+        if (entries == null || entries.isEmpty()) {
+            silenceIfIdle(uuid);
+            return false;
+        }
         for (QueueEntry e : entries) {
             List<QueueEntry> bucket = buckets.get(new Bucket(e.kit(), e.mode()));
             if (bucket != null) bucket.remove(e);
             // a party entry is referenced by every member
             if (e.mode() == QueueMode.PARTY) {
                 byPlayer.remove(e.player());
-                for (UUID m : e.partyMembers()) byPlayer.remove(m);
+                silenceIfIdle(e.player());
+                for (UUID m : e.partyMembers()) {
+                    byPlayer.remove(m);
+                    silenceIfIdle(m);
+                }
             }
         }
+        silenceIfIdle(uuid);
         return true;
+    }
+
+    /** No longer searching: the queue music stops right away (not at the next music tick). */
+    private void silenceIfIdle(UUID uuid) {
+        if (!isQueued(uuid)) plugin.queueMusic().stop(uuid);
     }
 
     /** Forgets the queues a player chose (they left their match on purpose), so Keep Queuing won't re-join them. */
@@ -283,6 +299,13 @@ public final class QueueService implements Listener, Runnable {
     public boolean isQueued(UUID uuid) {
         List<QueueEntry> list = byPlayer.get(uuid);
         return list != null && !list.isEmpty();
+    }
+
+    /** Everyone searching in at least one queue (a copy). */
+    public List<UUID> queuedPlayers() {
+        List<UUID> list = new ArrayList<>(byPlayer.size());
+        for (Map.Entry<UUID, List<QueueEntry>> e : byPlayer.entrySet()) if (!e.getValue().isEmpty()) list.add(e.getKey());
+        return list;
     }
 
     public List<QueueEntry> entries(UUID uuid) {
@@ -350,6 +373,7 @@ public final class QueueService implements Listener, Runnable {
                 if (p == null || plugin.matches().match(entry.player()) != null) {
                     it.remove();
                     byPlayer.remove(entry.player());
+                    silenceIfIdle(entry.player());
                     continue;
                 }
                 entry.ping(p.getPing());

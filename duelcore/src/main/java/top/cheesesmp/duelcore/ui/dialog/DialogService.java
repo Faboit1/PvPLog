@@ -283,6 +283,7 @@ public final class DialogService {
         inputs.add(bool("spectators", "dialog.settings.spectators", p.setting(Setting.ALLOW_SPECTATORS)));
         inputs.add(bool("friend_alerts", "dialog.settings.friend-alerts", p.setting(Setting.FRIEND_ALERTS)));
         inputs.add(bool("party_invites", "dialog.settings.party-invites", p.setting(Setting.PARTY_INVITES)));
+        inputs.add(bool("queue_music", "dialog.settings.queue-music", p.setting(Setting.QUEUE_MUSIC)));
         List<SingleOptionDialogInput.OptionEntry> regions = new ArrayList<>();
         regions.add(SingleOptionDialogInput.OptionEntry.create("none", msg().get("dialog.settings.region-none"), p.region() == null));
         for (String r : plugin.settings().regions) {
@@ -340,6 +341,16 @@ public final class DialogService {
         buttons.add(button(msg().get("dialog.spectate.search"), null, plugin.gui().wideWidth, "spectate/search", Map.of()));
         int limit = Math.max(1, plugin.gui().spectateLimit);
         for (Match m : shown.subList(0, Math.min(shown.size(), limit))) {
+            if (top.cheesesmp.duelcore.match.SpectateService.isFreeForAll(m)) {
+                Component label = msg().get("dialog.spectate.match-ffa", Messages.comp("kit_icon", m.kit().sprite()),
+                    Messages.num("players", m.participants().size()), Messages.num("alive", m.alive()),
+                    Messages.num("elo", (int) Math.round(matchElo(m))));
+                Component tooltip = msg().get("dialog.spectate.tooltip-ffa", Messages.comp("kit", m.kit().displayName()),
+                    Messages.text("names", ffaNames(m)), Messages.num("players", m.participants().size()),
+                    Messages.num("alive", m.alive()), Messages.num("spectators", m.spectators().size()));
+                buttons.add(button(label, tooltip, plugin.gui().wideWidth, "spectate/match", payload("id", String.valueOf(m.id()))));
+                continue;
+            }
             Component label = msg().get("dialog.spectate.match", Messages.comp("kit_icon", m.kit().sprite()),
                 Messages.text("red", m.teamName(0)), Messages.text("blue", m.teamName(1)),
                 Messages.num("red_score", m.score(0)), Messages.num("blue_score", m.score(1)),
@@ -358,6 +369,15 @@ public final class DialogService {
             : msg().get("dialog.spectate.body", Messages.num("shown", Math.min(shown.size(), limit)), Messages.num("live", live.size()));
         player.showDialog(dialog(title, List.of(text(body)), inputs,
             DialogType.multiAction(buttons).columns(1).exitAction(close()).build()));
+    }
+
+    /** "A, B, C +3": the fighters of a free-for-all, still standing ones first. */
+    private static String ffaNames(Match m) {
+        List<Participant> list = new ArrayList<>(m.participants());
+        list.sort(Comparator.comparing((Participant p) -> !(p.alive() && !p.left())));
+        List<String> names = new ArrayList<>();
+        for (Participant p : list.subList(0, Math.min(list.size(), 4))) names.add(p.name());
+        return String.join(", ", names) + (list.size() > 4 ? " +" + (list.size() - 4) : "");
     }
 
     private static boolean matchesQuery(Match m, String q) {

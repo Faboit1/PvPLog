@@ -147,6 +147,7 @@ public final class ClickRouter implements Listener {
         setBool(p, Setting.ALLOW_SPECTATORS, view.getBoolean("spectators"));
         setBool(p, Setting.FRIEND_ALERTS, view.getBoolean("friend_alerts"));
         setBool(p, Setting.PARTY_INVITES, view.getBoolean("party_invites"));
+        setBool(p, Setting.QUEUE_MUSIC, view.getBoolean("queue_music"));
         String region = view.getText("region");
         if (region != null) {
             String up = region.toUpperCase(Locale.ROOT);
@@ -162,6 +163,7 @@ public final class ClickRouter implements Listener {
         plugin.profiles().saveSettings(p);
         plugin.sidebar().refresh(player);
         plugin.visibility().refresh(player);
+        plugin.queueMusic().refresh(player);
         plugin.messages().send(player, "settings.saved", Messages.text("region", p.region() == null ? "—" : p.region()),
             Messages.num("max_ping", p.maxPing()));
     }

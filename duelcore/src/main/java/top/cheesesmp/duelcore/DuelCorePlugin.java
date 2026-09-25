@@ -55,6 +55,7 @@ public final class DuelCorePlugin extends JavaPlugin {
     private SidebarService sidebar;
     private TagService tags;
     private QueueService queue;
+    private top.cheesesmp.duelcore.queue.QueueMusic queueMusic;
     private MatchService matches;
     private SpectateService spectate;
     private DuelRequestService duels;
@@ -100,6 +101,8 @@ public final class DuelCorePlugin extends JavaPlugin {
         sidebar = new SidebarService(this);
         tags = new TagService(this);
         queue = new QueueService(this);
+        queueMusic = new top.cheesesmp.duelcore.queue.QueueMusic(this);
+        for (String problem : queueMusic.reload()) getLogger().warning("config.yml " + problem);
         matches = new MatchService(this);
         spectate = new SpectateService(this);
         duels = new DuelRequestService(this);
@@ -123,6 +126,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         pm.registerEvents(profiles, this);
         pm.registerEvents(new HubListener(this), this);
         pm.registerEvents(queue, this);
+        pm.registerEvents(queueMusic, this);
         pm.registerEvents(new MatchListener(this), this);
         pm.registerEvents(spectate, this);
         pm.registerEvents(duels, this);
@@ -146,6 +150,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         scheduler.runTaskTimer(this, matches, 1L, 1L);
         scheduler.runTaskTimer(this, arenas.queue(), 1L, 1L);
         scheduler.runTaskTimer(this, queue, 20L, cfg.mmIntervalTicks);
+        scheduler.runTaskTimer(this, queueMusic, 20L, 10L);
         scheduler.runTaskTimer(this, sidebar, 20L, 20L);
         scheduler.runTaskTimer(this, hints, 20L, 20L);
         scheduler.runTaskTimer(this, tags, 40L, 40L);
@@ -177,11 +182,17 @@ public final class DuelCorePlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         try {
+            if (queueMusic != null) queueMusic.stopAll();
             if (respawnPull != null) respawnPull.cancelAll();
             if (spawnRise != null) spawnRise.cancelAll();
             if (matches != null) matches.cancelAll();
         } catch (Throwable t) {
             getLogger().log(Level.WARNING, "Cancelling matches failed", t);
+        }
+        try {
+            if (hub != null) hub.revokeFlight();
+        } catch (Throwable t) {
+            getLogger().log(Level.WARNING, "Resetting hub flight failed", t);
         }
         if (parties != null) parties.disable();
         if (papiHooked) {
@@ -206,12 +217,17 @@ public final class DuelCorePlugin extends JavaPlugin {
         problems.addAll(arenas.loadTemplates());
         arenas.queue().budget(settings().blockBudgetMs);
         queue.reload();
+        problems.addAll(queueMusic.reload());
         ratingSystem = buildRatingSystem();
         leaderboards.clear();
         tags.refreshTeams();
         for (Player p : Bukkit.getOnlinePlayers()) {
-            if (matches.match(p.getUniqueId()) == null && spectate.spectating(p.getUniqueId()) == null) hub.giveItems(p);
+            if (matches.match(p.getUniqueId()) == null && spectate.spectating(p.getUniqueId()) == null) {
+                hub.giveItems(p);
+                if (hub.isHubWorld(p.getWorld())) hub.applyFlight(p);
+            }
             sidebar.refresh(p);
+            queueMusic.refresh(p);
         }
         return problems;
     }
@@ -304,6 +320,10 @@ public final class DuelCorePlugin extends JavaPlugin {
 
     public ResultsService results() {
         return results;
+    }
+
+    public top.cheesesmp.duelcore.queue.QueueMusic queueMusic() {
+        return queueMusic;
     }
 
     public top.cheesesmp.duelcore.ui.RespawnPull respawnPull() {

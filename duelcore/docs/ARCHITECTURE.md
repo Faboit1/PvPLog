@@ -26,7 +26,8 @@ top.cheesesmp.duelcore
 ├── arena/                    ArenaTemplate, ArenaSnapshot(+IO, .dca format), SchematicImporter (Sponge v2/v3),
 │                             ArenaGenerator (built-in defaults), ArenaWorld (void world), SlotGrid,
 │                             ArenaInstance, ArenaPool, BlockJobQueue (tick-budgeted), ArenaEditor, ArenaManager
-├── queue/                    QueueEntry, QueueService, Matchmaker, MatchPolicy (region/ping hook)
+├── queue/                    QueueEntry, QueueService, Matchmaker, MatchPolicy (region/ping hook),
+│                             QueueMusic + MusicTracks (music disc while searching)
 ├── match/                    Match, Participant, MatchState, RoundResult, MatchService, MatchListener,
 │                             Freeze, DuelRequestService, SpectateService, MatchResult
 ├── rating/                   RatingSystem, EloRating, Glicko2Rating, Tier, TierLadder, TierService, SeasonService
@@ -37,7 +38,8 @@ top.cheesesmp.duelcore
 ├── leaderboard/              LeaderboardService (cached pages, async refresh, rank lookups)
 ├── command/                  Brigadier tree registered in LifecycleEvents.COMMANDS
 ├── hook/                     PlaceholderHook (loaded only when PlaceholderAPI exists)
-├── debug/                    Diagnostics (/duelcore debug: matches, instances, chunks, entities, tasks, heap, DB)
+├── debug/                    Diagnostics (/duelcore debug: matches, instances, chunks, entities, tasks, heap, DB),
+│                             ClientInfo (client version via optional ViaVersion + brand, logged on join)
 ├── party/                    Party, PartyService (persistent parties, invites, chat routing, party matches),
 │                             PartyDialogs, PartyCommands (/party, /pc), PartyChatListener
 └── (phase 2) feed/, tournament/, web/ (REST)
@@ -124,6 +126,15 @@ A server shutdown during a match cancels it without any rating change. `/duelcor
 * **Hub hotbar** (locked): Queue · Leaderboard · Profile · Settings · Spectate. While you're queued, the Queue item becomes "Leave queue".
 * **Dialogs** use fixed custom-click keys (`duelcore:queue`, …) handled by one `PlayerCustomClickEvent` router. There are no per-click callbacks to leak, and test bots can click them with the `custom_click_action` packet.
 * **Sidebar** uses a blank number format and per-line custom names. The hub shows name, tier and overall Elo, queued and live counts. In a match it shows score, round, timer and ping.
+* **Queue music**: while searching, `QueueMusic` plays a random music disc to the player only (record source,
+  emitted from the player, `Setting.QUEUE_MUSIC`). The next track starts from the configured track length; the music
+  stops as soon as the player is matched, leaves every queue, spectates or quits (QueueService stops it on removal).
+* **Hub flight**: `HubService.prepare` allows flight in the hub (`hub.allow-flight`); every way into an arena
+  (spawn rise, respawn throw, kit reset) takes it away again, and plugin disable revokes it.
+* **Respawn throw** (`ui/RespawnPull`, timing in `ui/ThrowMath`): arcs are raised over terrain (or become a
+  teleport), high-ping players are teleported instead, the touch-down wait grows with ping, a throw the server never
+  sees move is ended after `respawn-throw-stall-ticks` + ping, and the final snap sends a zero velocity one tick before
+  the teleport so no velocity packet reaches the client after it.
 * **Match found**: a totem-pop animation shows an item that represents the kit. The client displays the held `death_protection` item, so for two ticks the offhand gets an item with `death_protection` + `item_model = <kit icon>`, then an `EntityEffect.PROTECTED_FROM_DEATH` plays.
 
 ## Testing approach

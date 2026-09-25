@@ -34,6 +34,8 @@ hub:
   void-y: 0
   # Show other hub players (false = everyone sees only themselves in the hub).
   show-players: true
+  # Everyone may fly in the hub (switched off when they leave for a match; spectators always fly).
+  allow-flight: true
 
 queue:
   # Allow being in queues for several kits at once (the queue menu's "Queue All"). Being matched in one kit takes
@@ -45,6 +47,37 @@ queue:
   unranked: false
   # Send a "still searching" action bar while queued.
   searching-action-bar: true
+  # Music while searching: a random music disc, heard only by the searching player (jukebox volume slider). When a
+  # track ends the next random one starts; it stops as soon as a match is found, the player leaves the queue or
+  # starts spectating. Players can switch it off in their settings.
+  music:
+    enabled: true
+    # 0.0-1.0
+    volume: 0.5
+    # "<sound id> <length in seconds or m:ss>". The length decides when the next track starts. Unknown sounds are
+    # skipped with a warning.
+    tracks:
+      - "music_disc.pigstep 148"
+      - "music_disc.otherside 195"
+      - "music_disc.relic 218"
+      - "music_disc.creator 176"
+      - "music_disc.creator_music_box 73"
+      - "music_disc.precipice 299"
+      - "music_disc.tears 175"
+      - "music_disc.lava_chicken 134"
+      - "music_disc.cat 185"
+      - "music_disc.blocks 345"
+      - "music_disc.chirp 185"
+      - "music_disc.far 174"
+      - "music_disc.mall 197"
+      - "music_disc.mellohi 96"
+      - "music_disc.stal 150"
+      - "music_disc.strad 188"
+      - "music_disc.ward 251"
+      - "music_disc.wait 238"
+      - "music_disc.5 178"
+      - "music_disc.13 178"
+      - "music_disc.11 71"
 
 matchmaking:
   # How often the matchmaker runs, in ticks (20 = every second).
@@ -93,8 +126,15 @@ animations:
   # From round 2 on, both fighters are thrown back to their spawn along a real Minecraft arc (normal player gravity)
   # instead of teleporting. They can look around but can't steer.
   respawn-throw: true
-  # How high the top of the arc is at least, in blocks above the higher end (longer throws go a bit higher).
+  # How high the top of the arc is at least, in blocks above the higher end (longer throws go a bit higher; arcs that
+  # would clip trees or hills go higher still, or become a teleport).
   respawn-throw-height: 10
+  # Players with a ping above this (ms) are teleported to their spawn instead: their client lags too far behind the
+  # throw. 0 = always throw.
+  respawn-throw-max-ping: 350
+  # A throw the server hasn't seen the player follow after this many ticks (plus the player's ping) is ended with a
+  # teleport to the spawn (4-60).
+  respawn-throw-stall-ticks: 10
   # Red burst and soul where a fighter dies.
   death: true
   # Golden spiral around the round winner.

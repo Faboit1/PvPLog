@@ -13,7 +13,9 @@ public enum Setting {
     /** Chat notices when a friend comes online or someone follows you. */
     FRIEND_ALERTS(7, true),
     /** Accept party invites from anyone (off: friends only). */
-    PARTY_INVITES(8, true);
+    PARTY_INVITES(8, true),
+    /** A random music disc plays (to this player only) while searching in a queue. */
+    QUEUE_MUSIC(9, true);
 
     private final int bit;
     private final boolean defaultValue;

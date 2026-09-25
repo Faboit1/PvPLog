@@ -118,6 +118,8 @@ duel:
 
 spectate:
   started: "<muted>Spectating <text><red></text> vs <text><blue></text> · <kit>. Use the dye or /leave to stop.</muted>"
+  # Party FFA (one team per player): <players> fighters, <alive> still standing this round.
+  started-ffa: "<muted>Spectating a <text>Party FFA</text> · <players> players · <alive> alive · <kit>. Use the dye or /leave to stop.</muted>"
   ended: "<muted>That match already ended.</muted>"
   not-spectating: "<muted>You're not spectating.</muted>"
   result:
@@ -595,6 +597,7 @@ dialog:
     spectators: "Allow spectators in my matches"
     friend-alerts: "Friend alerts"
     party-invites: "Party invites from anyone"
+    queue-music: "Music while searching"
     region: "Region"
     region-none: "Not set"
     country: "Country (2 letters)"
@@ -610,6 +613,9 @@ dialog:
     search: "<text>Search</text>"
     match: "<kit_icon> <text><red></text> <accent><red_score>–<blue_score></accent> <text><blue></text> <muted>· <elo></muted>"
     tooltip: "<text><kit></text> <muted>· <mode> · <elo> Elo · round <round> · first to <first_to> · <spectators> watching</muted>"
+    # Party FFA: <players> fighters, <alive> still standing, <names> the first few of them.
+    match-ffa: "<kit_icon> <text>Party FFA</text> <muted>· <players> players · <alive> alive</muted>"
+    tooltip-ffa: "<text><kit></text> <muted>· <names> · <spectators> watching</muted>"
   duel:
     players-title: "Challenge a player"
     players-body: "<muted>Pick an opponent, then a kit. Challenges are unranked.</muted>"

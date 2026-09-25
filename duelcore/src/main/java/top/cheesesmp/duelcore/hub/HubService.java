@@ -149,9 +149,33 @@ public final class HubService {
         player.setGameMode(GameMode.ADVENTURE);
         player.setFoodLevel(20);
         player.setSaturation(20f);
+        applyFlight(player);
         giveItems(player);
         plugin.visibility().refresh(player);
         plugin.tags().update(player);
+    }
+
+    /**
+     * Hub flight ({@code hub.allow-flight}) for a player who is in the lobby. Matches switch it off again: every way
+     * into the arena resets the player (spawn rise, respawn throw, kit), and spectating manages its own flight.
+     */
+    public void applyFlight(Player player) {
+        GameMode mode = player.getGameMode();
+        if (mode == GameMode.CREATIVE || mode == GameMode.SPECTATOR) return;
+        boolean allow = plugin.settings().hubAllowFlight;
+        if (!allow) player.setFlying(false);
+        player.setAllowFlight(allow);
+    }
+
+    /** Plugin disable: take hub flight away again (it is saved with the player and would outlive the plugin). */
+    public void revokeFlight() {
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            GameMode mode = p.getGameMode();
+            if (mode == GameMode.CREATIVE || mode == GameMode.SPECTATOR || !p.getAllowFlight()) continue;
+            if (!isHubWorld(p.getWorld())) continue; // (matches were cancelled already: everyone is back in the hub)
+            p.setFlying(false);
+            p.setAllowFlight(false);
+        }
     }
 
     /** Hub items added by features (party, friends, …): gui.yml key → what a right click does. */

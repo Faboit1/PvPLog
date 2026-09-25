@@ -62,6 +62,7 @@ public final class HubListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
+        top.cheesesmp.duelcore.debug.ClientInfo.logJoin(plugin, player);
         String join = plugin.messages().raw("hub.join-message");
         event.joinMessage(join.isBlank() ? null : plugin.messages().parse(join,
             top.cheesesmp.duelcore.config.Messages.text("player", player.getName())));

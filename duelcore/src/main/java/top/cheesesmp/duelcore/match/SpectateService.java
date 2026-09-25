@@ -12,6 +12,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
+import top.cheesesmp.duelcore.config.Messages;
 import top.cheesesmp.duelcore.kit.KitManager;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.Setting;
@@ -58,6 +59,7 @@ public final class SpectateService implements Listener {
         if (previous != null) previous.spectators().remove(viewer.getUniqueId());
         spectating.put(viewer.getUniqueId(), match);
         match.spectators().add(viewer.getUniqueId());
+        plugin.queueMusic().stop(viewer.getUniqueId()); // they stay queued, but the match is what they hear now
         plugin.tags().update(viewer); // grey, italic and last in the tab list
         Location to = focus != null && match.arena().contains(focus) ? focus.clone().add(0, 3, 0) : match.arena().center().add(0, 6, 0);
         KitManager.resetState(viewer, 20);
@@ -72,10 +74,19 @@ public final class SpectateService implements Listener {
             plugin.visibility().refresh(viewer);
             plugin.sidebar().refresh(viewer);
         });
-        plugin.messages().send(viewer, "spectate.started", top.cheesesmp.duelcore.config.Messages.text("red", match.teamName(0)),
-            top.cheesesmp.duelcore.config.Messages.text("blue", match.teamName(1)),
-            top.cheesesmp.duelcore.config.Messages.comp("kit", match.kit().displayName()));
+        if (isFreeForAll(match)) {
+            plugin.messages().send(viewer, "spectate.started-ffa", Messages.num("players", match.participants().size()),
+                Messages.num("alive", match.alive()), Messages.comp("kit", match.kit().displayName()));
+        } else {
+            plugin.messages().send(viewer, "spectate.started", Messages.text("red", match.teamName(0)),
+                Messages.text("blue", match.teamName(1)), Messages.comp("kit", match.kit().displayName()));
+        }
         return Result.OK;
+    }
+
+    /** A Party FFA (or any match of more than two teams): shown as players/alive instead of "red vs blue". */
+    public static boolean isFreeForAll(Match match) {
+        return match.ffa() || match.teamCount() > 2;
     }
 
     /** Stops spectating; sends to the hub when {@code toHub}. */

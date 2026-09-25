@@ -41,6 +41,21 @@ public final class Diagnostics {
         return out;
     }
 
+    /** Client, connection and state of one player. */
+    public List<String> player(org.bukkit.entity.Player p) {
+        List<String> out = new ArrayList<>();
+        java.util.UUID uuid = p.getUniqueId();
+        out.add(p.getName() + " " + ClientInfo.describe(p) + ", ping " + p.getPing() + " ms");
+        top.cheesesmp.duelcore.match.Match m = plugin.matches().match(uuid);
+        top.cheesesmp.duelcore.match.Match watching = plugin.spectate().spectating(uuid);
+        String music = plugin.queueMusic().track(uuid);
+        out.add("state " + (m != null ? "match #" + m.id() + " " + m.state() : watching != null ? "spectating #" + watching.id()
+            : "hub") + ", queues " + plugin.queue().entries(uuid).size() + (music == null ? "" : ", music " + music)
+            + ", " + p.getGameMode() + (p.getAllowFlight() ? ", may fly" : "") + (p.isFlying() ? " (flying)" : "")
+            + ", world " + p.getWorld().getName());
+        return out;
+    }
+
     public List<String> report(boolean gc) {
         List<String> out = new ArrayList<>();
         if (gc) System.gc();
@@ -59,7 +74,8 @@ public final class Diagnostics {
         out.add("matches live=" + plugin.matches().count() + " players=" + plugin.matches().playersInMatches()
             + " created=" + plugin.matches().created() + " finished=" + plugin.matches().finished()
             + " spectators=" + plugin.spectate().count());
-        out.add("queue players=" + plugin.queue().totalQueued() + " buckets=" + plugin.queue().bucketCount()
+        out.add("queue players=" + plugin.queue().totalQueued() + " music=" + plugin.queueMusic().playingCount()
+            + " buckets=" + plugin.queue().bucketCount()
             + " pairings=" + plugin.queue().pairingsMade() + " rematchKeys=" + plugin.queue().rematches().size()
             + " duelRequests=" + plugin.duels().pending());
         out.add("arenas templates=" + arenas.templates().size() + " instances=" + arenas.instances().size() + " " + states

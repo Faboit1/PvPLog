@@ -306,6 +306,9 @@ public final class MatchService implements Runnable {
                         arrive.run();
                     });
             } else {
+                // leaving the hub (where everyone may fly) or a death cam: no flying in the arena
+                player.setFlying(false);
+                player.setAllowFlight(false);
                 player.teleportAsync(spawn).thenRun(arrive);
             }
         }

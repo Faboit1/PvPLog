@@ -30,12 +30,16 @@ public final class MainConfig {
     public final boolean hubLockWeather;
     public final int hubVoidY;
     public final boolean hubShowPlayers;
+    public final boolean hubAllowFlight;
 
     // queue
     public final boolean queueAllowMultiple;
     public final boolean queueRanked;
     public final boolean queueUnranked;
     public final boolean queueSearchingActionBar;
+    public final boolean queueMusicEnabled;
+    public final float queueMusicVolume;
+    public final top.cheesesmp.duelcore.queue.MusicTracks queueMusicTracks;
 
     // matchmaking
     public final int mmIntervalTicks;
@@ -62,6 +66,10 @@ public final class MainConfig {
     public final boolean totemPop;
     public final boolean animRespawnThrow;
     public final double animRespawnThrowHeight;
+    /** Players with a higher ping are teleported instead of thrown (0 = always throw). */
+    public final int animRespawnThrowMaxPing;
+    /** Ticks (plus the player's ping) after which a throw the server never saw move is replaced by a teleport. */
+    public final int animRespawnThrowStallTicks;
     public final boolean animDeath;
     public final boolean animRoundWin;
     public final boolean animMatchWin;
@@ -72,7 +80,7 @@ public final class MainConfig {
     public final int animSpawnRiseTicks;
     public final top.cheesesmp.duelcore.ui.SoundPool matchFoundSounds;
     public final top.cheesesmp.duelcore.ui.SoundPool fightStartSounds;
-    /** Sound lines of match-found-sounds / fight-start-sounds that could not be read (reported on load and reload). */
+    /** Sound lines (match-found-sounds, fight-start-sounds, queue music) that could not be read (reported on load and reload). */
     public final List<String> soundProblems = new java.util.ArrayList<>();
     public final int voidDepth;
 
@@ -149,11 +157,16 @@ public final class MainConfig {
         hubLockWeather = c.getBoolean("hub.lock-weather", true);
         hubVoidY = c.getInt("hub.void-y", 0);
         hubShowPlayers = c.getBoolean("hub.show-players", true);
+        hubAllowFlight = c.getBoolean("hub.allow-flight", true);
 
         queueAllowMultiple = c.getBoolean("queue.allow-multiple", true);
         queueRanked = c.getBoolean("queue.ranked", true);
         queueUnranked = c.getBoolean("queue.unranked", false);
         queueSearchingActionBar = c.getBoolean("queue.searching-action-bar", true);
+        queueMusicEnabled = c.getBoolean("queue.music.enabled", true);
+        queueMusicVolume = (float) Math.clamp(c.getDouble("queue.music.volume", 0.5), 0.0, 1.0);
+        queueMusicTracks = top.cheesesmp.duelcore.queue.MusicTracks.parse(c.getStringList("queue.music.tracks"));
+        for (String p : queueMusicTracks.problems()) soundProblems.add("queue.music.tracks: " + p);
 
         mmIntervalTicks = Math.max(1, c.getInt("matchmaking.interval-ticks", 20));
         mmWindowInitial = c.getDouble("matchmaking.window.initial", 50);
@@ -178,6 +191,8 @@ public final class MainConfig {
         totemPop = c.getBoolean("match.totem-pop", true);
         animRespawnThrow = c.getBoolean("animations.respawn-throw", true);
         animRespawnThrowHeight = Math.clamp(c.getDouble("animations.respawn-throw-height", 10), 2, 40);
+        animRespawnThrowMaxPing = Math.max(0, c.getInt("animations.respawn-throw-max-ping", 350));
+        animRespawnThrowStallTicks = Math.clamp(c.getInt("animations.respawn-throw-stall-ticks", 10), 4, 60);
         animDeath = c.getBoolean("animations.death", true);
         animRoundWin = c.getBoolean("animations.round-win", true);
         animMatchWin = c.getBoolean("animations.match-win", true);

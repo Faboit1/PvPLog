@@ -84,6 +84,17 @@ final class AdminCommand {
                 for (String line : plugin.diagnostics().matches()) ctx.getSource().getSender().sendMessage(line);
                 return Command.SINGLE_SUCCESS;
             }))
+            // client version and brand, ping and state of one player
+            .then(Commands.literal("player").then(Commands.argument("player", StringArgumentType.word())
+                .suggests(cmd.onlineNames()).executes(ctx -> {
+                    Player target = Bukkit.getPlayerExact(StringArgumentType.getString(ctx, "player"));
+                    if (target == null) {
+                        ctx.getSource().getSender().sendMessage("Player not online.");
+                        return 0;
+                    }
+                    for (String line : plugin.diagnostics().player(target)) ctx.getSource().getSender().sendMessage(line);
+                    return Command.SINGLE_SUCCESS;
+                })))
             // send a minimal test dialog (one feature at a time) to find what a client or translator rejects
             .then(Commands.literal("dialog").then(Commands.argument("variant", StringArgumentType.word())
                 .suggests((c, b) -> {
@@ -129,25 +140,13 @@ final class AdminCommand {
         }
         String variant = StringArgumentType.getString(ctx, "variant");
         plugin.getLogger().info("[debug] dialog '" + variant + "' -> " + p.getName() + " (client protocol "
-            + clientProtocol(p) + ")");
+            + top.cheesesmp.duelcore.debug.ClientInfo.protocol(p) + ")");
         if (!plugin.dialogs().debugDialog(p, variant)) {
             sender.sendMessage("Variants: " + String.join(", ", top.cheesesmp.duelcore.ui.dialog.DialogService.DEBUG_VARIANTS));
             return 0;
         }
         sender.sendMessage("Sent dialog '" + variant + "' to " + p.getName() + ".");
         return Command.SINGLE_SUCCESS;
-    }
-
-    /** The client's protocol version as ViaVersion reports it (-1 without ViaVersion). */
-    private static int clientProtocol(Player p) {
-        try {
-            Class<?> via = Class.forName("com.viaversion.viaversion.api.Via");
-            Object api = via.getMethod("getAPI").invoke(null);
-            Object version = api.getClass().getMethod("getPlayerProtocolVersion", java.util.UUID.class).invoke(api, p.getUniqueId());
-            return (int) version.getClass().getMethod("getVersion").invoke(version);
-        } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
-            return -1;
-        }
     }
 
     private int throwPreview(CommandContext<CommandSourceStack> ctx, int distance) {

@@ -168,7 +168,7 @@ Player commands (all players by default):
 | `/party` | `/p` | Party menu (see *Parties*). `create`, `invite <player>`, `accept\|deny [player]`, `join <leader>`, `leave`, `kick <player>`, `promote <player>`, `disband`, `chat`, `open`, `private`, `password`, `list`, `ffa [kit]`, `split [kit]`, `duel [leader] [kit]`, `duel accept\|deny [leader]` |
 | `/pc <message>` | | Party chat. Starting a chat message with `@` does the same |
 | `/duel [player] [kit]` | | Unranked challenge. Without arguments it opens a player picker. `/duel accept\|deny <player>` |
-| `/settings` | | Duel requests, sidebar, sounds, chat tags, hub visibility, spectators, friend alerts, party invites, region, country, max ping |
+| `/settings` | | Duel requests, sidebar, sounds, chat tags, hub visibility, spectators, friend alerts, party invites, music while searching, region, country, max ping |
 | `/friends [add\|remove <player>\|list]` | `/f`, `/friend` | Friends dialog: follows, followers and friends (mutual follows), online first, filter, add back, duel or spectate a friend. `add` works for offline players by exact name |
 | `/follow <player>`, `/unfollow <player>` | | Follow or unfollow; when both follow each other they're friends |
 
@@ -184,9 +184,13 @@ Staff:
 | `/duelcore season info\|reset <name> confirm\|recalc` | `duelcore.admin.season` | New season: ratings reset, the old season stays viewable as "legacy". `recalc` rebuilds the overall tiers after changing tiers.yml |
 | `/duelcore player <name> setrating <kit> <r>\|setgames <kit> <n>\|setregion <r>\|setcountry <cc>` | `duelcore.admin.rating` | Edit a player |
 | `/duelcore forceend <player>` | `duelcore.admin.match` | End a match without rating changes |
-| `/duelcore debug [gc\|trace\|matches]` | `duelcore.admin.debug` | Health numbers (instances, chunks, entities, tasks, caches, heap, DB threads), live matches |
+| `/duelcore debug [gc\|trace\|matches\|player <name>]` | `duelcore.admin.debug` | Health numbers (instances, chunks, entities, tasks, caches, heap, DB threads), live matches, one player's client version, brand, ping and state |
 
 `/duelcore` has the alias `/dc`.
+
+Every join is logged as `[join] <name> client <version> (protocol <n>), brand <brand>`: the version comes from
+ViaVersion when it is installed (optional), the brand from the client (logged about two seconds later when it
+arrives after the join).
 
 ## Permissions
 
@@ -218,11 +222,11 @@ to false when they still have the old defaults (false / true). Main settings:
 | Section | Key settings |
 | --- | --- |
 | `database` | `type: sqlite\|mysql`, connection and pool size |
-| `hub` | world, fixed `time`, `lock-weather`, `void-y`, `show-players` |
-| `queue` | `allow-multiple` (several kit queues at once, default on), ranked on/off, `unranked` (off: no unranked queue; `/duel` is unaffected), "searching" action bar |
+| `hub` | world, fixed `time`, `lock-weather`, `void-y`, `show-players`, `allow-flight` (everyone flies in the hub, default on) |
+| `queue` | `allow-multiple` (several kit queues at once, default on), ranked on/off, `unranked` (off: no unranked queue; `/duel` is unaffected), "searching" action bar, `music` (`enabled`, `volume`, `tracks`: `"<sound id> <seconds>"` music discs played to a player while searching; players can turn it off in their settings) |
 | `matchmaking` | `interval-ticks`, rating window (`initial`, `growth-per-second`, `max`), region and ping penalties, `max-ranked-rematches-per-day`, `log-pairings` |
 | `match` | countdowns, `round-end-delay-ticks`, `return-delay-seconds`, `timeout-decision: health\|draw`, `max-rounds`, `allowed-commands`, `totem-pop`, `void-depth` |
-| `animations` | `respawn-throw` (+ `-height`), `spawn-rise` (+ `-depth`, `-ticks`), `death`, `round-win`, `match-win`, `fight-start`, `join-title`, `match-found-sounds`, `fight-start-sounds` |
+| `animations` | `respawn-throw` (+ `-height`, `-max-ping`: teleport players above 350 ms instead, `-stall-ticks`: give up a throw the server never sees move), `spawn-rise` (+ `-depth`, `-ticks`), `death`, `round-win`, `match-win`, `fight-start`, `join-title`, `match-found-sounds`, `fight-start-sounds` |
 | `rating` | `system: elo\|glicko2`, `default`, `floor`, Elo K-factors (normal and provisional), Glicko-2 tau/RD/volatility |
 | `season` | first season name |
 | `arena` | `world`, `persistent-world`, `pregenerate-slots`, `slot-spacing`, `base-y`, `max-instances`, `keep-idle-per-template`, `prewarm`, `block-budget-ms`, `reset-between-rounds`, `view-distance` |
