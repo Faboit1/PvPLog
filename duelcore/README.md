@@ -237,6 +237,7 @@ default). Main settings:
 | `season` | first season name |
 | `arena` | `world`, `persistent-world`, `pregenerate-slots`, `slot-spacing`, `base-y`, `max-instances`, `keep-idle-per-template`, `prewarm`, `block-budget-ms`, `reset-between-rounds`, `view-distance` |
 | `leaderboard` | `refresh-seconds`, `size`, `regions` |
+| `dialogs` | `refresh.enabled`, `refresh.interval-ticks` (20): open menus whose content changes are rebuilt this often and sent again only when something visible changed (see *Menus* below) |
 | `display` | tier tags in chat, tab and above heads |
 | `party` | `max-size` (20), `invite-seconds` (invites and party challenges, 60), `open-by-default` |
 | `debug` | `verbose` logging |
@@ -246,7 +247,22 @@ player), Weapons, Vanilla and Skills (the kit's `category`). Clicking a kit join
 player can search in several kits at once; the first match found takes them out of all the others. Each kit shows
 how many players are searching or playing it, and the player's tier and Elo in it, or a progress bar while its
 placement matches aren't played yet. *Queue All* joins (or leaves) every kit of the tab; *Keep Queuing* puts the
-player back into the same queues after each match.
+player back into the same queues after each match. The ✎ after a kit opens its kit editor (with `duelcore.kiteditor`), and the results
+screen after a match has an *Edit kit* button for the match's kit.
+
+**Menus** stay open while you click: a button that leads to another menu (a tab, a page, Back, a player in the
+friends list, …) swaps the menu in place instead of closing and re-opening the screen, and one that does something
+else (joins a match, starts spectating, sends a duel, saves settings, opens the kit editor) closes it. Close and
+Escape close every menu, also while a button waits for its next menu to load (it then doesn't pop up afterwards).
+While a menu is open it updates itself once a second (`dialogs.refresh`): the queue menu's search timers, player
+counts and queued kits, the party menu's and the friends list's online / in-match states, a friend's or party
+member's page, `/duel`'s player list, a profile's "5m ago" and the live spectate list. A menu is only sent again
+when something in it changed: every update is a new screen on the client, which scrolls back to the top. So times
+under a minute read "<1m" instead of counting seconds, and the queue menu's ticking search clock (0:07) is only
+shown on tabs with at most `queue-menu.clock-max-kits` kits (gui.yml, 5); longer tabs show whole minutes. Menus
+with a text box (Add Friends, party create / join / invite / privacy, the spectate search, settings) never update
+by themselves, since that would clear what you typed (the live spectate list's *Search* opens the list with the
+search box); neither does the queue menu while its progress animation plays.
 
 **tiers.yml**
 
@@ -263,7 +279,8 @@ the overall Elo: the average rating of every kit a player has finished placement
   items shows the new item's hint and switching to an empty slot clears it; while queued the "searching" bar has
   priority. `enabled: false` removes an item (a deleted entry is added back from the defaults on the next load). The
   Party and Friends items are only given to players with `duelcore.party` / `duelcore.friends`.
-- `queue-menu`: widths, tab icons and the placement progress bar of the queue menu.
+- `queue-menu`: widths, tab icons, the placement progress bar and `clock-max-kits` (tabs with up to this many kits
+  show a ticking search clock, longer ones whole minutes) of the queue menu.
 - Sidebar lines for hub, queue, match and spectate.
 - Tier tags (`tags`): the icon of a kit followed by the tier in it (`icon-tier: "<icon><tier>"`). In the hub a
   player shows their best kit (best tier, then highest rating), during a match the match's kit with the tier they had
@@ -455,11 +472,12 @@ Scripts:
 | `duel1.js` | Full match through the real UI (queue dialog click), respawn pull between rounds, results dialog, hub restore, profile and leaderboard dialogs |
 | `forfeit.js` | Disconnect during a match gives the win to the opponent, rating saved |
 | `load.js` | N bots in parallel over several kits until X matches are done (matchmaker widening, arena pooling) |
-| `specsearch.js` | Spectate list sorted by Elo then name, search by name and kit, no-results text, spectating a result |
+| `specsearch.js` | Spectate list sorted by Elo then name, the live list has no text box and its Search opens the one with the search box, search by name and kit, no-results text, spectating a result |
 | `tagcheck.js [kit] [icon]` | Tab header/footer, slur blocked, swearing masked, clean text untouched, tab tag switches to the match kit's icon during a match and back after, kit loadout |
 | `ping.js` | Server list MOTD and hover |
 | `guard.js [testers\|open]` | Login guard: unknown names, bots, IP locks and (open) guests and unlocked operator names (setup in the script header) |
 | `kiteditor.js [kit]` | Kit editor: `/kit edit` opens it, the hub hotbar is put aside and comes back, items are moved with window clicks, shift-click / number key / offhand key / drop / double click / clicks in the own inventory change nothing and leak nothing, save, then a `/duel` between two bots gives the items in the saved slots (and the other bot the default), Clear layout goes back to the default |
+| `dialogflow.js [kit] [prefix]` | Menus stay open: a queue tab click is answered by the next menu without a `clear_dialog` in between, every kit row has a ✎ (`duelcore:kiteditor/open`), Close is a `duelcore:dialog/close` click and brings a `clear_dialog`; queued with the menu open, at least two refreshed menus with a ticking timer arrive within ~3 s and none after Close; the Friends dialog is sent again when a friend comes online |
 | `party.js [kit]` | Party create/invite/accept, leader and member menus, party chat (`@`, `/pc`, toggle) only reaching members and passing the chat filter, a 3-bot Party FFA, leader succession, persistence across a rejoin, disband |
 
 Never install the test kit on a production server.

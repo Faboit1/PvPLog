@@ -113,6 +113,12 @@ queue-menu:
   # Width of the header rows, and of each kit's text next to its item.
   width: 310
   kit-width: 250
+  # While you're searching, the menu updates itself once a second (config.yml dialogs.refresh) and shows how long
+  # you've been searching as a ticking clock (0:07) on tabs with at most this many kits. Every update is a new screen
+  # on the client, which scrolls back to the top, so on longer tabs (they need scrolling on small screens or a big
+  # GUI scale) the time is shown in whole minutes (<1m, 2m) and the menu is only sent again when a minute or a count
+  # changes. 0 = always minutes, 1000 = always the clock.
+  clock-max-kits: 5
   # Tab icons: an atlas sprite ("items:item/diamond_sword", "blocks:block/obsidian", optional #rrggbb tint)
   # or "head" for the viewer's own head.
   tab-icons:

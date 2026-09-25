@@ -221,16 +221,33 @@ public final class FriendService implements Listener {
         if (!graphs.containsKey(player.getUniqueId()) && !loads.containsKey(player.getUniqueId())) load(player, 0, false);
     }
 
+    /**
+     * What a dialog click runs after a follow, unfollow or reload: {@code done} once it is done (or there was nothing
+     * to do), {@code failed} when it stopped early (the reason is told in chat), so the click's dialog doesn't wait for
+     * a dialog that won't come.
+     */
+    public record Then(Runnable done, Runnable failed) {
+    }
+
+    private static void done(@Nullable Then then) {
+        if (then != null) then.done().run();
+    }
+
+    private static void failed(@Nullable Then then) {
+        if (then != null) then.failed().run();
+    }
+
     /** Reloads a player's graph from the database (the dialog's Refresh), then runs {@code then}. */
-    public void reload(Player player, Runnable then) {
+    public void reload(Player player, @Nullable Then then) {
         reload(player, then, 0);
     }
 
-    private void reload(Player player, Runnable then, int attempt) {
+    private void reload(Player player, @Nullable Then then, int attempt) {
         PlayerProfile profile = plugin.profiles().get(player);
         if (profile == null) {
             plugin.messages().send(player, "friends.loading");
             ensureLoaded(player);
+            failed(then);
             return;
         }
         UUID uuid = player.getUniqueId();
@@ -243,16 +260,18 @@ public final class FriendService implements Listener {
             if (now != null && (now != before || now.changes != changes)) {
                 // followed or unfollowed while this was read: read again (queued after that write), or keep the cache
                 if (attempt < 3) reload(player, then, attempt + 1);
-                else then.run();
+                else done(then);
                 return;
             }
             Graph g = new Graph();
             for (Person p : relations.following()) g.following.put(p.uuid(), p);
             for (Person p : relations.followers()) g.followers.put(p.uuid(), p);
             graphs.put(uuid, g);
-            then.run();
+            done(then);
         }, () -> {
-            if (player.isOnline()) plugin.messages().send(player, "friends.error");
+            if (!player.isOnline()) return;
+            plugin.messages().send(player, "friends.error");
+            failed(then);
         });
     }
 
@@ -284,7 +303,7 @@ public final class FriendService implements Listener {
     // ------------------------------------------------------------------ follow / unfollow
 
     /** Follows a player by uuid (dialog and chat clicks). Offline players are looked up in the database. */
-    public void follow(Player player, UUID target, @Nullable Runnable then) {
+    public void follow(Player player, UUID target, @Nullable Then then) {
         Person known = person(player, target);
         if (known != null) {
             follow(player, known, then);
@@ -294,16 +313,19 @@ public final class FriendService implements Listener {
             if (!player.isOnline()) return;
             if (row.isEmpty()) {
                 plugin.messages().send(player, "friends.not-found", Messages.text("player", "?"));
+                failed(then);
                 return;
             }
             follow(player, person(row.get()), then);
         }, () -> {
-            if (player.isOnline()) plugin.messages().send(player, "friends.error");
+            if (!player.isOnline()) return;
+            plugin.messages().send(player, "friends.error");
+            failed(then);
         });
     }
 
     /** Follows a player by exact name; works for offline players who have played here. */
-    public void followByName(Player player, String name, @Nullable Runnable then) {
+    public void followByName(Player player, String name, @Nullable Then then) {
         Player online = Bukkit.getPlayerExact(name);
         if (online != null) {
             follow(player, online.getUniqueId(), then);
@@ -311,41 +333,48 @@ public final class FriendService implements Listener {
         }
         if (!NAME.matcher(name).matches()) {
             plugin.messages().send(player, "friends.not-found", Messages.text("player", name));
+            failed(then);
             return;
         }
         async(c -> PlayerDao.findByName(c, name), row -> {
             if (!player.isOnline()) return;
             if (row.isEmpty()) {
                 plugin.messages().send(player, "friends.not-found", Messages.text("player", name));
+                failed(then);
                 return;
             }
             follow(player, person(row.get()), then);
         }, () -> {
-            if (player.isOnline()) plugin.messages().send(player, "friends.error");
+            if (!player.isOnline()) return;
+            plugin.messages().send(player, "friends.error");
+            failed(then);
         });
     }
 
-    private void follow(Player player, Person target, @Nullable Runnable then) {
+    private void follow(Player player, Person target, @Nullable Then then) {
         UUID uuid = player.getUniqueId();
         PlayerProfile me = plugin.profiles().get(player);
         Graph g = graphs.get(uuid);
         if (me == null || g == null) {
             plugin.messages().send(player, "friends.loading");
             ensureLoaded(player);
+            failed(then);
             return;
         }
         String targetName = name(target);
         if (target.uuid().equals(uuid) || target.id() == me.id()) {
             plugin.messages().send(player, "friends.self");
+            failed(then);
             return;
         }
         if (g.following.containsKey(target.uuid())) {
             plugin.messages().send(player, "friends.already-following", Messages.text("player", targetName));
-            if (then != null) then.run();
+            done(then);
             return;
         }
         if (g.following.size() >= MAX_FOLLOWING) {
             plugin.messages().send(player, "friends.limit", Messages.num("max", MAX_FOLLOWING));
+            failed(then);
             return;
         }
         long now = System.currentTimeMillis();
@@ -386,17 +415,18 @@ public final class FriendService implements Listener {
                     Messages.text("player", player.getName()));
             }
         }
-        if (then != null) then.run();
+        done(then);
     }
 
     /** Stops following {@code target}. */
-    public void unfollow(Player player, UUID target, @Nullable Runnable then) {
+    public void unfollow(Player player, UUID target, @Nullable Then then) {
         UUID uuid = player.getUniqueId();
         PlayerProfile me = plugin.profiles().get(player);
         Graph g = graphs.get(uuid);
         if (me == null || g == null) {
             plugin.messages().send(player, "friends.loading");
             ensureLoaded(player);
+            failed(then);
             return;
         }
         Person followed = g.following.remove(target);
@@ -404,7 +434,7 @@ public final class FriendService implements Listener {
             Player online = Bukkit.getPlayer(target);
             plugin.messages().send(player, "friends.not-following",
                 Messages.text("player", online == null ? "?" : online.getName()));
-            if (then != null) then.run();
+            done(then);
             return;
         }
         g.changes++;
@@ -419,7 +449,7 @@ public final class FriendService implements Listener {
             if (player.isOnline()) plugin.messages().send(player, "friends.error");
         });
         plugin.messages().send(player, "friends.unfollowed", Messages.text("player", name(followed)));
-        if (then != null) then.run();
+        done(then);
     }
 
     /** Stops following a player by name (current or last known), without a database lookup. */

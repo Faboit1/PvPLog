@@ -27,6 +27,7 @@ import top.cheesesmp.duelcore.config.Messages;
 import top.cheesesmp.duelcore.db.dao.LeaderboardDao;
 import top.cheesesmp.duelcore.db.dao.MatchDao;
 import top.cheesesmp.duelcore.kit.Kit;
+import top.cheesesmp.duelcore.kit.editor.KitEditor;
 import top.cheesesmp.duelcore.leaderboard.LeaderboardService;
 import top.cheesesmp.duelcore.match.Match;
 import top.cheesesmp.duelcore.match.Participant;
@@ -40,7 +41,9 @@ import top.cheesesmp.duelcore.ui.Icons;
 
 /**
  * All menus as 1.21.6+ dialogs. Buttons use fixed custom-click keys ({@code duelcore:<action>}) with a small SNBT
- * payload, handled by {@link ClickRouter}: nothing is stored per click, and every payload is re-validated.
+ * payload, handled by {@link ClickRouter}: nothing is stored per click, and every payload is re-validated. Dialogs
+ * are shown through {@link OpenDialogs} (after-action NONE, the next dialog replaces the open one; the ones whose
+ * content changes are refreshed while open).
  */
 public final class DialogService {
 
@@ -89,16 +92,28 @@ public final class DialogService {
         return b.build();
     }
 
+    /**
+     * The Close button: a {@code duelcore:dialog/close} click (after-action NONE, a button without a click would do
+     * nothing). As the exit action it is also what Escape sends.
+     */
     public ActionButton close() {
-        return button(msg().get("dialog.close"), null, 120, null, Map.of());
+        return button(msg().get("dialog.close"), null, 120, OpenDialogs.CLOSE, Map.of());
     }
 
+    private OpenDialogs open() {
+        return plugin.openDialogs();
+    }
+
+    /**
+     * A dialog that stays on screen after a click (after-action NONE) until the server shows the next one or closes
+     * it, so switching between dialogs doesn't close and re-open the screen.
+     */
     public static Dialog dialog(Component title, List<DialogBody> body, List<DialogInput> inputs, DialogType type) {
         return Dialog.create(f -> f.empty()
             .base(DialogBase.builder(title)
                 .canCloseWithEscape(true)
                 .pause(false)
-                .afterAction(DialogBase.DialogAfterAction.CLOSE)
+                .afterAction(DialogBase.DialogAfterAction.NONE)
                 .body(body)
                 .inputs(inputs)
                 .build())
@@ -133,17 +148,25 @@ public final class DialogService {
     public void profile(Player viewer, PlayerProfile target, boolean legacy) {
         var history = target.recent();
         if (history == null) {
+            long ticket = open().awaitNext(viewer);
             plugin.profiles().history(target, Math.max(1, plugin.gui().historyLines)).thenAccept(list ->
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     if (plugin.profiles().get(target.uuid()) == target) target.recent(list);
-                    if (viewer.isOnline()) showProfile(viewer, target, list, legacy);
+                    open().continueAwait(viewer, ticket, () -> showProfile(viewer, target, list, legacy));
                 }));
             return;
         }
         showProfile(viewer, target, history, legacy);
     }
 
+    /** Shows a profile; it is refreshed while open (the "5m ago" of the history, the Follow button). */
     private void showProfile(Player viewer, PlayerProfile target, List<MatchDao.HistoryEntry> history, boolean legacy) {
+        open().show(viewer, OpenDialogs.Kind.PROFILE, buildProfile(viewer, target, history, legacy),
+            p -> buildProfile(p, target, history, legacy));
+    }
+
+    private OpenDialogs.Rendered buildProfile(Player viewer, PlayerProfile target, List<MatchDao.HistoryEntry> history,
+                                              boolean legacy) {
         List<Component> body = new ArrayList<>();
         int wins = target.totalWins();
         int losses = target.totalLosses();
@@ -192,14 +215,20 @@ public final class DialogService {
         buttons.add(button(msg().get("dialog.profile.recent-refresh"), null, 150, "profile/view", payload("name", target.name())));
         ActionButton follow = plugin.friends() == null ? null : plugin.friends().dialogs().profileButton(viewer, target);
         if (follow != null) buttons.add(follow);
-        Dialog d = dialog(msg().get("dialog.profile.title", Messages.text("player", target.name())),
-            List.of(text(lines(body))), List.of(), DialogType.multiAction(buttons).columns(2).exitAction(close()).build());
-        viewer.showDialog(d);
+        Component title = msg().get("dialog.profile.title", Messages.text("player", target.name()));
+        Dialog d = dialog(title, List.of(text(lines(body))), List.of(),
+            DialogType.multiAction(buttons).columns(2).exitAction(close()).build());
+        return new OpenDialogs.Rendered(d, Fingerprint.of(title, body, buttons));
     }
 
-    private static String ago(long at) {
+    /**
+     * "5m", "3h", "2d": how long ago {@code at} was, for refreshed dialogs. Under a minute it is
+     * {@code dialog.under-a-minute} ("&lt;1m"), not seconds: a text that changes every second would re-send the dialog
+     * every second, and each re-send scrolls it back to the top.
+     */
+    public String ago(long at) {
         long s = Math.max(0, (System.currentTimeMillis() - at) / 1000);
-        if (s < 60) return s + "s";
+        if (s < 60) return msg().raw("dialog.under-a-minute");
         if (s < 3600) return (s / 60) + "m";
         if (s < 86400) return (s / 3600) + "h";
         return (s / 86400) + "d";
@@ -211,10 +240,10 @@ public final class DialogService {
         String cat = category.toLowerCase(Locale.ROOT);
         if (!cat.equals(LeaderboardService.OVERALL) && plugin.kits().get(cat) == null) cat = LeaderboardService.OVERALL;
         String finalCat = cat;
+        long ticket = open().awaitNext(viewer);
         plugin.leaderboards().get(cat, region, null).thenAccept(rows ->
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                if (viewer.isOnline()) showLeaderboard(viewer, finalCat, region, rows);
-            }));
+            Bukkit.getScheduler().runTask(plugin, () ->
+                open().continueAwait(viewer, ticket, () -> showLeaderboard(viewer, finalCat, region, rows))));
     }
 
     private void showLeaderboard(Player viewer, String category, @Nullable String region, List<LeaderboardDao.Row> rows) {
@@ -266,7 +295,7 @@ public final class DialogService {
         Dialog d = dialog(msg().get("dialog.leaderboard.title", Messages.comp("category", catName),
                 Messages.text("region", region == null ? msg().raw("dialog.leaderboard.global") : region)),
             List.of(text(lines(body))), List.of(), DialogType.multiAction(buttons).columns(8).exitAction(close()).build());
-        viewer.showDialog(d);
+        open().show(viewer, OpenDialogs.Kind.LEADERBOARD, d);
     }
 
     // ------------------------------------------------------------------ settings
@@ -296,10 +325,10 @@ public final class DialogService {
             .step(25f).initial((float) Math.clamp(Math.round(p.maxPing() / 25.0) * 25, 0, 500)).width(250)
             .labelFormat("%s: %s").build());
         ActionButton save = button(msg().get("dialog.settings.save"), null, 150, "settings/save", Map.of());
-        ActionButton cancel = button(msg().get("dialog.settings.cancel"), null, 150, null, Map.of());
+        ActionButton cancel = button(msg().get("dialog.settings.cancel"), null, 150, OpenDialogs.CLOSE, Map.of());
         Dialog d = dialog(msg().get("dialog.settings.title"), List.of(text(msg().get("dialog.settings.body"))), inputs,
             DialogType.confirmation(save, cancel));
-        player.showDialog(d);
+        open().show(player, OpenDialogs.Kind.SETTINGS, d);
     }
 
     private DialogInput bool(String key, String label, boolean value) {
@@ -318,9 +347,25 @@ public final class DialogService {
 
     /**
      * Live matches, filtered by {@code query} (a player name or kit, case-insensitive substring), highest average
-     * Elo first, then by name.
+     * Elo first, then by name. Without a query it is the live list, refreshed while open; its Search button opens
+     * {@link #spectateSearch}. With one it is the list with the search box, which isn't refreshed (a re-send would
+     * clear what the player types).
      */
     public void spectate(Player player, String query) {
+        if (query.isBlank()) {
+            open().show(player, OpenDialogs.Kind.SPECTATE, buildSpectate(player, "", false), p -> buildSpectate(p, "", false));
+        } else {
+            open().show(player, OpenDialogs.Kind.SPECTATE, buildSpectate(player, query, true), null);
+        }
+    }
+
+    /** The live list with the search box (the live list's Search button); not refreshed. */
+    public void spectateSearch(Player player) {
+        open().show(player, OpenDialogs.Kind.SPECTATE, buildSpectate(player, "", true), null);
+    }
+
+    /** The spectate list; {@code search}: with the search box, whose Search button runs the search. */
+    private OpenDialogs.Rendered buildSpectate(Player player, String query, boolean search) {
         String q = query.strip().toLowerCase(Locale.ROOT);
         List<Match> live = new ArrayList<>();
         for (Match m : plugin.matches().active()) {
@@ -333,12 +378,13 @@ public final class DialogService {
         shown.sort(SPECTATE_ORDER);
         Component title = msg().get("dialog.spectate.title", Messages.num("live", live.size()));
         if (live.isEmpty()) {
-            player.showDialog(dialog(title, List.of(text(msg().get("dialog.spectate.none"))), List.of(),
-                DialogType.notice(close())));
-            return;
+            Component none = msg().get("dialog.spectate.none");
+            return new OpenDialogs.Rendered(dialog(title, List.of(text(none)), List.of(), DialogType.notice(close())),
+                Fingerprint.of(title, none));
         }
         List<ActionButton> buttons = new ArrayList<>();
-        buttons.add(button(msg().get("dialog.spectate.search"), null, plugin.gui().wideWidth, "spectate/search", Map.of()));
+        buttons.add(button(msg().get("dialog.spectate.search"), null, plugin.gui().wideWidth,
+            search ? "spectate/search" : "spectate/find", Map.of()));
         int limit = Math.max(1, plugin.gui().spectateLimit);
         for (Match m : shown.subList(0, Math.min(shown.size(), limit))) {
             if (top.cheesesmp.duelcore.match.SpectateService.isFreeForAll(m)) {
@@ -362,13 +408,16 @@ public final class DialogService {
             buttons.add(button(label, tooltip, plugin.gui().wideWidth, "spectate/match", payload("id", String.valueOf(m.id()))));
         }
         List<DialogInput> inputs = new ArrayList<>();
-        inputs.add(DialogInput.text("search", msg().get("dialog.spectate.search-label")).width(plugin.gui().wideWidth)
-            .initial(query.strip()).maxLength(32).build());
+        if (search) {
+            inputs.add(DialogInput.text("search", msg().get("dialog.spectate.search-label")).width(plugin.gui().wideWidth)
+                .initial(query.strip()).maxLength(32).build());
+        }
         Component body = shown.isEmpty()
             ? msg().get("dialog.spectate.no-results", Messages.text("query", query.strip()))
             : msg().get("dialog.spectate.body", Messages.num("shown", Math.min(shown.size(), limit)), Messages.num("live", live.size()));
-        player.showDialog(dialog(title, List.of(text(body)), inputs,
-            DialogType.multiAction(buttons).columns(1).exitAction(close()).build()));
+        return new OpenDialogs.Rendered(dialog(title, List.of(text(body)), inputs,
+            DialogType.multiAction(buttons).columns(1).exitAction(close()).build()), Fingerprint.of(title, body, buttons, query.strip()),
+            !inputs.isEmpty());
     }
 
     /** "A, B, C +3": the fighters of a free-for-all, still standing ones first. */
@@ -414,6 +463,11 @@ public final class DialogService {
 
     /** Opponent picker for a bare /duel: online players who are free. */
     public void duelPlayers(Player player) {
+        open().show(player, OpenDialogs.Kind.DUEL_PLAYERS, buildDuelPlayers(player), this::buildDuelPlayers);
+    }
+
+    /** Opponent picker; refreshed while open (players joining, leaving, starting or ending matches). */
+    private OpenDialogs.Rendered buildDuelPlayers(Player player) {
         List<ActionButton> buttons = new ArrayList<>();
         for (Player other : Bukkit.getOnlinePlayers()) {
             if (other.equals(player) || plugin.matches().match(other.getUniqueId()) != null) continue;
@@ -426,11 +480,13 @@ public final class DialogService {
         }
         Component title = msg().get("dialog.duel.players-title");
         if (buttons.isEmpty()) {
-            player.showDialog(dialog(title, List.of(text(msg().get("dialog.duel.no-players"))), List.of(), DialogType.notice(close())));
-            return;
+            Component none = msg().get("dialog.duel.no-players");
+            return new OpenDialogs.Rendered(dialog(title, List.of(text(none)), List.of(), DialogType.notice(close())),
+                Fingerprint.of(title, none));
         }
-        player.showDialog(dialog(title, List.of(text(msg().get("dialog.duel.players-body"))), List.of(),
-            DialogType.multiAction(buttons).columns(2).exitAction(close()).build()));
+        Component body = msg().get("dialog.duel.players-body");
+        return new OpenDialogs.Rendered(dialog(title, List.of(text(body)), List.of(),
+            DialogType.multiAction(buttons).columns(2).exitAction(close()).build()), Fingerprint.of(title, body, buttons));
     }
 
     public void duelPicker(Player player, Player target) {
@@ -440,7 +496,7 @@ public final class DialogService {
                     Messages.comp("kit", kit.displayName())), Component.text(kit.description()), plugin.gui().kitButtonWidth,
                 "duel/send", payload("target", target.getUniqueId().toString(), "kit", kit.id())));
         }
-        player.showDialog(dialog(msg().get("dialog.duel.title", Messages.text("player", target.getName())),
+        open().show(player, OpenDialogs.Kind.DUEL_PICKER, dialog(msg().get("dialog.duel.title", Messages.text("player", target.getName())),
             List.of(text(msg().get("dialog.duel.body", Messages.text("player", target.getName())))), List.of(),
             DialogType.multiAction(buttons).columns(plugin.gui().kitColumns).exitAction(close()).build()));
     }
@@ -450,7 +506,8 @@ public final class DialogService {
     /**
      * Results screen after a match (shown once the player is back in the hub). "Play again" (queue matches only)
      * joins the kit's menu queue, which is ranked (there is no unranked option in the menu). Hidden with Keep
-     * Queuing on, since those players are put back into their queues anyway.
+     * Queuing on, since those players are put back into their queues anyway. "Edit kit" opens the kit editor of the
+     * match's kit.
      */
     public void results(Player player, List<Component> lines, Component title, @Nullable Kit kit, @Nullable QueueMode mode) {
         List<ActionButton> buttons = new ArrayList<>();
@@ -462,13 +519,19 @@ public final class DialogService {
                 Messages.comp("kit", kit.displayName())), null, 150, "queue/join", payload("kit", kit.id(), "mode", again.id())));
         }
         buttons.add(button(msg().get("dialog.results.profile"), null, 150, "profile/view", payload("name", player.getName())));
-        player.showDialog(dialog(title, List.of(text(lines(lines))), List.of(),
+        if (kit != null && kit.enabled() && player.hasPermission(KitEditor.PERMISSION)) {
+            buttons.add(button(msg().get("dialog.results.edit-kit", Messages.comp("kit_icon", kit.sprite()),
+                    Messages.comp("kit", kit.displayName())),
+                msg().get("dialog.results.edit-kit-tooltip", Messages.comp("kit", kit.displayName())),
+                150, "kiteditor/open", payload("kit", kit.id())));
+        }
+        open().show(player, OpenDialogs.Kind.RESULTS, dialog(title, List.of(text(lines(lines))), List.of(),
             DialogType.multiAction(buttons).columns(2).exitAction(close()).build()));
     }
 
     /** Generic info notice. */
     public void notice(Player player, Component title, Component body) {
-        player.showDialog(dialog(title, List.of(text(body)), List.of(), DialogType.notice(close())));
+        open().show(player, OpenDialogs.Kind.NOTICE, dialog(title, List.of(text(body)), List.of(), DialogType.notice(close())));
     }
 
     /**
@@ -485,36 +548,36 @@ public final class DialogService {
             dialog(title, List.of(text(body)), List.of(), DialogType.notice(close()));
         Component plain = Component.text("Plain text. ");
         switch (variant) {
-            case "plain" -> player.showDialog(noticeWith.apply(plain));
-            case "shadow" -> player.showDialog(noticeWith.apply(plain.append(Component.text("shadow none")
+            case "plain" -> debug(player, noticeWith.apply(plain));
+            case "shadow" -> debug(player, noticeWith.apply(plain.append(Component.text("shadow none")
                 .shadowColor(net.kyori.adventure.text.format.ShadowColor.none()))));
-            case "sprite" -> player.showDialog(noticeWith.apply(plain.append(Icons.item("netherite_sword"))));
-            case "sprite-nofallback" -> player.showDialog(noticeWith.apply(plain.append(Component.object()
+            case "sprite" -> debug(player, noticeWith.apply(plain.append(Icons.item("netherite_sword"))));
+            case "sprite-nofallback" -> debug(player, noticeWith.apply(plain.append(Component.object()
                 .contents(net.kyori.adventure.text.object.ObjectContents.sprite(Key.key("items"), Key.key("item/netherite_sword")))
                 .build())));
-            case "sprite-gui" -> player.showDialog(noticeWith.apply(plain.append(Icons.gui("hud/heart/full"))));
-            case "sprite-block" -> player.showDialog(noticeWith.apply(plain.append(Icons.parse("blocks:block/obsidian"))));
-            case "head" -> player.showDialog(noticeWith.apply(plain.append(Icons.head(player.getUniqueId(), player.getName()))));
-            case "head-nofallback" -> player.showDialog(noticeWith.apply(plain.append(Component.object()
+            case "sprite-gui" -> debug(player, noticeWith.apply(plain.append(Icons.gui("hud/heart/full"))));
+            case "sprite-block" -> debug(player, noticeWith.apply(plain.append(Icons.parse("blocks:block/obsidian"))));
+            case "head" -> debug(player, noticeWith.apply(plain.append(Icons.head(player.getUniqueId(), player.getName()))));
+            case "head-nofallback" -> debug(player, noticeWith.apply(plain.append(Component.object()
                 .contents(net.kyori.adventure.text.object.ObjectContents.playerHead(player.getUniqueId())).build())));
-            case "button" -> player.showDialog(dialog(title, List.of(text(plain)), List.of(), DialogType.multiAction(List.of(
+            case "button" -> debug(player, dialog(title, List.of(text(plain)), List.of(), DialogType.multiAction(List.of(
                 button(Component.text("No payload"), null, 150, "debug/none", Map.of()))).exitAction(close()).build()));
-            case "payload" -> player.showDialog(dialog(title, List.of(text(plain)), List.of(), DialogType.multiAction(List.of(
+            case "payload" -> debug(player, dialog(title, List.of(text(plain)), List.of(), DialogType.multiAction(List.of(
                 button(Component.text("With payload"), null, 150, "debug/none", payload("kit", "sword", "mode", "ranked"))))
                 .exitAction(close()).build()));
-            case "tooltip" -> player.showDialog(dialog(title, List.of(text(plain)), List.of(), DialogType.multiAction(List.of(
+            case "tooltip" -> debug(player, dialog(title, List.of(text(plain)), List.of(), DialogType.multiAction(List.of(
                 button(Component.text("Tooltip"), Component.text("A tooltip"), 150, "debug/none", Map.of())))
                 .exitAction(close()).build()));
-            case "input-bool" -> player.showDialog(dialog(title, List.of(text(plain)),
+            case "input-bool" -> debug(player, dialog(title, List.of(text(plain)),
                 List.of(DialogInput.bool("b", Component.text("Bool")).initial(true).build()), DialogType.notice(close())));
-            case "input-text" -> player.showDialog(dialog(title, List.of(text(plain)),
+            case "input-text" -> debug(player, dialog(title, List.of(text(plain)),
                 List.of(DialogInput.text("t", Component.text("Text")).width(250).initial("x").maxLength(16).build()),
                 DialogType.notice(close())));
-            case "input-option" -> player.showDialog(dialog(title, List.of(text(plain)), List.of(DialogInput.singleOption("o",
+            case "input-option" -> debug(player, dialog(title, List.of(text(plain)), List.of(DialogInput.singleOption("o",
                 Component.text("Option"), List.of(SingleOptionDialogInput.OptionEntry.create("a", Component.text("A"), true),
                     SingleOptionDialogInput.OptionEntry.create("b", Component.text("B"), false))).width(250).build()),
                 DialogType.notice(close())));
-            case "input-range" -> player.showDialog(dialog(title, List.of(text(plain)), List.of(DialogInput.numberRange("r",
+            case "input-range" -> debug(player, dialog(title, List.of(text(plain)), List.of(DialogInput.numberRange("r",
                 Component.text("Range"), 0f, 500f).step(25f).initial(100f).width(250).labelFormat("%s: %s").build()),
                 DialogType.notice(close())));
             case "queue" -> queue(player, QueueMode.RANKED, false);
@@ -531,6 +594,10 @@ public final class DialogService {
             }
         }
         return true;
+    }
+
+    private void debug(Player player, Dialog dialog) {
+        open().show(player, OpenDialogs.Kind.DEBUG, dialog);
     }
 
     static TagResolver[] none() {

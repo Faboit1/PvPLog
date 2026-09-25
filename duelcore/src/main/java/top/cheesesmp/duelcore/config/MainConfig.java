@@ -186,6 +186,11 @@ public final class MainConfig {
     public final int partyInviteSeconds;
     public final boolean partyOpenByDefault;
 
+    // dialogs
+    /** Re-render open dialogs whose content changes (queue timers, online states) and re-send them when it did. */
+    public final boolean dialogRefresh;
+    public final int dialogRefreshTicks;
+
     public final boolean verbose;
 
     public MainConfig(FileConfiguration c) {
@@ -335,6 +340,9 @@ public final class MainConfig {
         partyMaxSize = Math.clamp(c.getInt("party.max-size", 20), 2, 100);
         partyInviteSeconds = Math.clamp(c.getInt("party.invite-seconds", 60), 10, 600);
         partyOpenByDefault = c.getBoolean("party.open-by-default", false);
+
+        dialogRefresh = c.getBoolean("dialogs.refresh.enabled", true);
+        dialogRefreshTicks = top.cheesesmp.duelcore.ui.dialog.DialogRefresh.interval(c.getInt("dialogs.refresh.interval-ticks", 20));
 
         verbose = c.getBoolean("debug.verbose", false);
     }

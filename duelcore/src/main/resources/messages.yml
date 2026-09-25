@@ -634,6 +634,10 @@ kit-editor:
 
 dialog:
   close: "<muted>Close</muted>"
+  # "How long ago" under a minute in menus that update themselves (profile history, a friend's or party member's
+  # page; otherwise "5m", "3h", "2d"), and the queue wait on long tabs. Plain text. Not seconds: a menu that changes
+  # every second is sent again every second, which scrolls it back to the top.
+  under-a-minute: "<1m"
   # The queue menu (Play item, /queue). Layout knobs are in gui.yml (queue-menu).
   queue:
     menu-title: "Queue"
@@ -680,6 +684,9 @@ dialog:
     change-placed: "<good>Placed!</good>"
     progress-done: "<#5bd46a>■</#5bd46a>"
     progress-todo: "<#26282c>■</#26282c>"
+    # After each kit row (kit editor permission): opens the kit's editor. <kit> in the hover.
+    edit: " <muted>✎</muted>"
+    edit-hover: "<text>Edit your layout for <kit></text>"
     star-on: "<accent>★</accent>"
     star-off: "<muted>☆</muted>"
     star-hover: "<muted>Add to favorites</muted>"
@@ -758,6 +765,9 @@ dialog:
   results:
     again: "<kit_icon> <text>Play again</text>"
     profile: "<muted>Profile</muted>"
+    # Opens the kit editor of the match's kit (kit editor permission).
+    edit-kit: "<kit_icon> <text>Edit kit</text>"
+    edit-kit-tooltip: "<muted>Arrange your <kit> items</muted>"
 
 # Post-match progress (config.yml animations): the hub action bar counts up, then blinks and fades out.
 progress:

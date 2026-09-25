@@ -68,6 +68,11 @@ public final class GuiConfig {
     public final int queueKitWidth;
     public final Map<String, String> queueTabIcons = new HashMap<>();
     public final int queueProgressSegments;
+    /**
+     * Queue menu: tabs with at most this many kits show the search time as a ticking m:ss clock; longer tabs (which
+     * need scrolling) show whole minutes, since every re-send scrolls the menu back to the top.
+     */
+    public final int queueClockKits;
     public final String queueProgressDone;
     public final String queueProgressTodo;
     /** Post-match progress animation: the action bar's bar, the blink colour, the colour it fades to, the shimmer. */
@@ -147,6 +152,7 @@ public final class GuiConfig {
         ConfigurationSection icons = y.getConfigurationSection("queue-menu.tab-icons");
         if (icons != null) for (String key : icons.getKeys(false)) queueTabIcons.put(key, icons.getString(key, ""));
         queueProgressSegments = Math.clamp(y.getInt("queue-menu.progress.segments", 10), 1, 30);
+        queueClockKits = Math.clamp(y.getInt("queue-menu.clock-max-kits", 5), 0, 1000);
         queueProgressDone = y.getString("queue-menu.progress.done", "");
         queueProgressTodo = y.getString("queue-menu.progress.todo", "");
         var std = top.cheesesmp.duelcore.ui.anim.ProgressBar.standard();

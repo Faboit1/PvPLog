@@ -64,6 +64,7 @@ public final class DuelCorePlugin extends JavaPlugin {
     private top.cheesesmp.duelcore.ui.SpawnRise spawnRise;
     private top.cheesesmp.duelcore.ui.Animations animations;
     private DialogService dialogs;
+    private top.cheesesmp.duelcore.ui.dialog.OpenDialogs openDialogs;
     private top.cheesesmp.duelcore.hub.HotbarHints hints;
     private ClickRouter clicks;
     private top.cheesesmp.duelcore.friends.FriendService friends;
@@ -124,6 +125,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         hubProgress = new top.cheesesmp.duelcore.hub.HubProgress(this);
         alerts = new top.cheesesmp.duelcore.ui.AlertPop(this);
         tester.preview("sidebar-title", p -> sidebar.sweepTitleNow());
+        openDialogs = new top.cheesesmp.duelcore.ui.dialog.OpenDialogs(this);
         dialogs = new DialogService(this);
         hints = new top.cheesesmp.duelcore.hub.HotbarHints(this);
         leaderboards = new LeaderboardService(this, database);
@@ -137,6 +139,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         hub.enable();
 
         var pm = getServer().getPluginManager();
+        pm.registerEvents(openDialogs, this); // first: signs that a dialog was closed run before anything opens a new one
         pm.registerEvents(profiles, this);
         pm.registerEvents(new HubListener(this), this);
         pm.registerEvents(queue, this);
@@ -167,6 +170,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         var scheduler = getServer().getScheduler();
         scheduler.runTaskTimer(this, matches, 1L, 1L);
         scheduler.runTaskTimer(this, anim, 1L, 1L);
+        scheduler.runTaskTimer(this, openDialogs, 1L, 1L); // live dialog refresh (every dialogs.refresh.interval-ticks)
         scheduler.runTaskTimer(this, arenas.queue(), 1L, 1L);
         scheduler.runTaskTimer(this, queue, 20L, cfg.mmIntervalTicks);
         scheduler.runTaskTimer(this, queueMusic, 20L, 10L);
@@ -205,6 +209,11 @@ public final class DuelCorePlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         try {
+            if (openDialogs != null) openDialogs.disable(); // their clicks would go unanswered
+        } catch (Throwable t) {
+            getLogger().log(Level.WARNING, "Closing dialogs failed", t);
+        }
+        try {
             if (kitEditor != null) kitEditor.disable(); // open editors close and give the players their items back
         } catch (Throwable t) {
             getLogger().log(Level.WARNING, "Closing kit editors failed", t);
@@ -241,6 +250,7 @@ public final class DuelCorePlugin extends JavaPlugin {
     public List<String> reload() {
         List<String> problems = new ArrayList<>();
         config.load();
+        openDialogs.reload(); // open menus are closed (texts, sizes and refresh settings may have changed)
         for (String problem : settings().soundProblems) problems.add("config.yml " + problem);
         problems.addAll(kits.load());
         profiles.syncKits(kits.ids());
@@ -382,6 +392,11 @@ public final class DuelCorePlugin extends JavaPlugin {
 
     public DialogService dialogs() {
         return dialogs;
+    }
+
+    /** Which DuelCore dialog each player has open, closing it and its live refresh. */
+    public top.cheesesmp.duelcore.ui.dialog.OpenDialogs openDialogs() {
+        return openDialogs;
     }
 
     /** Action bar hints of the held hub hotbar item. */

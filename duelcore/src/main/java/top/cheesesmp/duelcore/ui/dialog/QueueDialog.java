@@ -55,6 +55,8 @@ import top.cheesesmp.duelcore.debug.TesterMode;
 import top.cheesesmp.duelcore.config.GuiConfig;
 import top.cheesesmp.duelcore.config.Messages;
 import top.cheesesmp.duelcore.kit.Kit;
+import top.cheesesmp.duelcore.kit.editor.KitEditor;
+import top.cheesesmp.duelcore.kit.editor.KitPicker;
 import top.cheesesmp.duelcore.match.Match;
 import top.cheesesmp.duelcore.match.Participant;
 import top.cheesesmp.duelcore.profile.KitStats;
@@ -77,17 +79,19 @@ import top.cheesesmp.duelcore.ui.anim.TextFx;
 /**
  * The queue menu: a notice dialog with a header, category tabs (Favorites / Weapons / Vanilla / Skills), the
  * "Queue All" and "Keep Queuing" toggles and one item row per kit. Clicking a kit's text joins or leaves its queue
- * and re-opens the menu with the new state. Every click is a text click event {@code duelcore:queue/<action>}
- * (routed here through the "queue" prefix of {@link ClickRouter}); payloads are re-validated.
+ * and shows the menu again with the new state (it stays on screen meanwhile: after-action NONE); the ✎ of a row
+ * opens the kit's editor ({@code duelcore:kiteditor/open}). Every click is a text click event
+ * {@code duelcore:queue/<action>} (routed here through the "queue" prefix of {@link ClickRouter}); payloads are
+ * re-validated. While open, the menu is refreshed by {@link OpenDialogs} (search timers, player counts, queued state).
  *
  * <p>After a match ({@code animations.queue-progress}): when {@code plugin.progress()} has a reveal for a kit of the
  * opened tab, that kit's standing is animated by re-showing the menu every 2 ticks for about 1.7 s: the placement bar
  * fills segment by segment from the old to the new value (the new segments highlighted, then settling), or the Elo
  * counts up ("+18 Elo", the tier switching at the end), with a rising tick per step and a flourish at the end. The
- * reveal is consumed when it starts, so it plays once. The Close button (while animating), any click, key press
- * (movement, jump, sneak), hotbar or inventory action, command, camera turn or step stops it at once (Escape tells
- * the server nothing, so these are the signs that the menu is gone), and so do a match, a world change, a reload and
- * disable.
+ * reveal is consumed when it starts, so it plays once. Close or Escape (both send {@code duelcore:dialog/close}),
+ * any click, key press (movement, jump, sneak), hotbar or inventory action, command, camera turn or step stops it at
+ * once, and so do another dialog, a match, a world change, a reload and disable. The live refresh waits while it
+ * animates and then keeps the final frame's changes ("+18 Elo") until the menu is shown again.
  */
 public final class QueueDialog {
 
@@ -146,9 +150,10 @@ public final class QueueDialog {
             show(player, shown);
             return;
         }
-        prefs.load(player).thenRun(() -> {
-            if (player.isOnline() && plugin.matches().match(player.getUniqueId()) == null) show(player, shown);
-        });
+        long ticket = plugin.openDialogs().awaitNext(player); // an open dialog stays until the menu is loaded
+        prefs.load(player).thenRun(() -> plugin.openDialogs().continueAwait(player, ticket, () -> {
+            if (plugin.matches().match(player.getUniqueId()) == null) show(player, shown);
+        }));
     }
 
     /** All tab ids in menu order: favorites, then the kit categories. */
@@ -190,38 +195,64 @@ public final class QueueDialog {
                 plugin.progress().consume(uuid, kit.id()); // plays once, even when cut short
             }
         }
-        render(player, tab, reveals.isEmpty() ? null : new MenuFrame(reveals, 0, 0));
+        render(player, tab, reveals.isEmpty() ? null : new MenuFrame(reveals, 0, 0), reveals);
         if (!reveals.isEmpty()) animate(player, tab, reveals);
     }
 
-    /** Builds and shows the menu; {@code frame} (animation only) replaces the standing of its kits. */
-    private void render(Player player, String tab, @Nullable MenuFrame frame) {
+    /**
+     * Shows the menu; {@code frame} (animation only) replaces the standing of its kits. While open it is refreshed
+     * with the current state; after an animation of {@code reveals} the refresh keeps its final frame.
+     */
+    private void render(Player player, String tab, @Nullable MenuFrame frame, Map<String, Reveal> reveals) {
+        MenuFrame settled = reveals.isEmpty() ? null : new MenuFrame(reveals, 1, 1);
+        UUID uuid = player.getUniqueId();
+        // (a match closes the menu; until the close is seen, nothing is re-sent)
+        plugin.openDialogs().show(player, OpenDialogs.Kind.QUEUE, build(player, tab, frame),
+            p -> plugin.matches().match(uuid) != null ? null : build(p, tab, settled));
+    }
+
+    /** Builds the menu with its fingerprint (everything shown: texts, hovers, clicks, the rows' items). */
+    private OpenDialogs.Rendered build(Player player, String tab, @Nullable MenuFrame frame) {
         GuiConfig gui = plugin.gui();
         UUID uuid = player.getUniqueId();
         PlayerProfile profile = plugin.profiles().get(player);
         Set<String> favorites = Objects.requireNonNullElse(plugin.queue().prefs().favorites(uuid), Set.of());
         List<Kit> kits = kits(tab, favorites);
         long now = System.currentTimeMillis();
+        boolean edit = plugin.kitEditor() != null && player.hasPermission(KitEditor.PERMISSION);
+        Fingerprint fp = new Fingerprint();
         List<DialogBody> body = new ArrayList<>();
-        body.add(DialogBody.plainMessage(header(uuid), gui.queueWidth));
-        body.add(DialogBody.plainMessage(tabRow(player, tab), gui.queueWidth));
-        body.add(DialogBody.plainMessage(toggleRow(uuid, profile, kits, tab), gui.queueWidth));
+        body.add(plain(header(uuid), gui.queueWidth, fp));
+        body.add(plain(tabRow(player, tab), gui.queueWidth, fp));
+        body.add(plain(toggleRow(uuid, profile, kits, tab), gui.queueWidth, fp));
         if (kits.isEmpty()) {
-            body.add(DialogBody.plainMessage(msg().get(tab.equals(FAVORITES) ? "dialog.queue.no-favorites" : "dialog.queue.no-kits"),
-                gui.queueWidth));
+            body.add(plain(msg().get(tab.equals(FAVORITES) ? "dialog.queue.no-favorites" : "dialog.queue.no-kits"),
+                gui.queueWidth, fp));
         }
-        for (Kit kit : kits) body.add(kitRow(uuid, profile, kit, favorites.contains(kit.id()), tab, now, frame));
-        // while animating, Close tells the server (queue/close stops it); after Escape the first key or turn does
-        ActionButton close = frame == null ? ActionButton.builder(msg().get("dialog.close")).width(120).build()
-            : plugin.dialogs().button(msg().get("dialog.close"), null, 120, "queue/close", Map.of());
-        player.showDialog(Dialog.create(f -> f.empty()
-            .base(DialogBase.builder(msg().get("dialog.queue.menu-title"))
+        // a clock ticking every second re-sends the menu every second, and each re-send scrolls it back to the top:
+        // only on tabs short enough not to need scrolling
+        boolean clock = kits.size() <= gui.queueClockKits;
+        for (Kit kit : kits) {
+            body.add(kitRow(uuid, profile, kit, favorites.contains(kit.id()), tab, now, clock, frame, edit, fp));
+        }
+        // Close (and Escape) sends dialog/close: the menu is forgotten and a running animation stops
+        ActionButton close = plugin.dialogs().close();
+        Component title = msg().get("dialog.queue.menu-title");
+        fp.add(title).add(close);
+        Dialog dialog = Dialog.create(f -> f.empty()
+            .base(DialogBase.builder(title)
                 .canCloseWithEscape(true)
                 .pause(false)
-                .afterAction(DialogBase.DialogAfterAction.CLOSE)
+                .afterAction(DialogBase.DialogAfterAction.NONE)
                 .body(body)
                 .build())
-            .type(DialogType.notice(close))));
+            .type(DialogType.notice(close)));
+        return new OpenDialogs.Rendered(dialog, fp.value());
+    }
+
+    private static DialogBody plain(Component text, int width, Fingerprint fp) {
+        fp.add(text).add(width);
+        return DialogBody.plainMessage(text, width);
     }
 
     // ------------------------------------------------------------------ rows
@@ -273,7 +304,7 @@ public final class QueueDialog {
     }
 
     private DialogBody kitRow(UUID uuid, @Nullable PlayerProfile profile, Kit kit, boolean favorite, String tab, long now,
-                              @Nullable MenuFrame frame) {
+                              boolean clock, @Nullable MenuFrame frame, boolean edit, Fingerprint fp) {
         QueueEntry entry = plugin.queue().entry(uuid, kit.id());
         int queued = plugin.queue().size(kit.id());
         int playing = playing(kit.id());
@@ -282,7 +313,13 @@ public final class QueueDialog {
             .clickEvent(action("favorite", "kit", kit.id(), "tab", tab));
         Component first = msg().get(entry != null ? "dialog.queue.kit-queued" : "dialog.queue.kit",
             Messages.comp("kit", kit.displayName()), Messages.num("players", queued + playing),
-            Messages.text("wait", clock(entry == null ? 0 : entry.waitSeconds(now))), Messages.comp("star", star));
+            Messages.text("wait", wait(entry == null ? 0 : entry.waitSeconds(now), clock)), Messages.comp("star", star));
+        if (edit) {
+            // the ✎ opens the kit's editor (its own click and hover over the row's)
+            first = first.append(msg().get("dialog.queue.edit")
+                .hoverEvent(HoverEvent.showText(msg().get("dialog.queue.edit-hover", Messages.comp("kit", kit.displayName()))))
+                .clickEvent(KitPicker.editClick(kit)));
+        }
         Component description = Component.text()
             .append(first)
             .appendNewline()
@@ -291,6 +328,7 @@ public final class QueueDialog {
                 Messages.num("first_to", kit.firstTo()), Messages.num("queued", queued), Messages.num("playing", playing))))
             .clickEvent(action("toggle", "kit", kit.id(), "tab", tab))
             .build();
+        fp.add(description).add(kit.id()).add(entry != null).add(queued).add(playing).add(plugin.gui().queueKitWidth);
         return DialogBody.item(icon(kit, entry != null, queued, playing))
             .description(DialogBody.plainMessage(description, plugin.gui().queueKitWidth))
             .showDecorations(false)
@@ -419,15 +457,19 @@ public final class QueueDialog {
 
             @Override
             public boolean frame(Player p, int tick) {
-                // a reload (new gui.yml), a match or an interrupt ends it; the player keeps the last frame
-                if (plugin.gui() != gui || plugin.matches().match(uuid) != null || !animating.containsKey(uuid)) return false;
+                // a reload (new gui.yml), a match, an interrupt or another (or no) dialog ends it; the player keeps
+                // the last frame
+                if (plugin.gui() != gui || plugin.matches().match(uuid) != null || !animating.containsKey(uuid)
+                    || plugin.openDialogs().kind(p) != OpenDialogs.Kind.QUEUE) {
+                    return false;
+                }
                 if (tick < ANIM_DELAY) return true;
                 int t = tick - ANIM_DELAY;
                 if (t == 0) return true; // (the menu already shows this frame)
                 double e = Ease.easeOutCubic(Ease.progress(t, ANIM_COUNT));
                 double settle = t < ANIM_COUNT ? 0 : Ease.progress(t - ANIM_COUNT, ANIM_SETTLE);
                 if (plugin.settings().animQueueSounds) sounds(p, t, e);
-                render(p, tab, new MenuFrame(reveals, e, settle));
+                render(p, tab, new MenuFrame(reveals, e, settle), reveals);
                 return t < ANIM_COUNT + ANIM_SETTLE;
             }
 
@@ -456,17 +498,17 @@ public final class QueueDialog {
         if (animating.containsKey(player.getUniqueId())) plugin.anim().cancel(player, Channel.DIALOG);
     }
 
-    /**
-     * Signs that the player has closed the menu or is doing something else: each stops the animation, so later
-     * frames don't open a closed menu again. LOWEST, so an action that opens the menu again (the Play item, /queue)
-     * finds the old animation already gone.
-     */
     /** Any movement key, jump, sneak or sprint held (all released = a screen just opened). */
     static boolean anyPressed(Input in) {
         return in.isForward() || in.isBackward() || in.isLeft() || in.isRight() || in.isJump() || in.isSneak()
             || in.isSprint();
     }
 
+    /**
+     * Signs that the player has closed the menu or is doing something else: each stops the animation at once, so
+     * later frames don't open a closed menu again (Close and Escape send duelcore:dialog/close, which stops it too).
+     * LOWEST, so an action that opens the menu again (the Play item, /queue) finds the old animation already gone.
+     */
     private final class Interrupts implements Listener {
 
         @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -558,7 +600,7 @@ public final class QueueDialog {
         stopAnimation(player);
         Map<String, Reveal> reveals = new LinkedHashMap<>();
         reveals.put(kit.id(), r);
-        render(player, tab, new MenuFrame(reveals, 0, 0));
+        render(player, tab, new MenuFrame(reveals, 0, 0), reveals);
         animate(player, tab, reveals);
     }
 
@@ -624,9 +666,11 @@ public final class QueueDialog {
         return n;
     }
 
-    private static String clock(double seconds) {
+    /** The search time: a m:ss clock, or whole minutes ("&lt;1m", "2m") on long tabs (gui.yml queue-menu.clock-max-kits). */
+    private String wait(double seconds, boolean clock) {
         int s = (int) seconds;
-        return String.format(Locale.ROOT, "%d:%02d", s / 60, s % 60);
+        if (clock) return String.format(Locale.ROOT, "%d:%02d", s / 60, s % 60);
+        return s < 60 ? msg().raw("dialog.under-a-minute") : (s / 60) + "m";
     }
 
     private static ClickEvent<?> action(String action, String... kv) {
@@ -682,7 +726,7 @@ public final class QueueDialog {
             }
             case "queue/leave" -> plugin.queue().leave(player, true);
             case "queue/close" -> {
-                // the Close button of an animating menu: the animation was stopped above
+                // (the Close button before dialog/close; ClickRouter closes the menu for both)
             }
             default -> {
                 // unknown queue action: ignore

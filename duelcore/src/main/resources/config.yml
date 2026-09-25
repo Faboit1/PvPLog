@@ -291,6 +291,16 @@ leaderboard:
   # Region codes players can pick in Settings (used by leaderboards and matchmaking).
   regions: [EU, NA, SA, AS, OC, AF]
 
+dialogs:
+  # Open menus whose content changes (the queue menu's timers and counts, the party menu and friends list's online
+  # states, the live spectate list, a profile's "5m ago") are rebuilt this often and sent again only when something
+  # visible changed. Each re-send scrolls the menu back to the top (see gui.yml queue-menu.clock-max-kits). Menus with
+  # a text box are never refreshed (it would clear what the player typed).
+  refresh:
+    enabled: true
+    # Ticks between refreshes (20 = once a second, 5 to 1200).
+    interval-ticks: 20
+
 display:
   # Show the tier tag in chat, the tab list and above heads. Formats are in gui.yml.
   chat-tag: true
