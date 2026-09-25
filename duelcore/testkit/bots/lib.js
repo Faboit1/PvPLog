@@ -60,7 +60,9 @@ function createBot (name, opts = {}) {
     const start = Date.now() + wait
     while (Date.now() < start) { /* wait for this bot's login slot */ }
   }
-  const bot = mineflayer.createBot({ host: HOST, port: PORT, username: name, version: process.env.BOT_VERSION || '1.21.11', auth: 'offline', hideErrors: false, ...opts })
+  // MC_FAKE_HOST: the hostname sent in the handshake (a proxy's forced host, e.g. pvp.cheesesmp.top)
+  const fakeHost = process.env.MC_FAKE_HOST ? { fakeHost: process.env.MC_FAKE_HOST } : {}
+  const bot = mineflayer.createBot({ host: HOST, port: PORT, username: name, version: process.env.BOT_VERSION || '1.21.11', auth: 'offline', hideErrors: false, ...fakeHost, ...opts })
   bot.dc = { name, dialogs: [], titles: [], chat: [], matchesEnded: 0, matchState: 'hub', opponent: null }
   bot.on('login', () => log(name, 'login'))
   bot.on('spawn', () => {

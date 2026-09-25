@@ -496,7 +496,7 @@ public final class TestKitPlugin extends JavaPlugin implements Listener {
                 try (var in = Files.newBufferedReader(env.toPath())) {
                     props.load(in);
                 }
-                for (String k : List.of("MC_HOST", "MC_PORT", "BOT_AUTH_PASSWORD", "BOT_VERSION")) {
+                for (String k : List.of("MC_HOST", "MC_PORT", "MC_FAKE_HOST", "BOT_AUTH_PASSWORD", "BOT_VERSION")) {
                     String v = props.getProperty(k);
                     if (v != null && !v.isBlank()) pb.environment().put(k, v.trim());
                 }
