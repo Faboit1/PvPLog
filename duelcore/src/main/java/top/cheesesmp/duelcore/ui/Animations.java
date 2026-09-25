@@ -1,10 +1,13 @@
 package top.cheesesmp.duelcore.ui;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.config.MainConfig;
@@ -12,7 +15,7 @@ import top.cheesesmp.duelcore.config.MainConfig;
 /**
  * Small match effects. Everything is sent to an explicit viewer list (the match's fighters and spectators), so
  * parallel matches in the shared arena world never see or hear each other's effects. Each one can be turned off
- * in config.yml {@code animations}.
+ * in config.yml {@code animations}. The in-match titles, action bars and sounds are in {@link #fx()}.
  */
 public final class Animations {
 
@@ -21,9 +24,16 @@ public final class Animations {
     private static final Particle.DustOptions WHITE = new Particle.DustOptions(Color.fromRGB(0xF4, 0xF6, 0xF8), 0.9f);
 
     private final DuelCorePlugin plugin;
+    private final MatchFx fx;
 
     public Animations(DuelCorePlugin plugin) {
         this.plugin = plugin;
+        this.fx = new MatchFx(plugin);
+    }
+
+    /** Countdown, "FIGHT!", round banners, combo / heartbeat bars, victory and defeat titles. */
+    public MatchFx fx() {
+        return fx;
     }
 
     private MainConfig cfg() {
@@ -85,6 +95,33 @@ public final class Animations {
                 double a = i * Math.PI / 10;
                 v.spawnParticle(Particle.DUST, base.clone().add(Math.cos(a) * 1.1, 0, Math.sin(a) * 1.1), 1, 0, 0, 0, 0, WHITE);
             }
+        }
+    }
+
+    /**
+     * Match won: confetti (falling dust in the colours of gui.yml {@code match-fx.confetti}) rains around the winner
+     * for about two seconds, two colours per wave.
+     */
+    public void confetti(Player winner, List<Player> viewers) {
+        if (!cfg().animVictoryConfetti) return;
+        List<BlockData> colours = new ArrayList<>();
+        for (var m : plugin.gui().matchFx.confetti()) colours.add(m.createBlockData());
+        if (colours.isEmpty()) return;
+        for (int wave = 0; wave < 8; wave++) {
+            int w = wave;
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                if (!winner.isOnline()) return;
+                Location c = winner.getLocation().add(0, 3.6, 0);
+                ThreadLocalRandom rnd = ThreadLocalRandom.current();
+                BlockData a = colours.get(rnd.nextInt(colours.size()));
+                BlockData b = colours.get(rnd.nextInt(colours.size()));
+                for (Player v : viewers) {
+                    if (!v.isOnline() || v.getWorld() != c.getWorld()) continue;
+                    v.spawnParticle(Particle.FALLING_DUST, c, 7, 1.7, 0.4, 1.7, 0, a);
+                    v.spawnParticle(Particle.FALLING_DUST, c, 7, 1.7, 0.4, 1.7, 0, b);
+                    if (w % 3 == 0) v.spawnParticle(Particle.END_ROD, c, 4, 1.2, 0.3, 1.2, 0.02);
+                }
+            }, 2L + wave * 4L);
         }
     }
 }

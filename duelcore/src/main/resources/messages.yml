@@ -71,6 +71,31 @@ match:
   command-blocked: "<muted>You can't use that command during a match.</muted>"
   cancelled: "<muted>The match was cancelled. Nothing was rated.</muted>"
   no-arena: "<bad>No arena was free for your match. Nothing was rated, you can queue again."
+  # In-match animations (config.yml animations; colours in gui.yml match-fx).
+  fx:
+    # Plain text: the colours are the gradient in gui.yml match-fx.fight-colors.
+    fight: "FIGHT!"
+    # Round banner title and score; <you>/<opp> pop when they change (spectators: team 1 / team 2).
+    round-won: "<good><b>ROUND WON</b></good>"
+    round-lost: "<bad><b>ROUND LOST</b></bad>"
+    round-draw: "<muted><b>ROUND DRAWN</b></muted>"
+    round-spectator: "<text><winner></text> <muted>takes round <round></muted>"
+    round-score: "<text><you></text> <muted>—</muted> <text><opp></text>"
+    # Countdown subtitle when <team> is one round from winning, or when every side is.
+    match-point: "<bad>Match point</bad> <muted>· <text><team></text></muted>"
+    final-round: "<bad>Final round</bad> <muted>· round <round></muted>"
+    combo: "<accent><count></accent> <muted>hit combo</muted>"
+    kill: "<good>+1</good> <text>kill</text><combo>"
+    kill-combo: " <muted>·</muted> <accent><count></accent> <muted>hit combo</muted>"
+    # Low health; <hp> is in hearts. The colour pulses (gui.yml match-fx.heartbeat-colors).
+    heartbeat: "❤ <hp>"
+    players-left: "<text><count></text> <muted>players left</muted>"
+    # Spectators at the end of a match. <first>/<second>: the two teams' scores.
+    spectator-winner: "<accent><winner></accent>"
+    spectator-winner-sub: "<muted>wins · <first>–<second></muted>"
+    spectator-winner-sub-ffa: "<muted>wins the Party FFA</muted>"
+    spectator-draw: "<muted>Draw</muted>"
+    spectator-draw-sub: "<muted><first>–<second></muted>"
 
 results:
   title-victory: "<good>Victory</good>"

@@ -141,6 +141,13 @@ A server shutdown during a match cancels it without any rating change. `/duelcor
   searching bar check `busy(player, ACTION_BAR)`. Pure helpers (`Ease`, `TextFx`, `BlinkFade`, `ProgressBar`, the
   `Sfx` phrase builders) are unit tested. `ProgressTracker` (`plugin.progress()`) records each rated match's
   before/after per player and kit (memory only) for the post-match `ProgressReveal` and the queue menu.
+* **In-match animations** (`ui/MatchFx`, pure parts in `ui/MatchFxMath`, colours `ui/MatchFxStyle` from gui.yml
+  `match-fx`): MatchService calls them for the countdown, the fight start, round over (banner instead of the action
+  bar line while the match goes on), deaths (kill bar, FFA players left), the low-health heartbeat (every 5 ticks,
+  spaced by `Participant.lastBeat`) and the end (victory / defeat / spectator titles, `Animations.confetti`);
+  MatchListener calls the combo bar. Everything runs on the `plugin.anim()` channels, titles are sent part by part
+  (`TitlePart`) so re-sent frames don't fade in again, and each method returns false when its switch is off so the
+  caller keeps the plain title.
 * **Match found**: a totem-pop animation shows an item that represents the kit. The client displays the held `death_protection` item, so for two ticks the offhand gets an item with `death_protection` + `item_model = <kit icon>`, then an `EntityEffect.PROTECTED_FROM_DEATH` plays.
 
 ## Testing approach

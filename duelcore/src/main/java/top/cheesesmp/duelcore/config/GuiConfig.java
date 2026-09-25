@@ -64,6 +64,8 @@ public final class GuiConfig {
     public final net.kyori.adventure.text.format.TextColor revealFlash;
     public final net.kyori.adventure.text.format.TextColor revealFade;
     public final net.kyori.adventure.text.format.TextColor revealShimmer;
+    /** In-match animation colours and confetti (match-fx). */
+    public final top.cheesesmp.duelcore.ui.MatchFxStyle matchFx;
 
     public GuiConfig(YamlConfiguration y) {
         ConfigurationSection hb = y.getConfigurationSection("hotbar");
@@ -124,6 +126,7 @@ public final class GuiConfig {
         revealFlash = TextFx.color(y.getString("progress-reveal.flash-color"), TextFx.WHITE);
         revealFade = TextFx.color(y.getString("progress-reveal.fade-color"), net.kyori.adventure.text.format.TextColor.color(0x6B7078));
         revealShimmer = TextFx.color(y.getString("progress-reveal.shimmer-color"), TextFx.WHITE);
+        matchFx = top.cheesesmp.duelcore.ui.MatchFxStyle.parse(y);
     }
 
     public @Nullable HotbarItem item(String key) {

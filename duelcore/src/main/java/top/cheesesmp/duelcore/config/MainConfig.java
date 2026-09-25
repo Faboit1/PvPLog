@@ -89,6 +89,21 @@ public final class MainConfig {
     public final boolean animCelebrationParticles;
     /** Tick sounds while counting, flourishes (players' own sound setting still applies). */
     public final boolean animProgressSounds;
+    /**
+     * In-match animations (ui/MatchFx): popping countdown, "FIGHT!" sweep, round banner, match point pulse, combo /
+     * kill bar, low-health heartbeat (at or below heartbeat-hearts), victory / defeat titles, confetti, FFA players left.
+     */
+    public final boolean animCountdownPop;
+    public final boolean animFightSweep;
+    public final boolean animRoundBanner;
+    public final boolean animMatchPoint;
+    public final boolean animComboBar;
+    public final boolean animHeartbeat;
+    public final double animHeartbeatHearts;
+    public final boolean animVictoryTitle;
+    public final boolean animDefeatTitle;
+    public final boolean animVictoryConfetti;
+    public final boolean animPlayersLeft;
     public final top.cheesesmp.duelcore.ui.SoundPool matchFoundSounds;
     public final top.cheesesmp.duelcore.ui.SoundPool fightStartSounds;
     /** Sound lines (match-found-sounds, fight-start-sounds, queue music) that could not be read (reported on load and reload). */
@@ -219,6 +234,17 @@ public final class MainConfig {
         animTierDown = c.getBoolean("animations.tier-down", true);
         animCelebrationParticles = c.getBoolean("animations.celebration-particles", true);
         animProgressSounds = c.getBoolean("animations.progress-sounds", true);
+        animCountdownPop = c.getBoolean("animations.countdown-pop", true);
+        animFightSweep = c.getBoolean("animations.fight-sweep", true);
+        animRoundBanner = c.getBoolean("animations.round-banner", true);
+        animMatchPoint = c.getBoolean("animations.match-point", true);
+        animComboBar = c.getBoolean("animations.combo-bar", true);
+        animHeartbeat = c.getBoolean("animations.heartbeat", true);
+        animHeartbeatHearts = Math.clamp(c.getDouble("animations.heartbeat-hearts", 3), 0.5, 10);
+        animVictoryTitle = c.getBoolean("animations.victory-title", true);
+        animDefeatTitle = c.getBoolean("animations.defeat-title", true);
+        animVictoryConfetti = c.getBoolean("animations.victory-confetti", true);
+        animPlayersLeft = c.getBoolean("animations.players-left", true);
         matchFoundSounds = top.cheesesmp.duelcore.ui.SoundPool.parse(c.getStringList("animations.match-found-sounds"));
         var fightStart = top.cheesesmp.duelcore.ui.SoundPool.parse(c.getStringList("animations.fight-start-sounds"));
         for (String p : matchFoundSounds.problems()) soundProblems.add("animations.match-found-sounds: " + p);

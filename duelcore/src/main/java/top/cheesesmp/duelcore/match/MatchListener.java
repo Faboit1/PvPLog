@@ -156,6 +156,7 @@ public final class MatchListener implements Listener {
             ap.combo++;
             ap.bestCombo = Math.max(ap.bestCombo, ap.combo);
             vp.combo = 0;
+            plugin.animations().fx().combo(attacker, ap.combo); // (from 2 hits on, if animations.combo-bar)
         }
         vp.lastDamager = ap.uuid();
         vp.lastDamagedAt = System.currentTimeMillis();

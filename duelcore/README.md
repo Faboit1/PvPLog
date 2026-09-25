@@ -303,9 +303,20 @@ setting. Texts are in `messages.yml` (`progress`, `tester`), colours and the bar
 | `tier-down` | A quiet subtitle when a tier drops |
 | `celebration-particles` | Firework bursts in front of the player (only they see them) for `tier-up` and `placed` |
 | `progress-sounds` | Count ticks, flourish and demotion notes |
+| `countdown-pop` | Countdown numbers pop in (white and bold, then green / yellow / red by seconds left) with a tick that rises each second |
+| `fight-sweep` | `FIGHT!` with a gradient sweep across the letters and a punch sound |
+| `round-banner` | Round over, match goes on: `ROUND WON` / `ROUND LOST` types in, the score below pops (`2 — 1`); spectators see who took the round |
+| `match-point` | The countdown subtitle pulses `Match point` (or `Final round`) when a side is one round from winning |
+| `combo-bar` | Attacker's action bar: the hit combo counter pops from 2 hits on; `+1 kill · 3 hit combo` when a kill doesn't end the round |
+| `heartbeat` (+ `-hearts`) | At or below 3 hearts: a quiet heartbeat and a red pulse of the health in the action bar, faster when lower |
+| `victory-title`, `defeat-title` | Match won: victory jingle and a shimmer over `Victory` (spectators: the winner's name). Lost: three quiet falling notes, the title greys a little |
+| `victory-confetti` | Confetti raining around the match winner (colours in `gui.yml` `match-fx.confetti`) |
+| `players-left` | Party FFA: `3 players left` pops when someone is eliminated |
 
 **Tester mode** (`/tester on`, `duelcore.tester`): `/tester play <preview>` plays an animation on yourself
-(`placement`, `placed`, `elo-up`, `elo-down`, `tier-up`, `tier-down`, plus any a feature registers), and unranked
+(`placement`, `placed`, `elo-up`, `elo-down`, `tier-up`, `tier-down`; the in-match ones `countdown`, `fight`,
+`match-point`, `round-won`, `round-lost`, `round-spectator`, `combo`, `kill`, `heartbeat`, `victory`, `defeat`,
+`spectator-result`, `players-left`, and `match` for all of them in a row; plus any a feature registers), and unranked
 matches, duels and party matches end with a simulated progress reveal (ratings don't change). It lasts until
 `/tester off` or a restart.
 

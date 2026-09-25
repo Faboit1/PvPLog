@@ -44,9 +44,12 @@ import top.cheesesmp.duelcore.profile.ProgressTracker;
 import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.rating.RatingSystem;
 import top.cheesesmp.duelcore.rating.Tier;
+import top.cheesesmp.duelcore.ui.MatchFx;
+import top.cheesesmp.duelcore.ui.MatchFxMath;
 import top.cheesesmp.duelcore.ui.MatchSounds;
 import top.cheesesmp.duelcore.ui.SoundPool;
 import top.cheesesmp.duelcore.ui.TotemPop;
+import top.cheesesmp.duelcore.ui.anim.Channel;
 
 /**
  * The match engine: creation, the per-tick state machine (countdown → fight → round end → …), deaths, forfeits,
@@ -230,10 +233,16 @@ public final class MatchService implements Runnable {
                 int left = total - m.stateTicks;
                 if (left > 0 && left % 20 == 0) {
                     int secs = left / 20;
+                    // one round from winning: the subtitle says so (and pulses with the countdown animation)
+                    List<Integer> matchPoint = cfg.animMatchPoint && !m.ffa() ? MatchFxMath.matchPoint(m.score, m.firstTo()) : List.of();
+                    Component sub = matchPoint.isEmpty()
+                        ? plugin.messages().get("match.countdown-sub", Messages.num("round", m.round), Messages.num("first_to", m.firstTo()))
+                        : matchPoint.size() > 1 ? plugin.messages().get("match.fx.final-round", Messages.num("round", m.round))
+                        : plugin.messages().get("match.fx.match-point", Messages.text("team", m.teamName(matchPoint.getFirst())),
+                            Messages.num("round", m.round));
                     for (Player p : online(m)) {
-                        p.showTitle(Title.title(plugin.messages().get("match.countdown", Messages.num("seconds", secs)),
-                            plugin.messages().get("match.countdown-sub", Messages.num("round", m.round),
-                                Messages.num("first_to", m.firstTo())),
+                        if (plugin.animations().fx().countdown(p, secs, total / 20 - 1, sub, !matchPoint.isEmpty())) continue;
+                        p.showTitle(Title.title(plugin.messages().get("match.countdown", Messages.num("seconds", secs)), sub,
                             Title.Times.times(Duration.ZERO, Duration.ofMillis(1100), Duration.ZERO)));
                         sound(p, Sound.BLOCK_NOTE_BLOCK_HAT, 1f);
                     }
@@ -243,8 +252,12 @@ public final class MatchService implements Runnable {
             case FIGHTING -> {
                 m.roundTicks++;
                 int limit = m.kit().roundTimeLimitSeconds() * 20;
-                if (limit > 0 && m.roundTicks >= limit) timeout(m);
-                else if (m.roundTicks % 5 == 0) boundsCheck(m);
+                if (limit > 0 && m.roundTicks >= limit) {
+                    timeout(m);
+                } else if (m.roundTicks % 5 == 0) {
+                    boundsCheck(m);
+                    if (cfg.animHeartbeat && m.state == Match.State.FIGHTING) heartbeats(m);
+                }
             }
             case ROUND_END -> {
                 if (m.stateTicks >= cfg.roundEndDelayTicks && !m.arenaResetting) {
@@ -336,8 +349,10 @@ public final class MatchService implements Runnable {
             unfreeze(player);
             player.setInvulnerable(false);
             plugin.animations().fightStart(player, audience(m));
-            player.showTitle(Title.title(plugin.messages().get("match.fight"), Component.empty(),
-                Title.Times.times(Duration.ZERO, Duration.ofMillis(600), Duration.ofMillis(250))));
+            if (!plugin.animations().fx().fight(player)) {
+                player.showTitle(Title.title(plugin.messages().get("match.fight"), Component.empty(),
+                    Title.Times.times(Duration.ZERO, Duration.ofMillis(600), Duration.ofMillis(250))));
+            }
             MatchSounds.play(plugin, player, fightSounds, 0);
         }
     }
@@ -465,6 +480,33 @@ public final class MatchService implements Runnable {
                 Messages.comp("hearts", killerHealth(credited)));
         }
         checkRoundOver(m);
+        if (m.state == Match.State.FIGHTING) {
+            // the round goes on: the killer's "+1 kill" bar, and how many are left in a free-for-all
+            Player k = credited == null || credited.team() == dead.team() ? null : Bukkit.getPlayer(credited.uuid());
+            if (k != null && !credited.left()) plugin.animations().fx().kill(k, credited.combo);
+            if (m.ffa()) playersLeft(m);
+        }
+    }
+
+    /** Party FFA: "3 players left" for everyone watching. */
+    private void playersLeft(Match m) {
+        int left = m.alive();
+        for (Player p : online(m)) plugin.animations().fx().playersLeft(p, left);
+    }
+
+    /** Low-health heartbeat for fighters at or below animations.heartbeat-hearts (checked every 5 ticks). */
+    private void heartbeats(Match m) {
+        double threshold = plugin.settings().animHeartbeatHearts * 2;
+        for (Participant p : m.participants()) {
+            if (!p.alive || p.left()) continue;
+            Player player = Bukkit.getPlayer(p.uuid());
+            if (player == null) continue;
+            double hp = player.getHealth() + player.getAbsorptionAmount();
+            if (!MatchFxMath.lowHealth(hp, threshold)) continue;
+            if (m.roundTicks - p.lastBeat < MatchFxMath.heartbeatInterval(hp, threshold)) continue;
+            p.lastBeat = m.roundTicks;
+            plugin.animations().fx().heartbeat(player, hp);
+        }
     }
 
     private Component killerHealth(@Nullable Participant credited) {
@@ -533,10 +575,17 @@ public final class MatchService implements Runnable {
         }
         boolean decided = winnerTeam >= 0 && m.score[winnerTeam] >= m.firstTo();
         boolean capped = m.round >= plugin.settings().maxRounds;
+        // the match goes on: a round banner (title) instead of the action bar line
+        boolean banner = !decided && !capped && !m.ffa();
         for (Player p : online(m)) {
             Participant self = m.participant(p.getUniqueId());
             int you = self == null ? m.score[0] : m.score[self.team()];
             int opp = self == null ? m.score[1] : Teams.bestOther(m.score, self.team());
+            plugin.anim().cancel(p, Channel.ACTION_BAR); // combo and heartbeat bars make way for the result
+            if (banner && roundBanner(m, p, self, winnerTeam, you, opp)) {
+                plugin.sidebar().refresh(p);
+                continue;
+            }
             String key = winnerTeam < 0 ? "match.round-draw" : (self != null && self.team() == winnerTeam ? "match.round-won" : "match.round-lost");
             if (self == null) key = "match.round-spectator";
             if (m.ffa() && winnerTeam >= 0) {
@@ -544,7 +593,10 @@ public final class MatchService implements Runnable {
             }
             p.sendActionBar(plugin.messages().get(key, Messages.num("you", you), Messages.num("opp", opp),
                 Messages.num("round", m.round), Messages.text("winner", winnerTeam < 0 ? "" : m.teamName(winnerTeam))));
-            sound(p, winnerTeam >= 0 && self != null && self.team() == winnerTeam ? Sound.ENTITY_PLAYER_LEVELUP : Sound.BLOCK_NOTE_BLOCK_BASS, 1f);
+            boolean won = winnerTeam >= 0 && self != null && self.team() == winnerTeam;
+            // a decided match plays the victory jingle / defeat notes instead (see celebrate)
+            boolean jingle = decided && (self == null || won ? plugin.settings().animVictoryTitle : plugin.settings().animDefeatTitle);
+            if (!jingle) sound(p, won ? Sound.ENTITY_PLAYER_LEVELUP : Sound.BLOCK_NOTE_BLOCK_BASS, 1f);
             plugin.sidebar().refresh(p);
         }
         if (winnerTeam >= 0) {
@@ -563,6 +615,19 @@ public final class MatchService implements Runnable {
             int w = Teams.leader(m.score);
             end(m, w, w < 0 ? Match.EndReason.DRAW : Match.EndReason.SCORE);
         }
+    }
+
+    /** The animated round banner for one viewer; false when it is switched off. */
+    private boolean roundBanner(Match m, Player viewer, @Nullable Participant self, int winnerTeam, int you, int opp) {
+        MatchFx.Banner kind = self == null ? MatchFx.Banner.SPECTATOR : winnerTeam < 0 ? MatchFx.Banner.DRAW
+            : self.team() == winnerTeam ? MatchFx.Banner.WON : MatchFx.Banner.LOST;
+        int[] before = {you, opp};
+        if (winnerTeam >= 0) {
+            int scored = self == null ? (winnerTeam == 0 ? 0 : 1) : (self.team() == winnerTeam ? 0 : 1);
+            before[scored]--;
+        }
+        return plugin.animations().fx().roundBanner(viewer, kind, before, new int[] {you, opp}, m.round,
+            winnerTeam < 0 ? "" : m.teamName(winnerTeam));
     }
 
     private void boundsCheck(Match m) {
@@ -615,6 +680,7 @@ public final class MatchService implements Runnable {
             end(m, winner, quit ? Match.EndReason.FORFEIT_QUIT : Match.EndReason.FORFEIT_COMMAND);
         } else if (m.state == Match.State.FIGHTING) {
             checkRoundOver(m);
+            if (m.ffa() && m.state == Match.State.FIGHTING) playersLeft(m);
         }
         if (!quit) {
             byPlayer.remove(player.getUniqueId());
@@ -652,8 +718,30 @@ public final class MatchService implements Runnable {
         }
         Bukkit.getPluginManager().callEvent(new MatchEndEvent(m));
         plugin.results().show(m);
+        if (reason != Match.EndReason.CANCELLED && reason != Match.EndReason.NO_ARENA) celebrate(m);
         verbose("ended match #" + m.id() + " winner=" + winnerTeam + " reason=" + reason + " score=" + m.score[0] + "-"
             + m.score[1] + " rounds=" + m.roundString());
+    }
+
+    /** After the results title: victory / defeat animations, confetti over the winners, the spectators' banner. */
+    private void celebrate(Match m) {
+        int winner = m.winnerTeam();
+        List<Player> audience = audience(m);
+        for (Participant p : m.participants()) {
+            Player player = Bukkit.getPlayer(p.uuid());
+            if (player == null || p.left() || winner < 0) continue;
+            if (p.team() == winner) {
+                plugin.animations().fx().victory(player);
+                plugin.animations().confetti(player, audience);
+            } else {
+                plugin.animations().fx().defeat(player);
+            }
+        }
+        for (UUID s : m.spectators()) {
+            Player sp = Bukkit.getPlayer(s);
+            if (sp != null) plugin.animations().fx().spectatorResult(sp, winner < 0 ? null : m.teamName(winner), m.score(0),
+                m.score(1), m.ffa());
+        }
     }
 
     private void applyRatings(Match m, int winnerTeam, List<ProfileService.RatingWrite> writes) {
@@ -785,17 +873,12 @@ public final class MatchService implements Runnable {
 
     // ------------------------------------------------------------------ helpers
 
-    /** Online participants and spectators. */
-    /** Everyone who sees this match: online fighters plus spectators. */
+    /** Everyone who sees this match: online fighters plus spectators (the same list as {@link #online}). */
     public List<Player> audience(Match m) {
-        List<Player> list = new ArrayList<>(online(m));
-        for (UUID s : m.spectators()) {
-            Player sp = Bukkit.getPlayer(s);
-            if (sp != null) list.add(sp);
-        }
-        return list;
+        return online(m);
     }
 
+    /** Online participants (still in this match) and spectators. */
     public List<Player> online(Match m) {
         List<Player> list = new ArrayList<>();
         for (Participant p : m.participants()) {
