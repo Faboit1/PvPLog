@@ -11,7 +11,8 @@ import org.jspecify.annotations.Nullable;
 /** Typed view of gui.yml. */
 public final class GuiConfig {
 
-    public record HotbarItem(int slot, Material material, String name, List<String> lore) {
+    /** {@code actionBar}: MiniMessage hint shown in the action bar while the item is held (empty = none). */
+    public record HotbarItem(int slot, Material material, String name, List<String> lore, String actionBar) {
     }
 
     public final Map<String, HotbarItem> hotbar = new HashMap<>();
@@ -47,7 +48,7 @@ public final class GuiConfig {
                 if (s == null) continue;
                 Material m = Material.matchMaterial(s.getString("item", "stone"));
                 hotbar.put(key, new HotbarItem(Math.clamp(s.getInt("slot", 0), 0, 8), m == null ? Material.STONE : m,
-                    s.getString("name", key), s.getStringList("lore")));
+                    s.getString("name", key), s.getStringList("lore"), s.getString("action-bar", "")));
             }
         }
         sidebarEnabled = y.getBoolean("sidebar.enabled", true);

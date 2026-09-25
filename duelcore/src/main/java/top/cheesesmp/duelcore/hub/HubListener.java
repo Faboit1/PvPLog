@@ -206,6 +206,8 @@ public final class HubListener implements Listener {
             case "spectate" -> plugin.dialogs().spectate(player);
             case "stop-spectating" -> plugin.spectate().leave(player, true);
             default -> {
+                java.util.function.Consumer<Player> extra = plugin.hub().extraAction(action);
+                if (extra != null) extra.accept(player);
             }
         }
     }

@@ -62,6 +62,7 @@ public final class DuelCorePlugin extends JavaPlugin {
     private top.cheesesmp.duelcore.ui.RespawnPull respawnPull;
     private top.cheesesmp.duelcore.ui.Animations animations;
     private DialogService dialogs;
+    private ClickRouter clicks;
     private LeaderboardService leaderboards;
     private CommandService commands;
     private Diagnostics diagnostics;
@@ -120,7 +121,8 @@ public final class DuelCorePlugin extends JavaPlugin {
         pm.registerEvents(sidebar, this);
         pm.registerEvents(tags, this);
         pm.registerEvents(new top.cheesesmp.duelcore.chat.ChatFilterListener(this), this);
-        pm.registerEvents(new ClickRouter(this), this);
+        clicks = new ClickRouter(this);
+        pm.registerEvents(clicks, this);
         pm.registerEvents(results, this);
         pm.registerEvents(respawnPull, this);
         pm.registerEvents(new top.cheesesmp.duelcore.ui.MotdService(this), this);
@@ -291,6 +293,11 @@ public final class DuelCorePlugin extends JavaPlugin {
 
     public top.cheesesmp.duelcore.ui.Animations animations() {
         return animations;
+    }
+
+    /** Custom-click routing; features register their own {@code duelcore:<prefix>/…} handlers here. */
+    public ClickRouter clicks() {
+        return clicks;
     }
 
     public DialogService dialogs() {

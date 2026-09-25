@@ -154,6 +154,22 @@ public final class HubService {
         plugin.tags().update(player);
     }
 
+    /** Hub items added by features (party, friends, …): gui.yml key → what a right click does. */
+    private final java.util.Map<String, java.util.function.Consumer<Player>> extraItems = new java.util.LinkedHashMap<>();
+
+    /**
+     * Adds a hub hotbar item: it is given with the others whenever gui.yml has a {@code hotbar.<key>} entry, and a
+     * right click runs {@code onUse}.
+     */
+    public void registerItem(String key, java.util.function.Consumer<Player> onUse) {
+        extraItems.put(key, onUse);
+    }
+
+    /** The action of a feature-registered hub item, or null. */
+    public java.util.function.@Nullable Consumer<Player> extraAction(String key) {
+        return extraItems.get(key);
+    }
+
     /** Hub hotbar, reflecting queue state. */
     public void giveItems(Player player) {
         player.getInventory().clear();
@@ -161,6 +177,7 @@ public final class HubService {
         boolean queued = plugin.queue().isQueued(player.getUniqueId());
         List<String> keys = new ArrayList<>(List.of("leaderboard", "profile", "settings", "spectate"));
         keys.addFirst(queued ? "leave-queue" : "queue");
+        keys.addAll(extraItems.keySet());
         for (String key : keys) {
             GuiConfig.HotbarItem def = gui.item(key);
             if (def == null) continue;
