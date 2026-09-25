@@ -4,7 +4,7 @@
 display-name: "Creeper"
 description: "Creeper eggs and flint and steel. Blast your opponent."
 icon: creeper_spawn_egg
-category: vanilla
+category: skills
 order: 12
 enabled: true
 ranked: true

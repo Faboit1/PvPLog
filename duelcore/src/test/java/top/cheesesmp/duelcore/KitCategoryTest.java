@@ -33,9 +33,9 @@ class KitCategoryTest {
             Map.entry("sword", Kit.Category.WEAPONS), Map.entry("spear", Kit.Category.WEAPONS),
             Map.entry("mace", Kit.Category.WEAPONS), Map.entry("shield", Kit.Category.WEAPONS),
             Map.entry("bow", Kit.Category.WEAPONS),
-            Map.entry("crystal", Kit.Category.VANILLA), Map.entry("smp", Kit.Category.VANILLA),
-            Map.entry("diasmp", Kit.Category.VANILLA), Map.entry("cart", Kit.Category.VANILLA),
-            Map.entry("creeper", Kit.Category.VANILLA), Map.entry("earlygame", Kit.Category.VANILLA),
+            Map.entry("crystal", Kit.Category.SKILLS), Map.entry("smp", Kit.Category.VANILLA),
+            Map.entry("diasmp", Kit.Category.VANILLA), Map.entry("cart", Kit.Category.SKILLS),
+            Map.entry("creeper", Kit.Category.SKILLS), Map.entry("earlygame", Kit.Category.VANILLA),
             Map.entry("lategame", Kit.Category.VANILLA), Map.entry("endgame", Kit.Category.VANILLA),
             Map.entry("pot", Kit.Category.SKILLS), Map.entry("nethpot", Kit.Category.SKILLS));
         for (String id : KitManager.DEFAULT_KITS) {

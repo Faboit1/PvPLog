@@ -1,4 +1,4 @@
-# Crystal ("Vanilla"): the MCPVP crystal kit. Maxed netherite (blast-protection leggings and boots), 128 crystals
+# Crystal ("Skills"): the MCPVP crystal kit. Maxed netherite (blast-protection leggings and boots), 128 crystals
 # and obsidian, 64 anchors and glowstone, 14 totems, 112 pearls, 64 gapples, 192 XP, a slow-falling crossbow, shield
 # and a Density mace. MCPVP's preview has shulker boxes in the left column; they are useless in a duel, so they
 # became the crossbow, its arrows and more pearls.
@@ -6,7 +6,7 @@ display-name: "Crystal"
 description: "Netherite crystal PvP: crystals, anchors, obsidian and 14 totems."
 icon: obsidian
 sprite: "blocks:block/obsidian"
-category: vanilla
+category: skills
 order: 15
 enabled: true
 ranked: true

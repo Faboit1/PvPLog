@@ -68,7 +68,9 @@ hotbar:
       - "<muted>Who's online, follow players, duel friends"
     action-bar: "<accent>Right click</accent> <text>for friends</text> <muted>— who's online, follow players, duel friends</muted>"
   # The kit editor (/kit edit): pick a kit, move its items where you want them; every match uses your layout.
+  # Off by default: the ✎ next to each kit in the queue menu opens its editor.
   kit-editor:
+    enabled: false
     slot: 3
     item: anvil
     name: "<text>Kit Editor</text>"
