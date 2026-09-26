@@ -75,6 +75,53 @@ public final class ThrowMath {
         return out;
     }
 
+    /**
+     * The same flight with its launch and landing softened: the speed along the path ramps up from zero over the
+     * first {@code easeIn} ticks and back down to zero over the last {@code easeOut} ticks (a smoothstep ramp, so
+     * there is no jolt at either end), and runs at the real speed in between. The shape of the path is unchanged
+     * (positions between two ticks of {@code path} are interpolated); only the timing is. The result is
+     * {@code (easeIn + easeOut) / 2} ticks longer (use even ramps) and ends exactly on the last point of {@code path}.
+     * Ramps longer than the flight allows are shortened.
+     */
+    public static double[][] soften(double[][] path, int easeIn, int easeOut) {
+        int n = path.length;
+        int a = Math.max(0, Math.min(easeIn, n / 2)) & ~1;
+        int b = Math.max(0, Math.min(easeOut, n / 2)) & ~1;
+        int total = n + (a + b) / 2;
+        double[][] out = new double[total][];
+        for (int k = 0; k < total; k++) out[k] = at(path, warp(k + 1, total, a, b));
+        return out;
+    }
+
+    /**
+     * Path time (0..{@code total - (a + b) / 2}) at real time {@code t} of a flight that speeds up over its first
+     * {@code a} ticks and slows down over its last {@code b}: the integral of a speed that is 0 at both ends, 1 in the
+     * middle, with smoothstep ramps (whose integral from 0 to x is x³ − x⁴/2).
+     */
+    static double warp(double t, int total, int a, int b) {
+        t = Math.clamp(t, 0, total);
+        if (a > 0 && t < a) return a * rampArea(t / a);
+        double p = a / 2.0;
+        double downAt = total - b;
+        if (b <= 0 || t <= downAt) return p + (t - a);
+        double x = (t - downAt) / b;
+        return p + (downAt - a) + b * (x - rampArea(x));
+    }
+
+    private static double rampArea(double x) {
+        return x * x * x - x * x * x * x / 2;
+    }
+
+    /** The point at fractional tick {@code time} of {@code path} (tick 0 is the start, the origin). */
+    private static double[] at(double[][] path, double time) {
+        int i = (int) Math.floor(time);
+        if (i >= path.length) return path[path.length - 1].clone();
+        double f = time - i;
+        double[] from = i == 0 ? new double[3] : path[i - 1];
+        double[] to = path[i];
+        return new double[] {from[0] + (to[0] - from[0]) * f, from[1] + (to[1] - from[1]) * f, from[2] + (to[2] - from[2]) * f};
+    }
+
     /** Height at progress {@code u} (0..1) of the arc from {@code y0} to {@code y1} bulging {@code bulge} above the chord. */
     public static double y(double y0, double y1, double bulge, double u) {
         return y0 + (y1 - y0) * u + 4 * bulge * u * (1 - u);

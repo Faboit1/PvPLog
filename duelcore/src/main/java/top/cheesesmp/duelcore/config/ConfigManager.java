@@ -84,7 +84,7 @@ public final class ConfigManager {
     }
 
     /** The config-version this build writes; {@link #upgrade} brings older config.yml files up to it. */
-    static final int CONFIG_VERSION = 5;
+    static final int CONFIG_VERSION = 6;
 
     /** The {@code queue.music.tracks} default up to config-version 2 (replaced by version 3 when unchanged). */
     static final List<String> OLD_MUSIC_TRACKS = List.of(
@@ -108,6 +108,11 @@ public final class ConfigManager {
             new NumberDefault("rating.default", 1000, 750),
             new NumberDefault("rating.floor", 100, 50));
 
+    /** The {@code animations.respawn-styles} default up to config-version 5. */
+    static final List<String> OLD_RESPAWN_STYLES = List.of("throw", "look-down", "spin");
+    /** The {@code animations.respawn-styles} default since config-version 6 (same as the bundled config.yml). */
+    static final List<String> RESPAWN_STYLES = List.of("throw", "float", "orbit", "swoop", "look-down", "spin");
+
     /** The {@code queue.music.tracks} default since config-version 3 (same as the bundled config.yml). */
     static final List<String> MUSIC_TRACKS = List.of(
             "music_disc.cat 185", "music_disc.blocks 345", "music_disc.chirp 185", "music_disc.mellohi 96",
@@ -121,7 +126,8 @@ public final class ConfigManager {
      * list becomes the new, shorter one (tears at 2x). Version 4: the classic start countdown is back, so the
      * {@code animations.countdown-pop}, {@code fight-sweep} and {@code match-point} switches (true by default before)
      * are turned off. Version 5: {@code rating.default} 1000 → 750 and {@code rating.floor} 100 → 50 (existing player
-     * ratings are not touched). Values changed by hand are left alone. Returns true when something changed.
+     * ratings are not touched). Version 6: the old default {@code animations.respawn-styles} list gets the new
+     * float, orbit and swoop animations. Values changed by hand are left alone. Returns true when something changed.
      */
     static boolean upgrade(YamlConfiguration yml, java.util.logging.Logger log) {
         if (!yml.contains("config-version", true)) return false; // empty or broken file: defaults are merged in
@@ -157,6 +163,11 @@ public final class ConfigManager {
                     log.info("config.yml: " + d.key() + " is now " + d.now() + " (new default)");
                 }
             }
+        }
+        if (version < 6 && yml.isList("animations.respawn-styles")
+                && normalized(yml.getStringList("animations.respawn-styles")).equals(OLD_RESPAWN_STYLES)) {
+            yml.set("animations.respawn-styles", RESPAWN_STYLES);
+            log.info("config.yml: animations.respawn-styles now also has the float, orbit and swoop animations");
         }
         yml.set("config-version", CONFIG_VERSION);
         return true;
