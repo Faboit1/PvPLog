@@ -15,11 +15,21 @@ public final class LeaderboardDao {
 
     /**
      * One leaderboard line. For kit boards {@code value} is the rating and {@code tier} the pinned tier (if any);
-     * for the overall board {@code value} is the overall Elo and {@code tier} the overall tier.
+     * for the overall board {@code value} is the overall Elo and {@code tier} the overall tier. Test bots
+     * ({@link #BOT_PREFIX}) are never listed, so ranks count real players only.
      */
     public record Row(int rank, UUID uuid, String name, double value, @Nullable Tier tier, int wins, int losses,
                       @Nullable String region, @Nullable String country) {
     }
+
+    /**
+     * Name prefix of the test bots (dcbot_a, DCBot2, ...), matched case-insensitively. They never show on a board and
+     * are not counted in ranks.
+     */
+    public static final String BOT_PREFIX = "dcbot";
+
+    /** SQL condition (on {@code dc_players p}) that leaves out the test bots. */
+    static final String NOT_BOT = "p.name_lower NOT LIKE '" + BOT_PREFIX + "%'";
 
     private LeaderboardDao() {
     }
@@ -29,7 +39,7 @@ public final class LeaderboardDao {
         StringBuilder sql = new StringBuilder(
             "SELECT p.uuid, p.name, r.rating, r.tier_override, r.wins, r.losses, p.region, p.country "
                 + "FROM dc_ratings r JOIN dc_players p ON p.id = r.player_id "
-                + "WHERE r.season_id = ? AND r.kit_id = ? AND (r.games >= ? OR r.tier_override IS NOT NULL)");
+                + "WHERE r.season_id = ? AND r.kit_id = ? AND (r.games >= ? OR r.tier_override IS NOT NULL) AND " + NOT_BOT);
         if (region != null) sql.append(" AND p.region = ?");
         if (country != null) sql.append(" AND p.country = ?");
         sql.append(" ORDER BY r.rating DESC, r.wins DESC LIMIT ?");
@@ -53,7 +63,7 @@ public final class LeaderboardDao {
                 + "(SELECT COALESCE(SUM(r.losses), 0) FROM dc_ratings r WHERE r.season_id = s.season_id AND r.player_id = s.player_id), "
                 + "p.region, p.country "
                 + "FROM dc_standings s JOIN dc_players p ON p.id = s.player_id "
-                + "WHERE s.season_id = ? AND s.overall_tier IS NOT NULL");
+                + "WHERE s.season_id = ? AND s.overall_tier IS NOT NULL AND " + NOT_BOT);
         if (region != null) sql.append(" AND p.region = ?");
         if (country != null) sql.append(" AND p.country = ?");
         sql.append(" ORDER BY s.elo DESC, p.name ASC LIMIT ?");
@@ -67,11 +77,12 @@ public final class LeaderboardDao {
         }
     }
 
-    /** 1-based rank of a rating on a kit board (ties share the better rank). */
+    /** 1-based rank of a rating on a kit board (ties share the better rank; test bots are not counted). */
     public static int kitRank(Connection c, int seasonId, int kitId, int placementGames, double rating) throws SQLException {
         try (PreparedStatement ps = c.prepareStatement(
-            "SELECT COUNT(*) FROM dc_ratings WHERE season_id = ? AND kit_id = ? AND rating > ? "
-                + "AND (games >= ? OR tier_override IS NOT NULL)")) {
+            "SELECT COUNT(*) FROM dc_ratings r JOIN dc_players p ON p.id = r.player_id "
+                + "WHERE r.season_id = ? AND r.kit_id = ? AND r.rating > ? "
+                + "AND (r.games >= ? OR r.tier_override IS NOT NULL) AND " + NOT_BOT)) {
             ps.setInt(1, seasonId);
             ps.setInt(2, kitId);
             ps.setDouble(3, rating);
@@ -83,9 +94,11 @@ public final class LeaderboardDao {
         }
     }
 
+    /** 1-based rank of an overall Elo on the overall board (ties share the better rank; test bots are not counted). */
     public static int overallRank(Connection c, int seasonId, int elo) throws SQLException {
         try (PreparedStatement ps = c.prepareStatement(
-            "SELECT COUNT(*) FROM dc_standings WHERE season_id = ? AND elo > ? AND overall_tier IS NOT NULL")) {
+            "SELECT COUNT(*) FROM dc_standings s JOIN dc_players p ON p.id = s.player_id "
+                + "WHERE s.season_id = ? AND s.elo > ? AND s.overall_tier IS NOT NULL AND " + NOT_BOT)) {
             ps.setInt(1, seasonId);
             ps.setInt(2, elo);
             try (ResultSet rs = ps.executeQuery()) {

@@ -49,10 +49,12 @@ class ConfigUpgradeTest {
     @Test
     void emptyOrCurrentFilesAreLeftAlone() throws Exception {
         assertFalse(ConfigManager.upgrade(new YamlConfiguration(), LOG));
-        YamlConfiguration current = yml("config-version: 4\nqueue:\n  unranked: true\nanimations:\n  countdown-pop: true\n");
+        YamlConfiguration current = yml("config-version: 5\nqueue:\n  unranked: true\nanimations:\n  countdown-pop: true\n"
+            + "rating:\n  default: 1000\n");
         assertFalse(ConfigManager.upgrade(current, LOG));
         assertTrue(current.getBoolean("queue.unranked"));
         assertTrue(current.getBoolean("animations.countdown-pop"));
+        assertEquals(1000, current.getInt("rating.default"));
     }
 
     private static String tracks(List<String> list) {
@@ -95,7 +97,7 @@ class ConfigUpgradeTest {
         assertTrue(ConfigManager.upgrade(y, LOG));
         for (String key : ConfigManager.CLASSIC_COUNTDOWN) assertFalse(y.getBoolean(key, true), key);
         assertTrue(y.getBoolean("animations.round-banner")); // other animations are untouched
-        assertEquals(4, y.getInt("config-version"));
+        assertEquals(ConfigManager.CONFIG_VERSION, y.getInt("config-version"));
         // turned back on by hand afterwards: stays on
         y.set("animations.fight-sweep", true);
         assertFalse(ConfigManager.upgrade(y, LOG));
@@ -110,6 +112,31 @@ class ConfigUpgradeTest {
     }
 
     @Test
+    void oldRatingDefaultsAreReplacedOnce() throws Exception {
+        YamlConfiguration y = yml("config-version: 4\nrating:\n  system: elo\n  default: 1000\n  floor: 100.0\n");
+        assertTrue(ConfigManager.upgrade(y, LOG));
+        assertEquals(750, y.getInt("rating.default"));
+        assertEquals(50, y.getInt("rating.floor"));
+        assertEquals("elo", y.getString("rating.system"));
+        assertEquals(5, y.getInt("config-version"));
+        // set back by hand afterwards: stays
+        y.set("rating.default", 1000);
+        assertFalse(ConfigManager.upgrade(y, LOG));
+        assertEquals(1000, y.getInt("rating.default"));
+    }
+
+    @Test
+    void customRatingDefaultsAreKept() throws Exception {
+        YamlConfiguration y = yml("config-version: 4\nrating:\n  default: 1200\n  floor: 0\n");
+        assertTrue(ConfigManager.upgrade(y, LOG));
+        assertEquals(1200, y.getInt("rating.default"));
+        assertEquals(0, y.getInt("rating.floor"));
+        YamlConfiguration missing = yml("config-version: 4\nqueue:\n  ranked: true\n");
+        assertTrue(ConfigManager.upgrade(missing, LOG));
+        assertFalse(missing.contains("rating.default")); // defaults fill it in
+    }
+
+    @Test
     void bundledConfigMatchesTheUpgrade() throws Exception {
         try (var in = ConfigUpgradeTest.class.getResourceAsStream("/config.yml")) {
             YamlConfiguration bundled = YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
@@ -118,6 +145,9 @@ class ConfigUpgradeTest {
             for (String key : ConfigManager.CLASSIC_COUNTDOWN) {
                 assertTrue(bundled.isBoolean(key), key);
                 assertFalse(bundled.getBoolean(key), key);
+            }
+            for (ConfigManager.NumberDefault d : ConfigManager.RATING_DEFAULTS) {
+                assertEquals(d.now(), bundled.getDouble(d.key()), 0, d.key());
             }
         }
     }

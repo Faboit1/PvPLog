@@ -139,6 +139,9 @@ public final class MainConfig {
     public final String ratingSystem;
     public final double ratingDefault;
     public final double ratingFloor;
+    /** Each ranked rating change is {@code ratingGainMultiplier × change + ratingBonusPerMatch} (see rating.AdjustedRating). */
+    public final double ratingGainMultiplier;
+    public final double ratingBonusPerMatch;
     public final double eloK;
     public final double eloProvisionalK;
     public final double glickoTau;
@@ -301,8 +304,10 @@ public final class MainConfig {
         voidDepth = Math.max(1, c.getInt("match.void-depth", 6));
 
         ratingSystem = c.getString("rating.system", "elo").toLowerCase(Locale.ROOT);
-        ratingDefault = c.getDouble("rating.default", 1000);
-        ratingFloor = c.getDouble("rating.floor", 100);
+        ratingDefault = c.getDouble("rating.default", 750);
+        ratingFloor = c.getDouble("rating.floor", 50);
+        ratingGainMultiplier = c.getDouble("rating.gain-multiplier", 3);
+        ratingBonusPerMatch = c.getDouble("rating.bonus-per-match", 3);
         eloK = c.getDouble("rating.elo.k-factor", 32);
         eloProvisionalK = c.getDouble("rating.elo.provisional-k-factor", 48);
         glickoTau = c.getDouble("rating.glicko2.tau", 0.5);

@@ -30,6 +30,7 @@ import top.cheesesmp.duelcore.match.MatchService;
 import top.cheesesmp.duelcore.match.SpectateService;
 import top.cheesesmp.duelcore.profile.ProfileService;
 import top.cheesesmp.duelcore.queue.QueueService;
+import top.cheesesmp.duelcore.rating.AdjustedRating;
 import top.cheesesmp.duelcore.rating.EloRating;
 import top.cheesesmp.duelcore.rating.Glicko2Rating;
 import top.cheesesmp.duelcore.rating.RatingSystem;
@@ -283,10 +284,12 @@ public final class DuelCorePlugin extends JavaPlugin {
 
     private RatingSystem buildRatingSystem() {
         MainConfig c = settings();
-        if ("glicko2".equals(c.ratingSystem)) {
-            return new Glicko2Rating(c.glickoTau, c.ratingDefault, c.glickoMinRd, c.glickoDefaultRd, c.ratingFloor);
-        }
-        return new EloRating(c.eloK, c.eloProvisionalK, tiers().placementMatches(), c.ratingFloor);
+        // the floor is applied after the gain multiplier and bonus, so the inner system gets none
+        double noFloor = Double.NEGATIVE_INFINITY;
+        RatingSystem inner = "glicko2".equals(c.ratingSystem)
+            ? new Glicko2Rating(c.glickoTau, c.ratingDefault, c.glickoMinRd, c.glickoDefaultRd, noFloor)
+            : new EloRating(c.eloK, c.eloProvisionalK, tiers().placementMatches(), noFloor);
+        return new AdjustedRating(inner, c.ratingGainMultiplier, c.ratingBonusPerMatch, c.ratingFloor);
     }
 
     // ------------------------------------------------------------------ accessors

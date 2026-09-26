@@ -8,6 +8,7 @@ import java.lang.reflect.Method;
 import org.junit.jupiter.api.Test;
 import top.cheesesmp.duelcore.profile.KitStats;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
+import top.cheesesmp.duelcore.rating.AdjustedRating;
 import top.cheesesmp.duelcore.rating.EloRating;
 import top.cheesesmp.duelcore.rating.Glicko2Rating;
 import top.cheesesmp.duelcore.rating.RatingSystem;
@@ -97,5 +98,50 @@ class RatingTest {
         tiers.refresh(p);
         assertEquals(1400, p.elo());
         assertEquals(Tier.LT3, p.overall()); // 1350 <= 1400 < 1410
+    }
+
+    private static KitStats vet(double rating) {
+        KitStats s = new KitStats(rating, 350, 0.06);
+        s.games = 10;
+        return s;
+    }
+
+    @Test
+    void adjustedTriplesTheChangePlusBonus() {
+        AdjustedRating r = new AdjustedRating(new EloRating(32, 48, 5, Double.NEGATIVE_INFINITY), 3, 3, 50);
+        RatingSystem.Result res = r.rate(vet(750), vet(750), 1);
+        assertEquals(750 + 3 * 16 + 3, res.a().rating(), 1e-9); // 801
+        assertEquals(750 - 3 * 16 + 3, res.b().rating(), 1e-9); // 705
+        RatingSystem.Result draw = r.rate(vet(750), vet(750), 0.5);
+        assertEquals(753, draw.a().rating(), 1e-9);
+        assertEquals(753, draw.b().rating(), 1e-9);
+    }
+
+    @Test
+    void adjustedNeverDropsBelowTheFloor() {
+        AdjustedRating r = new AdjustedRating(new EloRating(32, 48, 5, Double.NEGATIVE_INFINITY), 3, 3, 50);
+        RatingSystem.Result res = r.rate(vet(60), vet(60), 1); // 60 - 48 + 3 = 15
+        assertEquals(50, res.b().rating(), 1e-9);
+        assertEquals(50, AdjustedRating.adjust(50, -16, 3, 3, 50), 1e-9);
+        assertEquals(56, AdjustedRating.adjust(50, 1, 3, 3, 50), 1e-9);
+    }
+
+    @Test
+    void adjustedWithOneAndZeroIsThePlainSystem() {
+        EloRating elo = new EloRating(32, 48, 5, 0);
+        RatingSystem.Result plain = elo.rate(vet(1100), vet(1000), 0);
+        RatingSystem.Result same = new AdjustedRating(elo, 1, 0, 0).rate(vet(1100), vet(1000), 0);
+        assertEquals(plain.a().rating(), same.a().rating(), 1e-9);
+        assertEquals(plain.b().rating(), same.b().rating(), 1e-9);
+    }
+
+    @Test
+    void adjustedKeepsGlickoRdAndVolatility() {
+        Glicko2Rating g = new Glicko2Rating(0.5, 750, 30, 350, Double.NEGATIVE_INFINITY);
+        RatingSystem.Result plain = g.rate(vet(750), vet(750), 1);
+        RatingSystem.Result adj = new AdjustedRating(g, 3, 3, 50).rate(vet(750), vet(750), 1);
+        assertEquals(750 + 3 * (plain.a().rating() - 750) + 3, adj.a().rating(), 1e-9);
+        assertEquals(plain.a().rd(), adj.a().rd(), 1e-12);
+        assertEquals(plain.b().volatility(), adj.b().volatility(), 1e-12);
     }
 }

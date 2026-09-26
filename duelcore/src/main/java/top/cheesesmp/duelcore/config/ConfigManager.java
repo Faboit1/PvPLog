@@ -84,7 +84,7 @@ public final class ConfigManager {
     }
 
     /** The config-version this build writes; {@link #upgrade} brings older config.yml files up to it. */
-    static final int CONFIG_VERSION = 4;
+    static final int CONFIG_VERSION = 5;
 
     /** The {@code queue.music.tracks} default up to config-version 2 (replaced by version 3 when unchanged). */
     static final List<String> OLD_MUSIC_TRACKS = List.of(
@@ -99,6 +99,15 @@ public final class ConfigManager {
     static final List<String> CLASSIC_COUNTDOWN = List.of(
             "animations.countdown-pop", "animations.fight-sweep", "animations.match-point");
 
+    /** A number whose default changed: a file still holding {@code old} gets {@code now}. */
+    record NumberDefault(String key, double old, int now) {
+    }
+
+    /** Rating defaults changed in config-version 5 (new players start at 750, nobody drops below 50). */
+    static final List<NumberDefault> RATING_DEFAULTS = List.of(
+            new NumberDefault("rating.default", 1000, 750),
+            new NumberDefault("rating.floor", 100, 50));
+
     /** The {@code queue.music.tracks} default since config-version 3 (same as the bundled config.yml). */
     static final List<String> MUSIC_TRACKS = List.of(
             "music_disc.cat 185", "music_disc.blocks 345", "music_disc.chirp 185", "music_disc.mellohi 96",
@@ -111,7 +120,8 @@ public final class ConfigManager {
      * false} and {@code queue.unranked: true} are switched. Version 3: the old default {@code queue.music.tracks}
      * list becomes the new, shorter one (tears at 2x). Version 4: the classic start countdown is back, so the
      * {@code animations.countdown-pop}, {@code fight-sweep} and {@code match-point} switches (true by default before)
-     * are turned off. Values changed by hand are left alone. Returns true when something changed.
+     * are turned off. Version 5: {@code rating.default} 1000 → 750 and {@code rating.floor} 100 → 50 (existing player
+     * ratings are not touched). Values changed by hand are left alone. Returns true when something changed.
      */
     static boolean upgrade(YamlConfiguration yml, java.util.logging.Logger log) {
         if (!yml.contains("config-version", true)) return false; // empty or broken file: defaults are merged in
@@ -137,6 +147,14 @@ public final class ConfigManager {
                 if (yml.isBoolean(key) && yml.getBoolean(key)) {
                     yml.set(key, false);
                     log.info("config.yml: " + key + " is now false (the classic start countdown)");
+                }
+            }
+        }
+        if (version < 5) {
+            for (NumberDefault d : RATING_DEFAULTS) {
+                if ((yml.isInt(d.key()) || yml.isDouble(d.key())) && yml.getDouble(d.key()) == d.old()) {
+                    yml.set(d.key(), d.now());
+                    log.info("config.yml: " + d.key() + " is now " + d.now() + " (new default)");
                 }
             }
         }
