@@ -54,6 +54,7 @@ public final class DuelCorePlugin extends JavaPlugin {
     private VisibilityService visibility;
     private SidebarService sidebar;
     private TagService tags;
+    private top.cheesesmp.duelcore.ui.TabListing tabListing;
     private QueueService queue;
     private top.cheesesmp.duelcore.queue.QueueMusic queueMusic;
     private MatchService matches;
@@ -152,6 +153,8 @@ public final class DuelCorePlugin extends JavaPlugin {
         pm.registerEvents(duels, this);
         pm.registerEvents(sidebar, this);
         pm.registerEvents(tags, this);
+        tabListing = new top.cheesesmp.duelcore.ui.TabListing(this);
+        pm.registerEvents(tabListing, this);
         pm.registerEvents(new top.cheesesmp.duelcore.chat.ChatFilterListener(this), this);
         clicks = new ClickRouter(this);
         pm.registerEvents(clicks, this);
@@ -182,6 +185,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         scheduler.runTaskTimer(this, hubProgress, 20L, top.cheesesmp.duelcore.hub.HubProgress.PERIOD);
         scheduler.runTaskTimer(this, hints, 20L, 20L);
         scheduler.runTaskTimer(this, tags, 40L, 40L);
+        scheduler.runTaskTimer(this, tabListing, 20L, 10L);
         scheduler.runTaskTimer(this, duels, 20L, 20L);
         scheduler.runTaskTimer(this, leaderboards, 200L, 200L);
         scheduler.runTaskTimer(this, profiles::sweep, 1200L, 1200L);
@@ -341,6 +345,10 @@ public final class DuelCorePlugin extends JavaPlugin {
 
     public top.cheesesmp.duelcore.chat.ChatFilter chatFilter() {
         return config.chatFilter();
+    }
+
+    public top.cheesesmp.duelcore.ui.TabListing tabListing() {
+        return tabListing;
     }
 
     public TagService tags() {

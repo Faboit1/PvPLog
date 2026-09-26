@@ -360,6 +360,7 @@ public final class MatchService implements Runnable {
         m.stateTicks = 0;
         m.roundTicks = 0;
         if (m.firstFightAt == 0) m.firstFightAt = System.currentTimeMillis();
+        for (Participant p : m.participants()) earlyLeaves.remove(p.uuid());
         List<SoundPool.Played> fightSounds = plugin.settings().fightStartSounds.pick(java.util.concurrent.ThreadLocalRandom.current());
         for (Participant p : m.participants()) {
             Player player = Bukkit.getPlayer(p.uuid());
@@ -689,6 +690,37 @@ public final class MatchService implements Runnable {
     /** A participant left the server or used /leave: they lose (or drop out, in team games). */
     public void forfeit(Player player, boolean quit) {
         forfeit(player, quit, false);
+    }
+
+    /** Early leaves in a row per player (reset once they play a fight); see {@link #leaveBeforeStart}. */
+    private final Map<UUID, Integer> earlyLeaves = new HashMap<>();
+
+    /**
+     * /leave before the first fight of a 1v1 has started: the match ends with no result at once (no confirmation,
+     * nothing saved, no Elo) and the leaver is not queued again by Keep Queuing; the opponent is, as after any match.
+     * Allowed {@code match.leave-before-start-max} times in a row (a fight played resets it); false when it doesn't
+     * apply, so the normal forfeit follows.
+     */
+    public boolean leaveBeforeStart(Player player) {
+        Match m = byPlayer.get(player.getUniqueId());
+        if (m == null || m.isOver() || m.firstFightAt != 0 || m.ffa() || m.participants().size() != 2) return false;
+        int used = earlyLeaves.getOrDefault(player.getUniqueId(), 0);
+        if (used >= plugin.settings().leaveBeforeStartMax) return false;
+        Participant p = m.participant(player.getUniqueId());
+        if (p == null) return false;
+        earlyLeaves.put(player.getUniqueId(), used + 1);
+        p.left = true;
+        p.alive = false;
+        byPlayer.remove(player.getUniqueId());
+        plugin.queue().forget(player.getUniqueId());
+        plugin.messages().send(player, "match.left-before-start",
+            Messages.num("left", Math.max(0, plugin.settings().leaveBeforeStartMax - used - 1)));
+        for (Player other : online(m)) {
+            if (other != player) plugin.messages().send(other, "match.opponent-left-before-start", Messages.text("player", p.name()));
+        }
+        end(m, -1, Match.EndReason.LEFT_BEFORE_START);
+        plugin.hub().send(player);
+        return true;
     }
 
     /**

@@ -116,6 +116,10 @@ match:
   # movement or input for disconnect-idle-seconds before it (0 = only the server's own timeout reasons).
   disconnect-saves-per-day: 5
   disconnect-idle-seconds: 5
+  # /leave before the first fight of a 1v1 starts ends it at once with no result (no Elo, not saved) and the leaver
+  # isn't queued again by Keep Queuing. Allowed this many times in a row (playing a fight resets it); after that
+  # /leave is a normal forfeit. 0 = off.
+  leave-before-start-max: 2
   # Commands usable during a match (everything else is blocked). Admins with duelcore.bypass.commands ignore this.
   allowed-commands: [leave, forfeit, msg, tell, w, r, reply, profile, ping]
   # Play the totem animation with the kit's item when a match is found (silent: animations.match-found-sounds play).

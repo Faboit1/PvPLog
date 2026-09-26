@@ -255,7 +255,8 @@ sidebar:
     - "<muted>First to <first_to> · round <round></muted>"
     - ""
     - "<muted>Time</muted>  <text><time></text>"
-    - "<muted>Ping</muted>  <text><ping></text> <muted>/ <opp_ping></muted>"
+    - "<muted>Your ping</muted>  <text><ping>ms</text>"
+    - "<muted><opponent></muted>  <text><opp_ping>ms</text>"
     - ""
     - "<muted>cheesesmp.top</muted>"
   # Extra: <kit> <kit_icon> <red_name> <blue_name> <red_score> <blue_score> <round> <time>
@@ -302,6 +303,11 @@ tags:
   tab: "<tier> <text><name></text>"
   # Tab name of players spectating a match (like vanilla spectators: grey, italic, listed last). <tier> works too.
   tab-spectator: "<gray><i><name></i></gray>"
+  # After a name in the tab list: an icon while in a match or queueing ("atlas:path[#rrggbb]" sprite; "" = none;
+  # nothing in the lobby), then this mark for server operators.
+  tab-status-match: "items:item/iron_sword"
+  tab-status-queue: "items:item/clock_00"
+  tab-admin: " <#ffd24a>★</#ffd24a>"
   nametag-prefix: "<tier> "
   # Hide the tag for players who have no ranked kit yet (instead of showing "???").
   hide-unranked: false

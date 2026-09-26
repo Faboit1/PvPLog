@@ -39,6 +39,10 @@ public final class GuiConfig {
     public final String chatFormat;
     public final String tabFormat;
     public final String tabSpectatorFormat;
+    /** Tab list status icons ("atlas:path[#rrggbb]" sprites, "" = none) and the admin mark after op names. */
+    public final String tabStatusMatch;
+    public final String tabStatusQueue;
+    public final String tabAdmin;
     public final String nametagPrefix;
     public final boolean hideUnrankedTag;
     public final String tagIconFormat;
@@ -124,6 +128,9 @@ public final class GuiConfig {
         chatFormat =y.getString("tags.chat", "<tier> <text><name></text><muted>:</muted> <message>");
         tabFormat = y.getString("tags.tab", "<tier> <text><name></text>");
         tabSpectatorFormat = y.getString("tags.tab-spectator", "<gray><i><name></i></gray>");
+        tabStatusMatch = y.getString("tags.tab-status-match", "items:item/iron_sword");
+        tabStatusQueue = y.getString("tags.tab-status-queue", "items:item/clock_00");
+        tabAdmin = y.getString("tags.tab-admin", " <#ffd24a>★</#ffd24a>");
         nametagPrefix = y.getString("tags.nametag-prefix", "<tier> ");
         hideUnrankedTag = y.getBoolean("tags.hide-unranked", false);
         tagIconFormat = y.getString("tags.icon-tier", "<icon><tier>");

@@ -36,12 +36,16 @@ public final class ResultsService implements org.bukkit.event.Listener {
 
     public void show(Match m) {
         Match.EndReason reason = m.endReason();
-        boolean cancelled = reason == Match.EndReason.CANCELLED || reason == Match.EndReason.NO_ARENA;
+        boolean cancelled = reason == Match.EndReason.CANCELLED || reason == Match.EndReason.NO_ARENA
+            || reason == Match.EndReason.LEFT_BEFORE_START;
         for (Participant p : m.participants()) {
             Player player = Bukkit.getPlayer(p.uuid());
             if (player == null || p.left()) continue;
             if (cancelled) {
-                plugin.messages().send(player, reason == Match.EndReason.NO_ARENA ? "match.no-arena" : "match.cancelled");
+                // (the opponent of an early leave was already told who left)
+                if (reason != Match.EndReason.LEFT_BEFORE_START) {
+                    plugin.messages().send(player, reason == Match.EndReason.NO_ARENA ? "match.no-arena" : "match.cancelled");
+                }
                 continue;
             }
             boolean draw = m.winnerTeam() < 0;

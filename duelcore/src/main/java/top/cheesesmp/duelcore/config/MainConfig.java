@@ -66,6 +66,7 @@ public final class MainConfig {
     public final int maxRounds;
     public final int disconnectSavesPerDay;
     public final int disconnectIdleSeconds;
+    public final int leaveBeforeStartMax;
     public final Set<String> allowedCommands;
     public final boolean totemPop;
     public final boolean animRespawnThrow;
@@ -245,6 +246,7 @@ public final class MainConfig {
         maxRounds = Math.max(1, c.getInt("match.max-rounds", 15));
         disconnectSavesPerDay = Math.max(0, c.getInt("match.disconnect-saves-per-day", 5));
         disconnectIdleSeconds = Math.max(0, c.getInt("match.disconnect-idle-seconds", 5));
+        leaveBeforeStartMax = Math.max(0, c.getInt("match.leave-before-start-max", 2));
         allowedCommands = lower(c.getStringList("match.allowed-commands"));
         totemPop = c.getBoolean("match.totem-pop", true);
         animRespawnThrow = c.getBoolean("animations.respawn-throw", true);

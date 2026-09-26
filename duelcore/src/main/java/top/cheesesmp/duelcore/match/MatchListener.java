@@ -242,6 +242,22 @@ public final class MatchListener implements Listener {
         }
     }
 
+    /**
+     * Only DuelCore puts players into the arena world: a teleport there by anything else (e.g. a login plugin sending a
+     * player back to where they quit, mid-match) is refused unless they are in a match or spectating one. Admins
+     * can still /tp in.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onTeleportIntoArena(PlayerTeleportEvent event) {
+        org.bukkit.World arenaWorld = plugin.arenas().world();
+        Location to = event.getTo();
+        if (arenaWorld == null || to.getWorld() != arenaWorld || event.getFrom().getWorld() == arenaWorld) return;
+        Player player = event.getPlayer();
+        if (plugin.matches().match(player.getUniqueId()) != null || plugin.spectate().spectating(player.getUniqueId()) != null) return;
+        if (event.getCause() == PlayerTeleportEvent.TeleportCause.COMMAND && player.hasPermission("duelcore.admin")) return;
+        event.setCancelled(true);
+    }
+
     @EventHandler(priority = EventPriority.LOW)
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();

@@ -224,6 +224,11 @@ public final class CommandService {
                 if (p == null) return 0;
                 Match m = plugin.matches().match(p.getUniqueId());
                 if (m != null) {
+                    // before the first fight starts, a 1v1 can be left at once (no result, a few times in a row)
+                    if (plugin.matches().leaveBeforeStart(p)) {
+                        leaveConfirm.remove(p.getUniqueId());
+                        return Command.SINGLE_SUCCESS;
+                    }
                     long now = System.currentTimeMillis();
                     Long first = leaveConfirm.remove(p.getUniqueId());
                     if (first == null || now - first > 5000) {

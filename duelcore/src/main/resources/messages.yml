@@ -89,6 +89,9 @@ match:
   opponent-quit: "<muted><text><player></text> left the match and forfeits.</muted>"
   opponent-forfeit: "<muted><text><player></text> forfeited.</muted>"
   # A ranked opponent's connection dropped and one of their disconnect saves voided the match.
+  # /leave before the first fight: the match ends with no result. <left> = early leaves left before it's a forfeit.
+  left-before-start: "<muted>You left before the fight started. No result.</muted> <text><left></text><muted> more early leaves in a row are allowed.</muted>"
+  opponent-left-before-start: "<muted><text><player></text> left before the fight started. No result, no Elo change.</muted>"
   opponent-connection-lost: "<muted><text><player></text> lost connection. No result, no Elo change.</muted>"
   # Told on the next join after a saved drop. <left> of <per_day> saves are left today.
   connection-saved: "<muted>Your connection dropped in a ranked match: no Elo lost.</muted> <text><left></text><muted>/<per_day> disconnect saves left today.</muted>"
