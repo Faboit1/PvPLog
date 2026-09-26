@@ -1,5 +1,6 @@
 package top.cheesesmp.duelcore.ui;
 
+import io.papermc.paper.math.Angle;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,21 +35,33 @@ import top.cheesesmp.duelcore.ui.RespawnMotion.Style;
  *   <li><b>throw</b>: the player rides an invisible seat that the server moves along a real ballistic arc (the path
  *       a thrown player would fly, {@link ThrowMath#path}) every tick. The client interpolates the seat
  *       ({@link org.bukkit.entity.Display#setTeleportDuration}), so the flight is smooth, and a passenger has no air
- *       control: they can look around but not steer. Dismounting (sneak) is cancelled while it runs. At the end they
- *       get off and are put exactly on the spawn.</li>
+ *       control: they can look around but not steer. Dismounting (sneak) is cancelled while it runs. The launch and
+ *       the landing are softened ({@link ThrowMath#soften}): the flight speeds up from and slows down to a stop.</li>
+ *   <li><b>float</b>: the same seat, straight up, across and gently down onto the spawn ({@link RespawnPaths#floatUp}).</li>
+ *   <li><b>orbit</b>: the same seat, in a rising spiral round the arena centre with the view on it, down onto the
+ *       spawn ({@link RespawnPaths#orbit}).</li>
+ *   <li><b>swoop</b>: the same seat, up and back behind the spawn looking over the arena, a short pause, then a dive
+ *       that levels out onto the spawn ({@link RespawnPaths#swoop}).</li>
  *   <li><b>look-down</b>: the view tilts smoothly down to the ground, the player is teleported onto the spawn still
  *       looking down, and the view tilts smoothly back up.</li>
  *   <li><b>spin</b>: one smooth 360° turn, teleported onto the spawn exactly half way through it.</li>
  * </ul>
  *
  * <p>For look-down and spin a player who isn't standing on the ground (the death cam, a jump) is held on a seat
- * until the teleport; on the ground the caller's freeze (no walking or jumping) is enough. The rotations are sent
- * once per tick ({@link Player#setRotation}, a pure rotation packet) and every animation ends facing the spawn's
- * direction.
+ * until the teleport; on the ground the caller's freeze (no walking or jumping) is enough. The view is turned once
+ * per tick by the <em>change</em> since the last tick ({@link Player#setRotation(Angle, Angle)} with relative angles):
+ * the client adds it to its own view, so mouse movement in between is kept instead of being snapped back every tick
+ * (the old absolute rotations made the view jitter while the player moved their mouse). Free-look flights (throw,
+ * float) turn the view into the spawn's facing over their last {@link RespawnMotion#LAND_TURN_TICKS} ticks, and
+ * every animation ends with the exact spawn facing, so the final teleport never snaps the view round.
+ *
+ * <p>Nothing here gives the player velocity: a flight moves the seat and the player rides it (a server-moved
+ * vehicle, which anticheats expect), and the rest are rotations and teleports.
  *
  * <p>Robustness: players whose ping is above {@code animations.respawn-throw-max-ping} are teleported instead;
  * throws that would clip terrain are raised, and become a teleport when no height clears them or the arc would be
- * faster than {@link #MAX_SPEED}. The seats are not persistent and carry {@link SpawnRise#KEEP_TAG}, so an arena reset
+ * faster than {@link #MAX_SPEED}; a float, orbit or swoop that doesn't fit the arena tries a smaller shape and
+ * becomes a throw when none fits. The seats are not persistent and carry {@link SpawnRise#KEEP_TAG}, so an arena reset
  * leaves them alone; every exit (arrival, quit, match end, another teleport, plugin disable) removes them.
  */
 public final class RespawnPull implements Listener {
@@ -71,6 +84,10 @@ public final class RespawnPull implements Listener {
      * smooth even when a packet comes in late.
      */
     private static final int SEAT_GLIDE_TICKS = 2;
+    /** Ticks over which a throw speeds up from a standstill at the launch (see {@link ThrowMath#soften}). */
+    static final int THROW_EASE_IN = 6;
+    /** Ticks over which a throw slows down to a stop onto the spawn. */
+    static final int THROW_EASE_OUT = 8;
     /** A player this close (squared, blocks) to the spawn at the end of a rotation is not teleported again. */
     private static final double ON_SPAWN_SQ = 0.25 * 0.25;
     private static final String TAG = "duelcore_pull";
@@ -87,6 +104,8 @@ public final class RespawnPull implements Listener {
     private static final class Pull {
         final Player player;
         final Location target;
+        /** What orbit and swoop look at (the arena centre), or null for the middle between start and spawn. */
+        final @Nullable Location focus;
         final Style style;
         final List<Player> viewers;
         final Runnable done;
@@ -99,9 +118,10 @@ public final class RespawnPull implements Listener {
         /** The mid-animation teleport onto the spawn has landed. */
         volatile boolean arrived;
 
-        Pull(Player player, Location target, Style style, List<Player> viewers, Runnable done) {
+        Pull(Player player, Location target, @Nullable Location focus, Style style, List<Player> viewers, Runnable done) {
             this.player = player;
             this.target = target;
+            this.focus = focus;
             this.style = style;
             this.viewers = viewers;
             this.done = done;
@@ -145,9 +165,20 @@ public final class RespawnPull implements Listener {
      */
     public void pull(Player player, Location target, double minHeight, List<Player> viewers, @Nullable Style style,
                      Runnable done) {
+        pull(player, target, null, minHeight, viewers, style, done);
+    }
+
+    /**
+     * Like {@link #pull(Player, Location, double, List, Style, Runnable)}; {@code focus} is the arena centre that the
+     * orbit circles and the swoop looks at (null: the middle between the player and the target). {@code minHeight}
+     * is also how high a float, orbit or swoop rises.
+     */
+    public void pull(Player player, Location target, @Nullable Location focus, double minHeight, List<Player> viewers,
+                     @Nullable Style style, Runnable done) {
         cancel(player.getUniqueId());
         Style s = style != null ? style : plugin.settings().animRespawnStyles.pick(ThreadLocalRandom.current().nextDouble());
-        Pull t = new Pull(player, target.clone(), s, viewers, done);
+        Pull t = new Pull(player, target.clone(), focus == null || focus.getWorld() != target.getWorld() ? null
+            : focus.clone(), s, viewers, done);
         active.put(player.getUniqueId(), t);
         if (player.getWorld() != target.getWorld() || player.getLocation().distanceSquared(target) > 300 * 300) {
             snap(t);
@@ -169,6 +200,7 @@ public final class RespawnPull implements Listener {
         }
         switch (s) {
             case THROW -> startThrow(t, minHeight);
+            case FLOAT, ORBIT, SWOOP -> startFlight(t, minHeight);
             case LOOK_DOWN, SPIN -> startTurn(t, wasSpectator || !standing(player));
         }
     }
@@ -194,34 +226,7 @@ public final class RespawnPull implements Listener {
             Math.hypot(target.getX() - start.getX(), target.getZ() - start.getZ()), arc.top() - start.getY(),
             arc.raise() > 0 ? String.format(java.util.Locale.ROOT, " (raised %.0f over terrain)", arc.raise()) : "",
             arc.ticks(), player.getPing());
-        t.task = plugin.getServer().getScheduler().runTaskTimer(plugin, new Runnable() {
-            int k;
-
-            @Override
-            public void run() {
-                if (t.stage != Stage.RUNNING) return;
-                if (!player.isOnline()) {
-                    complete(t);
-                    return;
-                }
-                if (!seated(t)) { // the seat went away underneath them: finish on the spawn
-                    snap(t);
-                    return;
-                }
-                if (k < arc.ticks()) {
-                    double[] at = arc.path()[k];
-                    moveSeat(t, start.clone().add(at[0], at[1], at[2]));
-                    player.setFallDistance(0);
-                    if (k % 2 == 0) trail(t, player.getLocation().add(0, 0.2, 0));
-                    k++;
-                    return;
-                }
-                // let the clients' glide onto the last position finish, then stand them exactly on the spawn
-                if (k++ < arc.ticks() + SEAT_GLIDE_TICKS) return;
-                landingEffects(t.viewers, target);
-                snap(t);
-            }
-        }, 1L, 1L);
+        fly(t, start, new RespawnPaths.Flight(ThrowMath.soften(arc.path(), THROW_EASE_IN, THROW_EASE_OUT), null), true);
     }
 
     /**
@@ -296,6 +301,131 @@ public final class RespawnPull implements Listener {
         return true;
     }
 
+    // ------------------------------------------------------------------ float, orbit, swoop
+
+    /**
+     * Float, orbit or swoop: plans the flight from where the player is ({@link RespawnPaths}), trying smaller shapes
+     * when one doesn't fit through the arena (walls, ceiling, terrain), and falls back to a throw when none does.
+     */
+    private void startFlight(Pull t, double minHeight) {
+        Player player = t.player;
+        Location start = freeSpot(player.getLocation()); // the death cam may end inside terrain
+        Location target = t.target;
+        double[] d = {target.getX() - start.getX(), target.getY() - start.getY(), target.getZ() - start.getZ()};
+        Location focus = t.focus != null ? t.focus
+            : new Location(target.getWorld(), (start.getX() + target.getX()) / 2, Math.min(start.getY(), target.getY()),
+                (start.getZ() + target.getZ()) / 2);
+        double[] c = {focus.getX() - start.getX(), focus.getY() - start.getY(), focus.getZ() - start.getZ()};
+        float yaw0 = player.getLocation().getYaw();
+        float pitch0 = player.getLocation().getPitch();
+        float yaw1 = target.getYaw();
+        float pitch1 = target.getPitch();
+        List<RespawnPaths.Flight> options = new ArrayList<>();
+        switch (t.style) {
+            case FLOAT -> {
+                double horizontal = Math.hypot(d[0], d[2]);
+                for (double lift : new double[] {minHeight, minHeight * 0.6, minHeight + 6}) {
+                    options.add(RespawnPaths.floatUp(d, lift, RespawnPaths.floatTicks(horizontal, lift)));
+                }
+            }
+            case ORBIT -> {
+                for (double lift : new double[] {minHeight * 0.8, minHeight * 0.4}) {
+                    options.add(RespawnPaths.orbit(d, c, lift, yaw0, pitch0, yaw1, pitch1));
+                }
+            }
+            default -> { // swoop: as far back as fits, then lower
+                for (double height : new double[] {minHeight, minHeight * 0.6}) {
+                    for (double back : new double[] {8, 4, 0}) {
+                        double[] top = RespawnPaths.swoopTop(d, c, yaw1, back, height);
+                        options.add(RespawnPaths.swoop(d, c, top, yaw0, pitch0, yaw1, pitch1));
+                    }
+                }
+            }
+        }
+        for (RespawnPaths.Flight f : options) {
+            if (RespawnPaths.maxStep(f.path()) > MAX_SPEED || !clear(start.getWorld(), start, target, f.path())) continue;
+            if (!seat(t, start, SEAT_GLIDE_TICKS)) {
+                verbose("[respawn] %s teleported instead: could not seat them for the %s", player.getName(), t.style.key);
+                snap(t);
+                return;
+            }
+            verbose("[respawn] %s %s %.0f blocks, %d ticks, ping %d ms", player.getName(), t.style.key,
+                Math.hypot(d[0], d[2]), f.ticks(), player.getPing());
+            fly(t, start, f, false);
+            return;
+        }
+        verbose("[respawn] %s throw instead of %s: it doesn't fit through the arena", player.getName(), t.style.key);
+        startThrow(t, minHeight);
+    }
+
+    /**
+     * Carries the seated player along {@code flight} (offsets from {@code start}, one per tick), turning the view with
+     * it, then stands them exactly on the spawn. A free-look flight (no facing) turns the view into the spawn's
+     * facing over its last {@link RespawnMotion#LAND_TURN_TICKS} ticks. {@code thud}: the throw's heavier landing.
+     */
+    private void fly(Pull t, Location start, RespawnPaths.Flight flight, boolean thud) {
+        Player player = t.player;
+        Location target = t.target;
+        double[][] path = flight.path();
+        float[][] facing = flight.facing();
+        int ticks = path.length;
+        int turnFrom = Math.max(0, ticks - RespawnMotion.LAND_TURN_TICKS);
+        Particle particle = thud ? Particle.CLOUD : Particle.END_ROD;
+        t.task = plugin.getServer().getScheduler().runTaskTimer(plugin, new Runnable() {
+            int k;
+            /** The view the animation set last (the client may have added mouse movement on top of it). */
+            float[] view = {player.getLocation().getYaw(), player.getLocation().getPitch()};
+            float[] turnStart = view;
+
+            @Override
+            public void run() {
+                if (t.stage != Stage.RUNNING) return;
+                if (!player.isOnline()) {
+                    complete(t);
+                    return;
+                }
+                if (!seated(t)) { // the seat went away underneath them: finish on the spawn
+                    snap(t);
+                    return;
+                }
+                if (k < ticks) {
+                    double[] at = path[k];
+                    moveSeat(t, start.clone().add(at[0], at[1], at[2]));
+                    if (facing != null) {
+                        view = turn(player, view, facing[k]);
+                    } else if (k >= turnFrom) {
+                        if (k == turnFrom) { // from wherever they are looking now
+                            turnStart = new float[] {player.getLocation().getYaw(), player.getLocation().getPitch()};
+                            view = turnStart;
+                        }
+                        view = turn(player, view, RespawnMotion.landTurn(turnStart[0], turnStart[1], target.getYaw(),
+                            target.getPitch(), k + 1 - turnFrom, ticks - turnFrom));
+                    }
+                    player.setFallDistance(0);
+                    if (k % 2 == 0) trail(t, player.getLocation().add(0, 0.2, 0), particle);
+                    k++;
+                    return;
+                }
+                // let the clients' glide onto the last position finish, then stand them exactly on the spawn
+                if (k++ < ticks + SEAT_GLIDE_TICKS) return;
+                landingEffects(t.viewers, target, thud);
+                snap(t);
+            }
+        }, 1L, 1L);
+    }
+
+    /**
+     * Turns the player's view from {@code from} (what the animation set last) to {@code to} by sending only the
+     * change: the client adds it to its own view, so mouse movement in between is kept instead of being snapped back
+     * every tick. Returns {@code to}.
+     */
+    private static float[] turn(Player player, float[] from, float[] to) {
+        float yaw = RespawnMotion.wrap(to[0] - from[0]);
+        float pitch = to[1] - from[1];
+        if (yaw != 0 || pitch != 0) player.setRotation(Angle.relative(yaw), Angle.relative(pitch));
+        return to;
+    }
+
     // ------------------------------------------------------------------ look-down and spin
 
     /**
@@ -319,6 +449,8 @@ public final class RespawnPull implements Listener {
         t.task = plugin.getServer().getScheduler().runTaskTimer(plugin, new Runnable() {
             int k;
             int held;
+            /** The view the animation set last. */
+            float[] view = {startYaw, startPitch};
 
             @Override
             public void run() {
@@ -338,18 +470,20 @@ public final class RespawnPull implements Listener {
                     float yaw = RespawnMotion.spinYaw(startYaw, endYaw, k, ticks);
                     float pitch = RespawnMotion.spinPitch(startPitch, endPitch, k, ticks);
                     if (k == RespawnMotion.spinTeleportTick(ticks)) jump(t, yaw, pitch);
-                    else player.setRotation(yaw, pitch);
+                    else turn(player, view, new float[] {yaw, pitch});
+                    view = new float[] {yaw, pitch};
                     if (k >= ticks) land(t);
                     return;
                 }
                 // look-down: tilt down (keeping their own yaw), jump, wait for the landing, tilt back up
                 int look = RespawnMotion.LOOK_TICKS;
                 if (k < look) {
-                    player.setRotation(player.getLocation().getYaw(), RespawnMotion.lookDown(startPitch, k, look));
+                    view = turn(player, view, new float[] {view[0], RespawnMotion.lookDown(startPitch, k, look)});
                     return;
                 }
                 if (k == look) {
                     jump(t, endYaw, RespawnMotion.DOWN);
+                    view = new float[] {endYaw, RespawnMotion.DOWN};
                     return;
                 }
                 if (!t.arrived && held++ < RespawnMotion.LOOK_HOLD_MAX_TICKS) {
@@ -357,7 +491,7 @@ public final class RespawnPull implements Listener {
                     return;
                 }
                 int up = k - look - 1;
-                player.setRotation(endYaw, RespawnMotion.lookUp(endPitch, up, look));
+                view = turn(player, view, new float[] {endYaw, RespawnMotion.lookUp(endPitch, up, look)});
                 if (up >= look) land(t);
             }
         }, 1L, 1L);
@@ -463,19 +597,22 @@ public final class RespawnPull implements Listener {
 
     // ------------------------------------------------------------------ effects
 
-    private static void trail(Pull t, Location at) {
+    private static void trail(Pull t, Location at, Particle particle) {
+        int count = particle == Particle.CLOUD ? 2 : 1;
         for (Player v : t.viewers) {
             if (v.isOnline() && v.getWorld() == at.getWorld()) {
-                v.spawnParticle(Particle.CLOUD, at, 2, 0.1, 0.1, 0.1, 0.01);
+                v.spawnParticle(particle, at, count, 0.1, 0.1, 0.1, 0.01);
             }
         }
     }
 
-    private static void landingEffects(List<Player> viewers, Location target) {
+    /** The landing: a thud for the throw, a soft step for the gentler flights. */
+    private static void landingEffects(List<Player> viewers, Location target, boolean thud) {
         for (Player v : viewers) {
             if (!v.isOnline() || v.getWorld() != target.getWorld()) continue;
-            v.playSound(target, Sound.ENTITY_PLAYER_BIG_FALL, 0.8f, 0.9f);
-            v.spawnParticle(Particle.CLOUD, target.clone().add(0, 0.1, 0), 8, 0.3, 0.05, 0.3, 0.02);
+            if (thud) v.playSound(target, Sound.ENTITY_PLAYER_BIG_FALL, 0.8f, 0.9f);
+            else v.playSound(target, Sound.ENTITY_PLAYER_SMALL_FALL, 0.7f, 1.1f);
+            v.spawnParticle(Particle.CLOUD, target.clone().add(0, 0.1, 0), thud ? 8 : 5, 0.3, 0.05, 0.3, 0.02);
         }
     }
 

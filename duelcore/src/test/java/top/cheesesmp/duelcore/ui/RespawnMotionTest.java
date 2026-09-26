@@ -1,5 +1,6 @@
 package top.cheesesmp.duelcore.ui;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -16,6 +17,10 @@ class RespawnMotionTest {
         assertEquals(Style.THROW, Style.parse("throw"));
         assertEquals(Style.LOOK_DOWN, Style.parse(" Look_Down "));
         assertEquals(Style.SPIN, Style.parse("SPIN"));
+        assertEquals(Style.FLOAT, Style.parse("float"));
+        assertEquals(Style.ORBIT, Style.parse("Orbit"));
+        assertEquals(Style.SWOOP, Style.parse("swoop"));
+        assertEquals("throw, look-down, spin, float, orbit, swoop", Style.names());
         assertNull(Style.parse("cartwheel"));
     }
 
@@ -108,5 +113,20 @@ class RespawnMotionTest {
         // half the turn is done at the teleport
         assertEquals(RespawnMotion.wrap(180), RespawnMotion.wrap(RespawnMotion.spinYaw(0, 0, at, n)), 1e-3);
         assertEquals(5, RespawnMotion.spinPitch(10, 0, at, n), 1e-4);
+    }
+
+    @Test
+    void landTurnEasesIntoTheSpawnFacingTheShortWay() {
+        int n = RespawnMotion.LAND_TURN_TICKS;
+        assertArrayEquals(new float[] {170, -20}, RespawnMotion.landTurn(170, -20, -150, 0, 0, n), 1e-4f);
+        assertArrayEquals(new float[] {-150, 0}, RespawnMotion.landTurn(170, -20, -150, 0, n, n), 1e-4f);
+        // through 180, not back round through 0
+        float[] prev = RespawnMotion.landTurn(170, -20, -150, 0, 0, n);
+        for (int k = 1; k <= n; k++) {
+            float[] v = RespawnMotion.landTurn(170, -20, -150, 0, k, n);
+            float step = RespawnMotion.wrap(v[0] - prev[0]);
+            assertTrue(step > 0 && step < 10, "tick " + k + " step " + step);
+            prev = v;
+        }
     }
 }

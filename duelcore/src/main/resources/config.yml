@@ -4,7 +4,7 @@
 #  kits in kits/*.yml and arenas in arenas/*.yml.
 #  Reload everything with /duelcore reload (running matches keep their kit).
 # ─────────────────────────────────────────────────────────────
-config-version: 5
+config-version: 6
 
 database:
   # sqlite (default, file in the plugin folder) or mysql (MySQL 8 / MariaDB 10.5+)
@@ -149,15 +149,25 @@ animations:
   respawn-throw: true
   # The respawn animations, one picked at random for each fighter every round. Write "<style>" or "<style> <weight>"
   # (a style with weight 2 comes twice as often; 0 turns it off):
-  #   throw      carried back along a real Minecraft arc (normal player gravity); they can still look around
+  #   throw      carried back along a real Minecraft arc (normal player gravity), easing off at the launch and the
+  #              landing; they can still look around
+  #   float      floated straight up, across and gently down onto the spawn; they can still look around
+  #   orbit      carried in a rising spiral round the arena centre, the camera on it, and down onto the spawn
+  #   swoop      pulled up and back behind the spawn looking over the arena, then a dive that levels out onto it
   #   look-down  the view tilts slowly down to the ground, they're teleported, and it tilts slowly back up
   #   spin       one smooth 360° turn, teleported exactly half way through it
+  # Every style ends facing the way the spawn faces. float, orbit and swoop that don't fit the arena try a smaller
+  # shape, then become a throw.
   respawn-styles:
     - throw
+    - float
+    - orbit
+    - swoop
     - look-down
     - spin
   # How high the top of the throw's arc is at least, in blocks above the higher end (longer throws go a bit higher;
-  # arcs that would clip trees or hills go higher still, or become a teleport).
+  # arcs that would clip trees or hills go higher still, or become a teleport). float, swoop and orbit rise about as
+  # high.
   respawn-throw-height: 10
   # Players with a ping above this (ms) are teleported to their spawn instead of animated: their client lags too far
   # behind. 0 = always animate.

@@ -14,12 +14,20 @@ import top.cheesesmp.duelcore.ui.anim.Ease;
  */
 public final class RespawnMotion {
 
-    /** Ticks of the look-down (and of the look back up): about 0.6 s each. */
-    public static final int LOOK_TICKS = 12;
+    /** Ticks of the look-down (and of the look back up): 0.8 s each, so each per-tick step stays small. */
+    public static final int LOOK_TICKS = 16;
     /** Longest wait at the spawn, still looking down, for the teleport to land before looking back up. */
     public static final int LOOK_HOLD_MAX_TICKS = 20;
-    /** Ticks of the full 360° spin (1 s); the teleport happens exactly half way. */
-    public static final int SPIN_TICKS = 20;
+    /**
+     * Ticks of the full 360° spin (1.5 s; the view turns at most about 19° a tick, where a 1 s spin jumped 28°); the
+     * teleport happens exactly half way.
+     */
+    public static final int SPIN_TICKS = 30;
+    /**
+     * Last ticks of a free-look flight (throw, float) over which the view turns smoothly into the spawn's facing, so
+     * the player lands already facing the right way instead of being snapped round on the spawn.
+     */
+    public static final int LAND_TURN_TICKS = 10;
     /** Straight down. */
     public static final float DOWN = 90f;
 
@@ -30,12 +38,25 @@ public final class RespawnMotion {
         /** Look slowly down, teleport, look slowly back up. */
         LOOK_DOWN("look-down"),
         /** One smooth 360° turn, teleported half way through it. */
-        SPIN("spin");
+        SPIN("spin"),
+        /** Floated straight up, across and gently down onto the spawn. */
+        FLOAT("float"),
+        /** Carried in a rising spiral round the arena centre, looking at it, down onto the spawn. */
+        ORBIT("orbit"),
+        /** Pulled up and back behind the spawn looking over the arena, then a dive that levels out onto it. */
+        SWOOP("swoop");
 
         public final String key;
 
         Style(String key) {
             this.key = key;
+        }
+
+        /** All style names, for messages ("throw, look-down, ..."). */
+        public static String names() {
+            StringBuilder b = new StringBuilder();
+            for (Style s : values()) b.append(b.isEmpty() ? "" : ", ").append(s.key);
+            return b.toString();
         }
 
         /** The style named {@code name} (case and {@code _}/{@code -} don't matter), or null. */
@@ -74,7 +95,7 @@ public final class RespawnMotion {
                 String[] parts = entry.trim().split("\\s+");
                 Style style = Style.parse(parts[0]);
                 if (style == null) {
-                    problems.add("unknown respawn style '" + parts[0] + "' (throw, look-down, spin)");
+                    problems.add("unknown respawn style '" + parts[0] + "' (" + Style.names() + ")");
                     continue;
                 }
                 int weight = 1;
@@ -167,6 +188,16 @@ public final class RespawnMotion {
     /** Pitch at {@code tick} of {@code ticks} of a spin: levels out from {@code from} to {@code to} over the spin. */
     public static float spinPitch(float from, float to, int tick, int ticks) {
         return (float) Ease.lerp(from, to, Ease.easeInOutSine(Ease.progress(tick, ticks)));
+    }
+
+    /**
+     * The view at tick {@code tick} of {@code ticks} while turning from {@code fromYaw}/{@code fromPitch} into the
+     * spawn's facing {@code toYaw}/{@code toPitch} at the end of a free-look flight: the short way round, eased in
+     * and out. Returns {yaw, pitch}.
+     */
+    public static float[] landTurn(float fromYaw, float fromPitch, float toYaw, float toPitch, int tick, int ticks) {
+        return RespawnPaths.blend(fromYaw, fromPitch, new float[] {toYaw, toPitch},
+            Ease.easeInOutSine(Ease.progress(tick, ticks)));
     }
 
     /** The tick of the spin at which the player is teleported: exactly half way through the turn. */

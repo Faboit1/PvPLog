@@ -105,7 +105,7 @@ final class AdminCommand {
                 .then(Commands.argument("player", StringArgumentType.word()).suggests(cmd.onlineNames())
                     .executes(ctx -> debugDialog(ctx, Bukkit.getPlayerExact(StringArgumentType.getString(ctx, "player")))))))
             // preview the respawn animation: lands on the ground <distance> blocks ahead of where the player looks,
-            // in the given style (throw, look-down, spin) or one picked like between rounds
+            // in the given style (throw, float, orbit, swoop, look-down, spin) or one picked like between rounds
             .then(Commands.literal("throw").then(Commands.argument("player", StringArgumentType.word())
                 .suggests(cmd.onlineNames())
                 .executes(ctx -> throwPreview(ctx, 40, null))
@@ -168,7 +168,8 @@ final class AdminCommand {
         if (styleName != null) {
             style = top.cheesesmp.duelcore.ui.RespawnMotion.Style.parse(styleName);
             if (style == null) {
-                ctx.getSource().getSender().sendMessage("Styles: throw, look-down, spin.");
+                ctx.getSource().getSender().sendMessage(
+                    "Styles: " + top.cheesesmp.duelcore.ui.RespawnMotion.Style.names() + ".");
                 return 0;
             }
         }

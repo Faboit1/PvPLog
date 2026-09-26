@@ -78,7 +78,7 @@ public final class MainConfig {
     public final double animRespawnThrowHeight;
     /** Players with a higher ping are teleported instead of thrown (0 = always throw). */
     public final int animRespawnThrowMaxPing;
-    /** The respawn animations to pick from at random, with their weights (throw, look-down, spin). */
+    /** The respawn animations to pick from at random, with their weights (RespawnMotion.Style). */
     public final top.cheesesmp.duelcore.ui.RespawnMotion.Pool animRespawnStyles;
     public final boolean animDeath;
     public final boolean animRoundWin;

@@ -16,6 +16,7 @@ public final class Ease {
     public static final DoubleUnaryOperator OUT_BACK = Ease::easeOutBack;
     public static final DoubleUnaryOperator IN_OUT_SINE = Ease::easeInOutSine;
     public static final DoubleUnaryOperator OUT_EXPO = Ease::easeOutExpo;
+    public static final DoubleUnaryOperator SMOOTHER = Ease::smootherstep;
 
     private Ease() {
     }
@@ -66,6 +67,15 @@ public final class Ease {
     public static double easeInOutSine(double t) {
         t = clamp01(t);
         return (1 - Math.cos(Math.PI * t)) / 2;
+    }
+
+    /**
+     * Perlin's smootherstep (6t⁵ − 15t⁴ + 10t³): like ease-in-out, but speed and acceleration are both zero at the
+     * ends, so a motion eased with it starts and stops without any jolt.
+     */
+    public static double smootherstep(double t) {
+        t = clamp01(t);
+        return t * t * t * (t * (t * 6 - 15) + 10);
     }
 
     public static double easeOutExpo(double t) {
