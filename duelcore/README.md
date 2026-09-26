@@ -315,7 +315,7 @@ setting. Texts are in `messages.yml` (`progress`, `animtest`), colours and the b
 
 | Key | What it does |
 | --- | --- |
-| `respawn-throw` (+ `-height`, `-max-ping`, `-stall-ticks`) | From round 2 on, fighters are thrown back to their spawn along an arc. Players above `-max-ping` ms (350) are teleported instead; a throw the server never sees move is ended after `-stall-ticks` + ping |
+| `respawn-throw` (+ `respawn-styles`, `-height`, `-max-ping`) | From round 2 on, fighters are brought back to their spawn with a respawn animation picked at random from `respawn-styles` (`throw`: carried along an arc; `look-down`: look down, teleport, look back up; `spin`: a 360° turn, teleported half way; `"<style> <weight>"` for weights). They can't move until they stand on the spawn. Players above `-max-ping` ms (350) are teleported instead. Preview: `/duelcore debug throw <player> [distance] [style]` |
 | `spawn-rise` (+ `-depth`, `-ticks`) | Round 1: each fighter rises out of a hole at their spawn |
 | `death`, `round-win`, `match-win`, `fight-start` | Red burst on death, golden spiral for the round winner, fireworks for the match winner, white ring when a round starts |
 | `join-title` | Title on joining the hub |

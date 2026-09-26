@@ -128,18 +128,24 @@ match:
   void-depth: 6
 
 animations:
-  # From round 2 on, both fighters are thrown back to their spawn along a real Minecraft arc (normal player gravity)
-  # instead of teleporting. They can look around but can't steer.
+  # From round 2 on, both fighters are brought back to their spawn with a respawn animation (respawn-styles) instead
+  # of a plain teleport. They can't move, jump or steer until they stand on the spawn.
   respawn-throw: true
-  # How high the top of the arc is at least, in blocks above the higher end (longer throws go a bit higher; arcs that
-  # would clip trees or hills go higher still, or become a teleport).
+  # The respawn animations, one picked at random for each fighter every round. Write "<style>" or "<style> <weight>"
+  # (a style with weight 2 comes twice as often; 0 turns it off):
+  #   throw      carried back along a real Minecraft arc (normal player gravity); they can still look around
+  #   look-down  the view tilts slowly down to the ground, they're teleported, and it tilts slowly back up
+  #   spin       one smooth 360° turn, teleported exactly half way through it
+  respawn-styles:
+    - throw
+    - look-down
+    - spin
+  # How high the top of the throw's arc is at least, in blocks above the higher end (longer throws go a bit higher;
+  # arcs that would clip trees or hills go higher still, or become a teleport).
   respawn-throw-height: 10
-  # Players with a ping above this (ms) are teleported to their spawn instead: their client lags too far behind the
-  # throw. 0 = always throw.
+  # Players with a ping above this (ms) are teleported to their spawn instead of animated: their client lags too far
+  # behind. 0 = always animate.
   respawn-throw-max-ping: 350
-  # A throw the server hasn't seen the player follow after this many ticks (plus the player's ping) is ended with a
-  # teleport to the spawn (4-60).
-  respawn-throw-stall-ticks: 10
   # Red burst and soul where a fighter dies.
   death: true
   # Golden spiral around the round winner.
