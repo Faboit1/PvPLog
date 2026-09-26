@@ -69,6 +69,7 @@ import top.cheesesmp.duelcore.queue.QueuePrefs;
 import top.cheesesmp.duelcore.queue.QueueService;
 import top.cheesesmp.duelcore.rating.Tier;
 import top.cheesesmp.duelcore.ui.Icons;
+import top.cheesesmp.duelcore.ui.MenuSound;
 import top.cheesesmp.duelcore.ui.anim.Animation;
 import top.cheesesmp.duelcore.ui.anim.Channel;
 import top.cheesesmp.duelcore.ui.anim.Ease;
@@ -741,8 +742,12 @@ public final class QueueDialog {
             case "queue/toggle" -> {
                 Kit kit = kit(data);
                 if (kit == null) return;
-                if (plugin.queue().isQueued(player.getUniqueId(), kit.id())) plugin.queue().leave(player, kit);
-                else join(player, kit);
+                if (plugin.queue().isQueued(player.getUniqueId(), kit.id())) {
+                    plugin.queue().leave(player, kit);
+                    sound(player, MenuSound.TOGGLE_OFF);
+                } else if (join(player, kit)) {
+                    sound(player, MenuSound.TOGGLE_ON); // (a refusal played the deny sound)
+                }
                 reopen(player, tab);
             }
             case "queue/all" -> {
@@ -754,12 +759,13 @@ public final class QueueDialog {
                 if (profile == null) return;
                 profile.setting(Setting.KEEP_QUEUING, !profile.setting(Setting.KEEP_QUEUING));
                 plugin.profiles().saveSettings(profile);
+                sound(player, MenuSound.toggle(profile.setting(Setting.KEEP_QUEUING)));
                 reopen(player, tab);
             }
             case "queue/favorite" -> {
                 Kit kit = kit(data);
                 if (kit == null || plugin.queue().prefs().favorites(player.getUniqueId()) == null) return;
-                plugin.queue().prefs().toggle(player, kit);
+                sound(player, MenuSound.toggle(plugin.queue().prefs().toggle(player, kit)));
                 reopen(player, tab);
             }
             // direct join: the results "Play again" button and test bots ({kit, mode?})
@@ -770,6 +776,7 @@ public final class QueueDialog {
                 if (mode == null || mode == QueueMode.PARTY) mode = plugin.queue().modeFor(kit);
                 if (mode == null) {
                     plugin.messages().send(player, "queue.result.mode_disabled", Messages.comp("kit", kit.displayName()));
+                    sound(player, MenuSound.DENY);
                     return;
                 }
                 plugin.commands().joinQueue(player, kit, mode);
@@ -800,6 +807,7 @@ public final class QueueDialog {
             default -> {
                 plugin.messages().send(player, "queue.result." + r.name().toLowerCase(Locale.ROOT),
                     Messages.comp("kit", kit.displayName()));
+                sound(player, MenuSound.DENY);
                 return false;
             }
         }
@@ -812,11 +820,18 @@ public final class QueueDialog {
         List<Kit> kits = kits(tab, favorites);
         if (allQueued(player.getUniqueId(), kits)) {
             for (Kit kit : kits) plugin.queue().leave(player, kit);
+            sound(player, MenuSound.TOGGLE_OFF);
             return;
         }
         for (Kit kit : kits) {
             if (!plugin.queue().isQueued(player.getUniqueId(), kit.id()) && !join(player, kit)) return;
         }
+        sound(player, MenuSound.TOGGLE_ON);
+    }
+
+    /** The press's menu sound, played before ClickRouter's default one (which is then skipped). */
+    private void sound(Player player, MenuSound kind) {
+        plugin.menuSounds().play(player, kind);
     }
 
     /** Shows the menu again with the new state, unless the click started a match or the player left. */

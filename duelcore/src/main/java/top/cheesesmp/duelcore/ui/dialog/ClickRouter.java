@@ -19,10 +19,12 @@ import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.kit.Kit;
 import top.cheesesmp.duelcore.match.Match;
 import top.cheesesmp.duelcore.match.SpectateService;
+import top.cheesesmp.duelcore.ui.MenuSound;
 
 /**
  * Handles every {@code duelcore:*} custom click from dialogs and chat. Payloads come from the client and are
- * treated as untrusted: every id is looked up and checked again.
+ * treated as untrusted: every id is looked up and checked again. Every handled click plays a menu sound
+ * ({@link top.cheesesmp.duelcore.ui.MenuSounds}).
  */
 public final class ClickRouter implements Listener {
 
@@ -73,8 +75,11 @@ public final class ClickRouter implements Listener {
         long serial = open.serial(player);
         try {
             handle(player, action, data, view);
+            // every press sounds: the handler's own kind (a toggle's state, a refusal) if it played one, else this
+            plugin.menuSounds().play(player, MenuSound.forClick(action));
         } catch (RuntimeException e) {
             plugin.getLogger().warning("Click '" + action + "' from " + player.getName() + " failed: " + e);
+            plugin.menuSounds().play(player, MenuSound.DENY);
         } finally {
             open.afterClick(player, serial);
         }
@@ -122,16 +127,21 @@ public final class ClickRouter implements Listener {
                 Match match = plugin.matches().byId(id);
                 if (match == null || match.isOver()) {
                     plugin.messages().send(player, "spectate.ended");
+                    deny(player);
                     return;
                 }
                 plugin.openDialogs().close(player);
                 SpectateService.Result r = plugin.spectate().spectate(player, match, null);
-                if (r != SpectateService.Result.OK) plugin.messages().send(player, "spectate.result." + r.name().toLowerCase(Locale.ROOT));
+                if (r != SpectateService.Result.OK) {
+                    plugin.messages().send(player, "spectate.result." + r.name().toLowerCase(Locale.ROOT));
+                    deny(player);
+                }
             }
             case "duel/pick" -> {
                 Player target = uuidPlayer(data.get("target"));
                 if (target == null) {
                     plugin.messages().send(player, "duel.result.offline");
+                    deny(player);
                     return;
                 }
                 plugin.dialogs().duelPicker(player, target);
@@ -141,6 +151,7 @@ public final class ClickRouter implements Listener {
                 Kit kit = plugin.kits().get(data.getOrDefault("kit", ""));
                 if (target == null || kit == null) {
                     plugin.messages().send(player, "duel.result.offline");
+                    deny(player);
                     return;
                 }
                 plugin.commands().sendDuel(player, target, kit);
@@ -159,6 +170,10 @@ public final class ClickRouter implements Listener {
                 if (handler != null) handler.handle(player, action, data, view);
             }
         }
+    }
+
+    private void deny(Player player) {
+        plugin.menuSounds().play(player, MenuSound.DENY);
     }
 
     /** Reads a flat SNBT compound of string values, e.g. {kit:"sword",mode:"ranked"}. */

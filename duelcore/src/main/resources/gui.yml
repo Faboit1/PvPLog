@@ -212,6 +212,26 @@ kit-editor:
     clear: "item.book.page_turn 0.8 0.8 + block.note_block.bass 0.9 0.35 @2"
     cancel: "ui.button.click 0.8 0.3"
 
+# Sounds of menu presses: every menu button (dialogs), clickable chat button (duel / party requests, draw offers)
+# and hub hotbar item plays one, to the presser only. Players' own sound setting applies. Same format as above
+# ("<sound> [pitch] [volume] [@delay]", several joined with "+", "" = none); at most one plays per press. The kit
+# editor uses its own sounds (kit-editor.sounds). Preview them all: /animtest play menu-sounds.
+menu-sounds:
+  enabled: true
+  # A plain button: opens a menu, a player, a kit.
+  click: "ui.button.click 1.6 0.25"
+  # A setting, queue, favourite or follow switched on / off (the settings' arrows too: up / down).
+  toggle-on: "block.note_block.hat 1.5 0.35"
+  toggle-off: "block.note_block.hat 1.0 0.35"
+  # Back, Close (also Escape), a declined request, leaving the queue or spectating (hub items).
+  back: "ui.button.click 1.1 0.25"
+  # Accepted, confirmed, saved or sent.
+  confirm: "block.note_block.chime 1.5 0.4 + block.note_block.chime 2.0 0.4 @2"
+  # A press that was refused or failed (the reason is shown in chat or on the menu).
+  deny: "block.note_block.bass 0.7 0.35"
+  # Another tab, page or category of the same menu.
+  page: "item.book.page_turn 1.2 0.5"
+
 # The animated searching action bar (config.yml animations.searching-bar; text in messages.yml
 # queue.searching-animated).
 searching:

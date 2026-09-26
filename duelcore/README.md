@@ -341,6 +341,10 @@ the overall Elo: the average rating of every kit a player has finished placement
 - `motd`: two server-list lines, centered automatically, plus the hover text.
 - `party-menu`: members per page, list lengths and widths of the party menu; `sidebar.match-ffa` and
   `sidebar.spectate-ffa` are the sidebars of a Party FFA.
+- `menu-sounds`: every menu button, clickable chat button (duel / party requests, draw offers) and hub item plays a
+  sound to the presser: `click`, `toggle-on` / `toggle-off`, `back` (also Close, Escape and declining), `confirm`,
+  `deny` (refused or failed) and `page` (tabs, pages), one per press; `enabled: false` silences them all. Same format
+  as `kit-editor.sounds` ("" = none); players' own *Sounds* setting applies. Preview: `/animtest play menu-sounds`.
 
 **chat-filter.yml**: blocks slurs and harassment, masks swearing, in chat and private messages (`/msg`, `/tell`,
 `/r`, `/me`, …). Terms are written plainly and also catch leetspeak (`n1gg3r`, `f@g`), look-alike letters from

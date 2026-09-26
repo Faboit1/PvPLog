@@ -27,7 +27,7 @@ import top.cheesesmp.duelcore.profile.DuelRequests;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.ui.Icons;
-import top.cheesesmp.duelcore.ui.anim.Sfx;
+import top.cheesesmp.duelcore.ui.MenuSound;
 import top.cheesesmp.duelcore.ui.dialog.SettingsLayout.Entry;
 import top.cheesesmp.duelcore.ui.dialog.SettingsLayout.Section;
 
@@ -249,7 +249,7 @@ public final class SettingsDialog {
 
     /**
      * Saves the settings and refreshes everything a setting controls right away (sidebar, hub visibility, queue
-     * music, the hotbar hint, the searching bar), with a soft click sound.
+     * music, the hotbar hint, the searching bar), with the toggle on / off menu sound ({@code up}: on, more).
      */
     private void changed(Player player, PlayerProfile profile, boolean up) {
         plugin.profiles().saveSettings(profile);
@@ -258,6 +258,6 @@ public final class SettingsDialog {
         plugin.queueMusic().refresh(player);
         plugin.hints().refresh(player);
         if (!profile.setting(Setting.SEARCHING_BAR)) plugin.queue().searching().stop(player.getUniqueId());
-        Sfx.play(plugin, player, new Sfx.Note(Sfx.HAT, up ? 1.5f : 1.0f, 0.35f, 0));
+        plugin.menuSounds().play(player, MenuSound.toggle(up));
     }
 }

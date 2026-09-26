@@ -82,6 +82,7 @@ public final class DuelCorePlugin extends JavaPlugin {
     private top.cheesesmp.duelcore.hub.HubProgress hubProgress;
     private top.cheesesmp.duelcore.ui.AlertPop alerts;
     private top.cheesesmp.duelcore.kit.editor.KitEditor kitEditor;
+    private top.cheesesmp.duelcore.ui.MenuSounds menuSounds;
     private boolean papiHooked;
 
     @Override
@@ -128,6 +129,8 @@ public final class DuelCorePlugin extends JavaPlugin {
         tester = new top.cheesesmp.duelcore.debug.TesterMode(this);
         hubProgress = new top.cheesesmp.duelcore.hub.HubProgress(this);
         alerts = new top.cheesesmp.duelcore.ui.AlertPop(this);
+        menuSounds = new top.cheesesmp.duelcore.ui.MenuSounds(this);
+        menuSounds.enable(tester); // gui.yml problems, /animtest play menu-sounds
         tester.preview("sidebar-title", p -> sidebar.sweepTitleNow());
         openDialogs = new top.cheesesmp.duelcore.ui.dialog.OpenDialogs(this);
         dialogs = new DialogService(this);
@@ -159,6 +162,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         pm.registerEvents(new top.cheesesmp.duelcore.chat.ChatFilterListener(this), this);
         clicks = new ClickRouter(this);
         pm.registerEvents(clicks, this);
+        pm.registerEvents(menuSounds, this);
         clicks.register("queue", dialogs.queueMenu()::click);
         clicks.register("settings", dialogs.settingsMenu()::click);
         pm.registerEvents(hints, this);
@@ -269,6 +273,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         queue.reload();
         problems.addAll(queueMusic.reload());
         problems.addAll(kitEditor.reload()); // layouts made for a kit that changed are reset (players are told)
+        problems.addAll(gui().menuSounds.problems());
         ratingSystem = buildRatingSystem();
         leaderboards.clear();
         tags.refreshTeams();
@@ -403,6 +408,11 @@ public final class DuelCorePlugin extends JavaPlugin {
     /** Custom-click routing; features register their own {@code duelcore:<prefix>/…} handlers here. */
     public ClickRouter clicks() {
         return clicks;
+    }
+
+    /** The sound of every menu press (dialog and chat buttons, hub items). */
+    public top.cheesesmp.duelcore.ui.MenuSounds menuSounds() {
+        return menuSounds;
     }
 
     /** Follows and friends (mutual follows) of online players. */

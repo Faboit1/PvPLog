@@ -48,6 +48,7 @@ import top.cheesesmp.duelcore.ui.MatchFoundReveal;
 import top.cheesesmp.duelcore.ui.MatchFx;
 import top.cheesesmp.duelcore.ui.MatchFxMath;
 import top.cheesesmp.duelcore.ui.MatchSounds;
+import top.cheesesmp.duelcore.ui.MenuSound;
 import top.cheesesmp.duelcore.ui.SoundPool;
 import top.cheesesmp.duelcore.ui.TotemPop;
 import top.cheesesmp.duelcore.ui.anim.Channel;
@@ -776,21 +777,25 @@ public final class MatchService implements Runnable {
         Participant self = m == null ? null : m.participant(player.getUniqueId());
         if (m == null || self == null || self.left() || m.isOver()) {
             plugin.messages().send(player, "match.draw.not-in-match");
+            plugin.menuSounds().play(player, MenuSound.DENY);
             return;
         }
         if (m.ffa() || m.participants().size() != 2) {
             plugin.messages().send(player, "match.draw.only-1v1");
+            plugin.menuSounds().play(player, MenuSound.DENY);
             return;
         }
         MainConfig cfg = plugin.settings();
         if (!cfg.drawEnabled) {
             plugin.messages().send(player, "match.draw.disabled");
+            plugin.menuSounds().play(player, MenuSound.DENY);
             return;
         }
         Participant opp = m.opponentOf(self);
         Player other = opp == null || opp.left() ? null : Bukkit.getPlayer(opp.uuid());
         if (other == null) {
             plugin.messages().send(player, "match.draw.not-in-match");
+            plugin.menuSounds().play(player, MenuSound.DENY);
             return;
         }
         long now = System.currentTimeMillis();
@@ -804,12 +809,14 @@ public final class MatchService implements Runnable {
         }
         if (pending) {
             plugin.messages().send(player, "match.draw.already-offered");
+            plugin.menuSounds().play(player, MenuSound.DENY);
             return;
         }
         Long last = drawOffers.get(player.getUniqueId());
         long wait = last == null ? 0 : cfg.drawOfferCooldownSeconds * 1000L - (now - last);
         if (wait > 0) {
             plugin.messages().send(player, "match.draw.cooldown", Messages.num("seconds", (int) Math.ceil(wait / 1000.0)));
+            plugin.menuSounds().play(player, MenuSound.DENY);
             return;
         }
         drawOffers.put(player.getUniqueId(), now);
@@ -823,6 +830,7 @@ public final class MatchService implements Runnable {
             .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/draw deny"));
         plugin.messages().send(other, "match.draw.received", Messages.text("player", player.getName()),
             Messages.num("seconds", cfg.drawOfferSeconds), Messages.comp("accept", accept), Messages.comp("deny", deny));
+        plugin.menuSounds().play(player, MenuSound.CONFIRM);
         sound(other, Sound.BLOCK_NOTE_BLOCK_PLING, 1.2f);
     }
 
@@ -832,11 +840,13 @@ public final class MatchService implements Runnable {
         if (m == null || m.drawOffer == null || m.drawOffer.equals(player.getUniqueId())
             || System.currentTimeMillis() - m.drawOfferAt > plugin.settings().drawOfferSeconds * 1000L) {
             plugin.messages().send(player, "match.draw.no-offer");
+            plugin.menuSounds().play(player, MenuSound.DENY);
             return;
         }
         Player offerer = Bukkit.getPlayer(m.drawOffer);
         m.drawOffer = null;
         plugin.messages().send(player, "match.draw.you-denied");
+        plugin.menuSounds().play(player, MenuSound.BACK); // (the chat Deny button runs /draw deny)
         if (offerer != null) plugin.messages().send(offerer, "match.draw.denied", Messages.text("player", player.getName()));
     }
 
