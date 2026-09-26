@@ -13,7 +13,8 @@ import org.jspecify.annotations.Nullable;
  * <p>Every map is {@value #SIZE}×{@value #SIZE} blocks with a bedrock floor about {@value #GROUND} blocks under the
  * surface, fenced by a {@value #RING}-block-thick ring of invisible barrier from just above the bedrock up to a
  * {@value #RING}-block-thick barrier ceiling (only the ring's top surface block and its plant are left, so the edge
- * still looks natural; digging into it hits barrier). Hills get gentler towards the middle, the ground around both
+ * still looks natural; digging into it hits barrier; the outermost column is solid barrier so mining those surface
+ * blocks never opens a way out). Hills get gentler towards the middle, the ground around both
  * spawns is levelled, and trees stay out of the ring and the corridor between the spawns so the fighting area stays
  * open.
  *
@@ -171,14 +172,18 @@ public final class ArenaGenerator {
             }
         }
         plantTrees(s, grid, h, r);
-        // invisible fence: the ring is barrier from the bedrock up, except its surface block and plant, then a ceiling
+        // invisible fence: the ring is barrier from the bedrock up, except its surface block and plant, then a ceiling.
+        // The outermost column keeps nothing: mining the kept surface blocks (and plants) of the ring must not open a
+        // tunnel (crawling, or two high where plants stood) out of the map.
         for (int x = 0; x < SIZE; x++) {
             for (int z = 0; z < SIZE; z++) {
                 int top = h[x][z];
                 if (inRing(x, z)) {
+                    boolean outer = x == 0 || z == 0 || x == SIZE - 1 || z == SIZE - 1;
                     String deco = get(grid, x, top + 1, z);
                     for (int y = 1; y < HEIGHT; y++) {
-                        if (y == top || (y == top + 1 && deco != null && !deco.equals(AIR))) continue;
+                        boolean kept = y == top || (y == top + 1 && deco != null && !deco.equals(AIR));
+                        if (kept && !outer) continue;
                         set(grid, x, y, z, BARRIER);
                     }
                 }

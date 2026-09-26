@@ -60,6 +60,13 @@ class GeneratedArenaUpgradeTest {
 
         assertFalse(new File(dir, "blossom.yml").exists());
         assertFalse(new File(dir, "blossom.dca").exists());
+        // the replaced and removed files are kept aside, never lost
+        File backup = new File(dir, ArenaManager.BACKUP_FOLDER);
+        for (String kept : List.of("dunes-v1.yml", "dunes-v1.dca", "blossom-v1.yml", "blossom-v1.dca")) {
+            assertTrue(new File(backup, kept).isFile(), kept);
+        }
+        assertEquals("My dunes", YamlConfiguration.loadConfiguration(new File(backup, "dunes-v1.yml")).getString("display-name"));
+        assertEquals(2, ArenaSnapshot.read(new File(backup, "dunes-v1.dca").toPath()).sizeY());
         for (String untouched : List.of("tundra", "mesa", "castle")) {
             assertEquals(2, ArenaSnapshot.read(new File(dir, untouched + ".dca").toPath()).sizeY(), untouched);
             assertFalse(yml(dir, untouched).contains(ArenaManager.GENERATOR_VERSION), untouched);

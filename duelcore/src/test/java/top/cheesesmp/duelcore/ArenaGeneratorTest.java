@@ -67,7 +67,7 @@ class ArenaGeneratorTest {
 
     /**
      * Nobody digs or towers out: the 3 outer columns on every side are barrier from just above the bedrock to the
-     * top, except the surface block (and a plant on it), and the top 3 layers are barrier everywhere.
+     * top, except the surface block (and a plant on it) of the inner two, and the top 3 layers are barrier everywhere.
      */
     @Test
     void barrierRingIsThreeThickAndSealed() {
@@ -85,10 +85,15 @@ class ArenaGeneratorTest {
                     }
                     boolean edge = x < ring || z < ring || x >= sx - ring || z >= sz - ring;
                     if (!edge) continue;
+                    String where = g.name() + " ring at " + x + "," + z;
+                    if (x == 0 || z == 0 || x == sx - 1 || z == sz - 1) {
+                        // the outermost column is solid: mining the kept surface blocks never opens a tunnel out
+                        for (int y = 1; y < sy; y++) assertEquals("minecraft:barrier", at(s, x, y, z), where + " y=" + y);
+                        continue;
+                    }
                     // the lowest non-barrier block is the surface: everything below it is barrier
                     int surface = 1;
                     while (surface < sy && at(s, x, surface, z).equals("minecraft:barrier")) surface++;
-                    String where = g.name() + " ring at " + x + "," + z;
                     assertTrue(surface >= 10 && surface < sy - ring, where + ": no surface block (" + surface + ")");
                     String top = at(s, x, surface, z);
                     assertFalse(passable(top), where + ": surface is " + top);

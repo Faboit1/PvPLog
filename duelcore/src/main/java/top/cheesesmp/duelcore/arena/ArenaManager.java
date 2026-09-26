@@ -525,7 +525,8 @@ public final class ArenaManager {
      * generator no longer makes ({@link ArenaGenerator#REMOVED}) are deleted. A map counts as built-in only when its
      * name is one of the generator's, it has the {@code terrain} tag, its blocks come from a {@code .dca} (not a
      * schematic) and it is not marked {@code edited: true}; anything else, i.e. every hand-made arena, is left
-     * alone. Maps missing from the folder are not recreated (the owner deleted them). Returns what changed.
+     * alone. Maps missing from the folder are not recreated (the owner deleted them). The old files are kept in
+     * {@value #BACKUP_FOLDER}/ first. Returns what changed.
      */
     static List<String> upgradeGenerated(File dir, List<String> errors) {
         List<String> changes = new ArrayList<>();
@@ -542,23 +543,46 @@ public final class ArenaManager {
                 continue; // broken: readTemplate reports it
             }
             if (!outdatedGenerated(y)) continue;
+            int version = y.getInt(GENERATOR_VERSION, 1);
             try {
+                String kept = backUp(dir, name, version);
                 if (!current.contains(name)) {
                     Files.deleteIfExists(yml.toPath());
                     Files.deleteIfExists(new File(dir, name + ".dca").toPath());
-                    changes.add(name + ": removed (no longer a built-in map)");
+                    changes.add(name + ": removed (no longer a built-in map, old copy in " + kept + ")");
                     continue;
                 }
                 ArenaGenerator.Generated g = ArenaGenerator.generate(name);
                 if (g == null) continue;
                 writeGenerated(dir, g, y);
-                changes.add(name + ": regenerated (built-in map version " + y.getInt(GENERATOR_VERSION, 1) + " -> "
-                    + ArenaGenerator.VERSION + ")");
+                changes.add(name + ": regenerated (built-in map version " + version + " -> " + ArenaGenerator.VERSION
+                    + ", old copy in " + kept + ")");
             } catch (IOException e) {
                 errors.add("could not update default arena " + name + ": " + e.getMessage());
             }
         }
         return changes;
+    }
+
+    /** Folder (inside the arenas folder) keeping the files of built-in maps that an update replaced or removed. */
+    static final String BACKUP_FOLDER = "old-builtin";
+
+    /**
+     * Copies a built-in map's yml + dca to {@value #BACKUP_FOLDER}/&lt;name&gt;-v&lt;version&gt;.* before it is replaced, so
+     * a map the owner had changed by hand is never lost (it can be moved back and marked {@code edited: true}).
+     * Returns the backup folder's path relative to the arenas folder.
+     */
+    private static String backUp(File dir, String name, int version) throws IOException {
+        Path backup = dir.toPath().resolve(BACKUP_FOLDER);
+        Files.createDirectories(backup);
+        for (String ext : List.of(".yml", ".dca")) {
+            Path from = dir.toPath().resolve(name + ext);
+            if (Files.isRegularFile(from)) {
+                Files.copy(from, backup.resolve(name + "-v" + version + ext),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+        }
+        return BACKUP_FOLDER + "/";
     }
 
     /** True for the yml of a built-in map made by an older generator, see {@link #upgradeGenerated}. */

@@ -53,15 +53,17 @@ instance when it's pasted):
 
 Every map is 180×180 with about 30 blocks of ground over a bedrock floor, and 44 blocks of air above. A 3-block-thick
 ring of invisible barrier runs around the edge from the bedrock up to a 3-block-thick barrier ceiling, so nobody
-can dig or tower out (only the ring's top surface block is kept, so the edge looks natural). The spawns are 61 blocks
+can dig or tower out (the top surface block of the ring's inner two columns is kept, so the edge looks natural;
+the outermost column is solid barrier). The spawns are 61 blocks
 apart on the middle line, the ground around them is levelled, and trees stay out of the corridor between them.
 The whole map can be mined during a match and is restored between rounds. Any arena without a full bedrock bottom
 layer gets one added automatically (`bedrock-floor: false` in its yml turns that off).
 
 The default maps carry `generator-version` in their yml. When an update changes the built-in maps, every default
 map written by an older version is regenerated on the next start (or `/duelcore reload`), and maps that were
-dropped from the defaults are deleted. Arenas you made yourself are never touched, and neither is a default map
-you saved from the editor or whose `generator-version` line you removed.
+dropped from the defaults are deleted. The old files are copied to `arenas/old-builtin/<name>-v<version>.yml/.dca`
+first, so nothing is lost. Arenas you made yourself are never touched, and neither is a default map you saved from
+the editor or marked `edited: true` in its yml.
 
 **Building your own arena** (in the flat editor world):
 
