@@ -197,9 +197,9 @@ duel:
     no_request: "<muted>No open challenge.</muted>"
 
 spectate:
-  started: "<muted>Spectating <text><red></text> vs <text><blue></text> · <kit>. Use the dye or /leave to stop.</muted>"
+  started: "<muted>Spectating <text><red></text> vs <text><blue></text> · <kit>. Use /leave to stop · left-click a fighter to watch through their eyes.</muted>"
   # Party FFA (one team per player): <players> fighters, <alive> still standing this round.
-  started-ffa: "<muted>Spectating a <text>Party FFA</text> · <players> players · <alive> alive · <kit>. Use the dye or /leave to stop.</muted>"
+  started-ffa: "<muted>Spectating a <text>Party FFA</text> · <players> players · <alive> alive · <kit>. Use /leave to stop · left-click a fighter to watch through their eyes.</muted>"
   ended: "<muted>That match already ended.</muted>"
   not-spectating: "<muted>You're not spectating.</muted>"
   result:

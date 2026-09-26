@@ -186,6 +186,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         scheduler.runTaskTimer(this, sidebar::animateTitle, 24L, SidebarService.TITLE_PERIOD);
         scheduler.runTaskTimer(this, hubProgress, 20L, top.cheesesmp.duelcore.hub.HubProgress.PERIOD);
         scheduler.runTaskTimer(this, hints, 20L, 20L);
+        scheduler.runTaskTimer(this, spectate, 20L, 20L); // spectators who flew off their arena go back
         scheduler.runTaskTimer(this, tags, 40L, 40L);
         scheduler.runTaskTimer(this, tabListing, 20L, 10L);
         scheduler.runTaskTimer(this, duels, 20L, 20L);
