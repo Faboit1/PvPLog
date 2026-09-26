@@ -1,7 +1,7 @@
 # Diamond SMP: the SMP layout in maxed diamond, plus the diamond-era tools: cobwebs, water and lava buckets and
-# cobblestone. Shield, Sharpness V sword and axe, 128 gapples, 32 pearls, 64 XP and 22 totems (no potions).
+# cobblestone. Shield, Sharpness V sword and axe, 128 gapples, 32 pearls, 64 XP. No totems or potions.
 display-name: "Diamond SMP"
-description: "Maxed diamond SMP: shield, cobwebs, buckets and a stack of totems. No potions."
+description: "Maxed diamond SMP: shield, cobwebs and buckets. No totems or potions."
 icon: diamond_sword
 category: vanilla
 order: 10
@@ -19,7 +19,7 @@ rules:
   allowed-blocks: [cobblestone, cobweb, water, lava]
   ender-pearls: true
   pearl-cooldown: 1
-  totems: true
+  totems: false
   crystals: false
   anchors: false
   cobwebs: true
@@ -38,35 +38,13 @@ loadout:
     3: { item: golden_apple, amount: 64 }
     4: { item: cobweb, amount: 64 }
     5: water_bucket
-    6: totem_of_undying
-    7: totem_of_undying
-    8: totem_of_undying
     9: { item: golden_apple, amount: 64 }
     10: { item: ender_pearl, amount: 16 }
     11: { item: experience_bottle, amount: 64 }
     12: lava_bucket
     13: water_bucket
     14: { item: cobblestone, amount: 64 }
-    15: totem_of_undying
-    16: totem_of_undying
-    17: totem_of_undying
-    18: totem_of_undying
-    19: totem_of_undying
-    20: totem_of_undying
-    21: totem_of_undying
-    22: totem_of_undying
-    23: totem_of_undying
-    24: totem_of_undying
-    25: totem_of_undying
     26: { item: cobweb, amount: 64 }
-    27: totem_of_undying
-    28: totem_of_undying
-    29: totem_of_undying
-    30: totem_of_undying
-    31: totem_of_undying
-    32: totem_of_undying
-    33: totem_of_undying
-    34: totem_of_undying
     35: { item: cobblestone, amount: 64 }
   offhand: { item: shield, enchants: { unbreaking: 3, mending: 1 } }
 effects: []
