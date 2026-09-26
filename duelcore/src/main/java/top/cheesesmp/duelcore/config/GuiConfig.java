@@ -100,6 +100,8 @@ public final class GuiConfig {
     public final top.cheesesmp.duelcore.ui.MatchFxStyle matchFx;
     /** The kit editor: items of its fixed slots, the kit picker and its sounds (kit-editor). */
     public final top.cheesesmp.duelcore.kit.editor.KitEditorStyle kitEditor;
+    /** The sounds of menu presses: dialog and chat buttons, hub items (menu-sounds). */
+    public final top.cheesesmp.duelcore.ui.MenuSoundStyle menuSounds;
 
     public GuiConfig(YamlConfiguration y) {
         ConfigurationSection hb = y.getConfigurationSection("hotbar");
@@ -191,6 +193,7 @@ public final class GuiConfig {
         searchingCycleTicks = (int) Math.round(Math.clamp(y.getDouble("searching.cycle-seconds", 6), 1, 60) * 20);
         matchFx = top.cheesesmp.duelcore.ui.MatchFxStyle.parse(y);
         kitEditor = top.cheesesmp.duelcore.kit.editor.KitEditorStyle.parse(y);
+        menuSounds = top.cheesesmp.duelcore.ui.MenuSoundStyle.parse(y);
     }
 
     public @Nullable HotbarItem item(String key) {

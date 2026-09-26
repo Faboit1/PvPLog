@@ -156,8 +156,12 @@ public final class PartyService implements Listener, Runnable {
         pm.registerEvents(new PartyChatListener(this), plugin);
         plugin.clicks().register("party", dialogs::click);
         plugin.hub().registerItem("party", PERMISSION, player -> {
-            if (player.hasPermission(PERMISSION)) dialogs.open(player);
-            else plugin.messages().send(player, "command.no-permission");
+            if (player.hasPermission(PERMISSION)) {
+                dialogs.open(player);
+            } else {
+                plugin.messages().send(player, "command.no-permission");
+                plugin.menuSounds().play(player, top.cheesesmp.duelcore.ui.MenuSound.DENY);
+            }
         });
         ticker = Bukkit.getScheduler().runTaskTimer(plugin, this, 20L, 20L);
         waiter = Bukkit.getScheduler().runTaskTimer(plugin, this::loadWhenReady, 5L, 10L);

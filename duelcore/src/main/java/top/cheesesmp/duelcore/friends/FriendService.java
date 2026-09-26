@@ -86,8 +86,12 @@ public final class FriendService implements Listener {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
         plugin.clicks().register("friend", dialogs::click);
         plugin.hub().registerItem("friends", PERMISSION, player -> {
-            if (player.hasPermission(PERMISSION)) dialogs.open(player, 0, FriendDialogs.Filter.ALL);
-            else plugin.messages().send(player, "command.no-permission");
+            if (player.hasPermission(PERMISSION)) {
+                dialogs.open(player, 0, FriendDialogs.Filter.ALL);
+            } else {
+                plugin.messages().send(player, "command.no-permission");
+                plugin.menuSounds().play(player, top.cheesesmp.duelcore.ui.MenuSound.DENY);
+            }
         });
         for (Player p : Bukkit.getOnlinePlayers()) load(p, 0, false);
     }

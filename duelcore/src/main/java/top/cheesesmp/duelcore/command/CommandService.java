@@ -134,8 +134,11 @@ public final class CommandService {
                     Messages.comp("kit", kit.displayName()), Messages.comp("kit_icon", kit.sprite()),
                     Messages.text("mode", plugin.messages().raw("mode." + mode.id())));
             }
-            default -> plugin.messages().send(player, "queue.result." + r.name().toLowerCase(Locale.ROOT),
-                Messages.comp("kit", kit.displayName()));
+            default -> {
+                plugin.messages().send(player, "queue.result." + r.name().toLowerCase(Locale.ROOT),
+                    Messages.comp("kit", kit.displayName()));
+                plugin.menuSounds().play(player, top.cheesesmp.duelcore.ui.MenuSound.DENY);
+            }
         }
     }
 
@@ -176,6 +179,7 @@ public final class CommandService {
         DuelRequestService.Result r = plugin.duels().send(from, to, kit);
         if (r != DuelRequestService.Result.SENT) {
             plugin.messages().send(from, "duel.result." + r.name().toLowerCase(Locale.ROOT), Messages.text("player", to.getName()));
+            plugin.menuSounds().play(from, top.cheesesmp.duelcore.ui.MenuSound.DENY);
         }
         plugin.openDialogs().close(from);
     }
@@ -184,6 +188,7 @@ public final class CommandService {
         DuelRequestService.Result r = plugin.duels().accept(player, from);
         if (r != DuelRequestService.Result.ACCEPTED) {
             plugin.messages().send(player, "duel.result." + r.name().toLowerCase(Locale.ROOT), Messages.text("player", ""));
+            plugin.menuSounds().play(player, top.cheesesmp.duelcore.ui.MenuSound.DENY);
         }
     }
 
