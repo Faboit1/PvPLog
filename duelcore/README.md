@@ -17,7 +17,7 @@ everything is in YAML with MiniMessage.
    server once. The default files are written to `plugins/DuelCore/`.
 2. Stand where players should spawn and run `/duelcore sethub`. If the hub world is empty, a small platform is
    generated.
-3. That's it. 15 kits and 7 terrain maps are created on the first start, and players get the hub hotbar
+3. That's it. 15 kits and 6 terrain maps are created on the first start, and players get the hub hotbar
    (Play, Party, Leaderboard, Kit Editor, Profile, Settings, Friends, Spectate).
 
 Optional:
@@ -39,7 +39,7 @@ changed or removed ones are cleared. Chunks for the first `arena.pregenerate-slo
 the background, so new instances paste quickly. Delete the world folder (`world/dimensions/duelcore/arenas`) to start
 over.
 
-The seven default maps are gently rolling natural terrain, each in its own biome (the biome is painted onto the
+The six default maps are gently rolling natural terrain, each in its own biome (the biome is painted onto the
 instance when it's pasted):
 
 | Map | Biome | Look |
@@ -48,14 +48,20 @@ instance when it's pasted):
 | Dunes | desert | sand and sandstone, cacti, dry grass |
 | Tundra | snowy_plains | snow-covered grass, spruce |
 | Mesa | badlands | red sand over terracotta bands |
-| Blossom | cherry_grove | pink petals, cherry trees |
 | Savanna | savanna | grass and coarse dirt, acacias |
 | Pinewood | taiga | podzol, ferns, leaf litter, spruce |
 
-Every map is 180×180 with a bedrock floor, invisible barrier walls and a ceiling. The spawns are 61 blocks
+Every map is 180×180 with about 30 blocks of ground over a bedrock floor, and 44 blocks of air above. A 3-block-thick
+ring of invisible barrier runs around the edge from the bedrock up to a 3-block-thick barrier ceiling, so nobody
+can dig or tower out (only the ring's top surface block is kept, so the edge looks natural). The spawns are 61 blocks
 apart on the middle line, the ground around them is levelled, and trees stay out of the corridor between them.
 The whole map can be mined during a match and is restored between rounds. Any arena without a full bedrock bottom
 layer gets one added automatically (`bedrock-floor: false` in its yml turns that off).
+
+The default maps carry `generator-version` in their yml. When an update changes the built-in maps, every default
+map written by an older version is regenerated on the next start (or `/duelcore reload`), and maps that were
+dropped from the defaults are deleted. Arenas you made yourself are never touched, and neither is a default map
+you saved from the editor or whose `generator-version` line you removed.
 
 **Building your own arena** (in the flat editor world):
 
