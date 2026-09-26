@@ -321,9 +321,11 @@ public final class MatchService implements Runnable {
                 plugin.sidebar().refresh(player);
             };
             if (m.round > 1 && plugin.settings().animRespawnThrow && player.getWorld() == arena.world()) {
-                // later rounds: throw the player back instead of teleporting (see RespawnPull)
+                // later rounds: a respawn animation (throw, look-down, spin) instead of a plain teleport (see
+                // RespawnPull); no walking or jumping from its first tick on
                 player.setFireTicks(0);
                 player.getInventory().clear();
+                freeze(player);
                 m.pulling++;
                 plugin.respawnPull().pull(player, spawn, plugin.settings().animRespawnThrowHeight, audience(m), () -> {
                     m.pulling--;

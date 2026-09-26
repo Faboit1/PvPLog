@@ -5,77 +5,105 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDismountEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
+import top.cheesesmp.duelcore.ui.RespawnMotion.Style;
 
 /**
- * The between-round respawn: the player is thrown back to their spawn along a real ballistic arc.
+ * The between-round respawn animation: the player is brought back to their spawn in one of the configured styles
+ * ({@code animations.respawn-styles}, see {@link RespawnMotion}), and can't move until they stand on it.
  *
- * <p>The player gets one launch velocity, computed from Minecraft's own player physics (gravity 0.08, vertical drag
- * 0.98, horizontal drag 0.91, ground friction on the first tick) so that the client's normal physics carries them
- * along a natural arc onto the spawn ({@link ThrowMath#launch}). Nothing steers them after that; on landing they are
- * put exactly on the spawn, which only corrects the little their own air control moved them.
- *
- * <p>Robustness, because the client runs a round trip behind the server and an anticheat checks every velocity:
  * <ul>
- *   <li>arcs that would clip trees, hills or the barrier ceiling are raised, and become a teleport when no height
- *       clears them;</li>
- *   <li>players whose ping is above {@code animations.respawn-throw-max-ping} are teleported instead of thrown;</li>
- *   <li>the wait for touch-down after the last velocity grows with the player's ping, and landing only counts once the
- *       server has seen the player move (a position that never changed is still on the ground at the start);</li>
- *   <li>a throw the server never sees the player follow (movement lost or ignored, e.g. a teleport the client has not
- *       confirmed yet) is ended after {@code respawn-throw-stall-ticks} plus the ping with a teleport;</li>
- *   <li>a launch faster than {@link #MAX_SPEED} blocks per tick (a very long throw) becomes a teleport;</li>
- *   <li>before the final teleport a zero velocity goes out one tick ahead (entity velocity packets leave with the
- *       end-of-tick entity updates, a teleport immediately), so no velocity packet can reach the client after the
- *       snap and launch it again.</li>
+ *   <li><b>throw</b>: the player rides an invisible seat that the server moves along a real ballistic arc (the path
+ *       a thrown player would fly, {@link ThrowMath#path}) every tick. The client interpolates the seat
+ *       ({@link org.bukkit.entity.Display#setTeleportDuration}), so the flight is smooth, and a passenger has no air
+ *       control: they can look around but not steer. Dismounting (sneak) is cancelled while it runs. At the end they
+ *       get off and are put exactly on the spawn.</li>
+ *   <li><b>look-down</b>: the view tilts smoothly down to the ground, the player is teleported onto the spawn still
+ *       looking down, and the view tilts smoothly back up.</li>
+ *   <li><b>spin</b>: one smooth 360° turn, teleported onto the spawn exactly half way through it.</li>
  * </ul>
+ *
+ * <p>For look-down and spin a player who isn't standing on the ground (the death cam, a jump) is held on a seat
+ * until the teleport; on the ground the caller's freeze (no walking or jumping) is enough. The rotations are sent
+ * once per tick ({@link Player#setRotation}, a pure rotation packet) and every animation ends facing the spawn's
+ * direction.
+ *
+ * <p>Robustness: players whose ping is above {@code animations.respawn-throw-max-ping} are teleported instead;
+ * throws that would clip terrain are raised, and become a teleport when no height clears them or the arc would be
+ * faster than {@link #MAX_SPEED}. The seats are not persistent and carry {@link SpawnRise#KEEP_TAG}, so an arena reset
+ * leaves them alone; every exit (arrival, quit, match end, another teleport, plugin disable) removes them.
  */
 public final class RespawnPull implements Listener {
 
     /** Extra height tried, in order, when the arc would clip terrain. */
     private static final double[] RAISE = {0, 4, 8, 14, 22};
-    /** A server-side position closer than this (squared, blocks) to the start never moved. */
-    private static final double STILL_SQ = 1.0;
     /** Heights above the feet checked for a free path (the player is 1.8 tall). */
     private static final double[] BODY = {0.1, 0.9, 1.7};
     /** Half the player's width, for the corners of the path check. */
     private static final double HALF_WIDTH = 0.3;
-    /** Fastest launch (blocks per tick, horizontally) before a throw becomes a teleport. */
+    /** Fastest flight (blocks per tick, horizontally) before a throw becomes a teleport. */
     static final double MAX_SPEED = 6.0;
+    /**
+     * How far a passenger's feet sit below its seat: a player attaches to a vehicle 0.6 above its feet
+     * ({@code Avatar.DEFAULT_VEHICLE_ATTACHMENT}) and a display has no height, so its riders sit on its origin.
+     */
+    static final double RIDE_OFFSET = 0.6;
+    /**
+     * Ticks the client takes to glide the seat to each new position. Two ticks per one-tick move keeps the camera
+     * smooth even when a packet comes in late.
+     */
+    private static final int SEAT_GLIDE_TICKS = 2;
+    /** A player this close (squared, blocks) to the spawn at the end of a rotation is not teleported again. */
+    private static final double ON_SPAWN_SQ = 0.25 * 0.25;
+    private static final String TAG = "duelcore_pull";
 
-    private enum Stage { FLYING, SNAPPING, DONE }
+    private enum Stage { RUNNING, SNAPPING, DONE }
 
-    /** A planned flight: the launch velocity, how long it takes and where the player is after each tick. */
-    private record Arc(Vector launch, int ticks, double top, double raise, double[][] path) {
+    /** A planned flight: how long it takes, how high it goes and where the player is after each tick. */
+    private record Arc(int ticks, double top, double raise, double[][] path) {
     }
 
     private final DuelCorePlugin plugin;
-    private final Map<UUID, Throw> active = new HashMap<>();
+    private final Map<UUID, Pull> active = new HashMap<>();
 
-    private static final class Throw {
+    private static final class Pull {
         final Player player;
         final Location target;
+        final Style style;
+        final List<Player> viewers;
         final Runnable done;
         @Nullable BukkitTask task;
-        Stage stage = Stage.FLYING;
+        Stage stage = Stage.RUNNING;
+        /** The seat the player rides, while they are held on one. */
+        @Nullable ItemDisplay seat;
+        /** True while the seat is being moved: the player's own teleport that comes with it is expected. */
+        boolean movingSeat;
+        /** The mid-animation teleport onto the spawn has landed. */
+        volatile boolean arrived;
 
-        Throw(Player player, Location target, Runnable done) {
+        Pull(Player player, Location target, Style style, List<Player> viewers, Runnable done) {
             this.player = player;
             this.target = target;
+            this.style = style;
+            this.viewers = viewers;
             this.done = done;
         }
     }
@@ -84,105 +112,114 @@ public final class RespawnPull implements Listener {
         this.plugin = plugin;
     }
 
+    /** True while the player is in a respawn animation (their position is driven by it). */
     public boolean pulling(UUID player) {
         return active.containsKey(player);
+    }
+
+    /**
+     * True while the player rides an animation's seat: the server moves them, so the freeze's move rollback must leave
+     * them alone. A player standing through a look-down or spin is not carried and stays under the rollback, so a
+     * client that ignores the walk speed still can't walk off during the turn.
+     */
+    public boolean carried(UUID player) {
+        Pull t = active.get(player);
+        return t != null && t.seat != null;
     }
 
     public int activeCount() {
         return active.size();
     }
 
-    /**
-     * Throws the player to {@code target}. {@code minHeight} is how far the top of the arc rises above the higher end
-     * point at least (longer throws go higher). Falls back to a teleport for another world, an absurd distance, a
-     * high ping or an arc that can't clear the terrain. {@code done} always runs exactly once, on the main thread,
-     * after the player is standing on the target (or the throw was aborted).
-     */
+    /** Brings the player to {@code target} in a style picked at random from the configured ones. */
     public void pull(Player player, Location target, double minHeight, List<Player> viewers, Runnable done) {
+        pull(player, target, minHeight, viewers, null, done);
+    }
+
+    /**
+     * Brings the player to {@code target} with the respawn animation {@code style} (null: picked at random from
+     * {@code animations.respawn-styles}). {@code minHeight} is how far the top of a throw rises above the higher end
+     * point at least (longer throws go higher). Falls back to a teleport for another world, an absurd distance, a
+     * high ping or a throw that can't clear the terrain. {@code done} always runs exactly once, on the main thread,
+     * after the player is standing on the target (or the animation was aborted).
+     */
+    public void pull(Player player, Location target, double minHeight, List<Player> viewers, @Nullable Style style,
+                     Runnable done) {
         cancel(player.getUniqueId());
-        Throw t = new Throw(player, target.clone(), done);
+        Style s = style != null ? style : plugin.settings().animRespawnStyles.pick(ThreadLocalRandom.current().nextDouble());
+        Pull t = new Pull(player, target.clone(), s, viewers, done);
         active.put(player.getUniqueId(), t);
         if (player.getWorld() != target.getWorld() || player.getLocation().distanceSquared(target) > 300 * 300) {
-            snap(t, false);
+            snap(t);
             return;
         }
-        if (player.getGameMode() == GameMode.SPECTATOR) player.setGameMode(GameMode.SURVIVAL);
+        boolean wasSpectator = player.getGameMode() == GameMode.SPECTATOR;
+        if (wasSpectator) player.setGameMode(GameMode.SURVIVAL);
         player.leaveVehicle();
         player.setFlying(false);
         player.setAllowFlight(false);
         player.setFallDistance(0);
+        player.setVelocity(new Vector());
         int ping = Math.max(0, player.getPing());
         int maxPing = plugin.settings().animRespawnThrowMaxPing;
         if (maxPing > 0 && ping > maxPing) {
-            verbose("[throw] %s teleported instead: ping %d ms is above %d", player.getName(), ping, maxPing);
-            snap(t, false);
+            verbose("[respawn] %s teleported instead of %s: ping %d ms is above %d", player.getName(), s.key, ping, maxPing);
+            snap(t);
             return;
         }
+        switch (s) {
+            case THROW -> startThrow(t, minHeight);
+            case LOOK_DOWN, SPIN -> startTurn(t, wasSpectator || !standing(player));
+        }
+    }
+
+    // ------------------------------------------------------------------ throw
+
+    private void startThrow(Pull t, double minHeight) {
+        Player player = t.player;
+        Location target = t.target;
         Location start = freeSpot(player.getLocation()); // the death cam may end inside terrain
         Arc arc = plan(start, target, minHeight);
         if (arc == null) {
-            verbose("[throw] %s teleported instead: no arc clears the terrain or it would be too fast", player.getName());
-            snap(t, false);
+            verbose("[respawn] %s teleported instead: no arc clears the terrain or it would be too fast", player.getName());
+            snap(t);
             return;
         }
-        if (!start.equals(player.getLocation())) player.teleport(start);
-
-        Vector a = start.toVector();
-        Vector b = target.toVector();
-        int settleMax = ThrowMath.settleTicks(ping);
-        int stallAfter = ThrowMath.stallTicks(plugin.settings().animRespawnThrowStallTicks, ping);
-        verbose("[throw] %s %.0f blocks, top %.1f above start%s, %d ticks, ping %d ms (settle %d, stall %d)",
-            player.getName(), Math.hypot(b.getX() - a.getX(), b.getZ() - a.getZ()), arc.top() - a.getY(),
+        if (!seat(t, start, SEAT_GLIDE_TICKS)) {
+            verbose("[respawn] %s teleported instead: could not seat them for the throw", player.getName());
+            snap(t);
+            return;
+        }
+        verbose("[respawn] %s throw %.0f blocks, top %.1f above start%s, %d ticks, ping %d ms", player.getName(),
+            Math.hypot(target.getX() - start.getX(), target.getZ() - start.getZ()), arc.top() - start.getY(),
             arc.raise() > 0 ? String.format(java.util.Locale.ROOT, " (raised %.0f over terrain)", arc.raise()) : "",
-            arc.ticks(), ping, settleMax, stallAfter);
-        // one launch; from here on the client's own physics flies the arc
-        player.setVelocity(arc.launch());
-        player.setFallDistance(0);
+            arc.ticks(), player.getPing());
         t.task = plugin.getServer().getScheduler().runTaskTimer(plugin, new Runnable() {
             int k;
-            int settle;
 
             @Override
             public void run() {
-                if (t.stage != Stage.FLYING) return;
+                if (t.stage != Stage.RUNNING) return;
                 if (!player.isOnline()) {
                     complete(t);
                     return;
                 }
-                Location now = player.getLocation();
-                if (now.getWorld() != start.getWorld()) { // moved away by something else: leave them there
-                    complete(t);
+                if (!seated(t)) { // the seat went away underneath them: finish on the spawn
+                    snap(t);
                     return;
                 }
-                boolean moved = now.distanceSquared(start) >= STILL_SQ;
                 if (k < arc.ticks()) {
-                    if (!moved && k >= stallAfter) {
-                        // the server hasn't seen them follow the arc at all: stop steering and put them on the spawn
-                        verbose("[throw] %s stalled: no movement after %d ticks (ping %d ms), teleporting",
-                            player.getName(), k, player.getPing());
-                        landingEffects(viewers, target);
-                        snap(t, false);
-                        return;
-                    }
+                    double[] at = arc.path()[k];
+                    moveSeat(t, start.clone().add(at[0], at[1], at[2]));
                     player.setFallDistance(0);
-                    if (k % 2 == 0) {
-                        Location trail = now.add(0, 0.2, 0);
-                        for (Player v : viewers) {
-                            if (v.isOnline() && v.getWorld() == trail.getWorld()) {
-                                v.spawnParticle(Particle.CLOUD, trail, 2, 0.1, 0.1, 0.1, 0.01);
-                            }
-                        }
-                    }
+                    if (k % 2 == 0) trail(t, player.getLocation().add(0, 0.2, 0));
                     k++;
                     return;
                 }
-                // the flight time is up: the client is a round trip behind and finishes the arc on its own momentum;
-                // wait for it to touch down, then stand it exactly on the spawn. A position the server never saw move
-                // is not a landing, even if it is on the ground.
-                boolean grounded = moved && now.subtract(0, 0.08, 0).getBlock().isSolid();
-                if (!grounded && settle++ < settleMax) return;
-                landingEffects(viewers, target);
-                snap(t, false);
+                // let the clients' glide onto the last position finish, then stand them exactly on the spawn
+                if (k++ < arc.ticks() + SEAT_GLIDE_TICKS) return;
+                landingEffects(t.viewers, target);
+                snap(t);
             }
         }, 1L, 1L);
     }
@@ -190,7 +227,7 @@ public final class RespawnPull implements Listener {
     /**
      * The lowest arc (at least {@code minHeight} above the higher end, a bit more for long throws) whose path the
      * player's body fits through, raising it over trees and hills; null when none does (the barrier ceiling) or the
-     * launch would be faster than {@link #MAX_SPEED}.
+     * flight would be faster than {@link #MAX_SPEED}.
      */
     private static @Nullable Arc plan(Location start, Location target, double minHeight) {
         World world = start.getWorld();
@@ -198,16 +235,15 @@ public final class RespawnPull implements Listener {
         double dz = target.getZ() - start.getZ();
         double horizontal = Math.hypot(dx, dz);
         double base = Math.max(start.getY(), target.getY()) + Math.clamp(minHeight + horizontal * 0.2, minHeight, minHeight + 16);
-        boolean onGround = start.clone().subtract(0, 0.08, 0).getBlock().isSolid();
         for (double raise : RAISE) {
             double top = base + raise;
             if (top + 2 >= world.getMaxHeight()) break;
             double bulge = top - (start.getY() + target.getY()) / 2;
             int ticks = ThrowMath.ticks(bulge);
-            double[] v = ThrowMath.launch(dx, target.getY() - start.getY(), dz, ticks, onGround);
+            double[] v = ThrowMath.launch(dx, target.getY() - start.getY(), dz, ticks, false);
             if (Math.hypot(v[0], v[2]) > MAX_SPEED) return null;
-            double[][] path = ThrowMath.path(v, ticks, onGround);
-            if (clear(world, start, target, path)) return new Arc(new Vector(v[0], v[1], v[2]), ticks, top, raise, path);
+            double[][] path = ThrowMath.path(v, ticks, false);
+            if (clear(world, start, target, path)) return new Arc(ticks, top, raise, path);
         }
         return null;
     }
@@ -260,6 +296,194 @@ public final class RespawnPull implements Listener {
         return true;
     }
 
+    // ------------------------------------------------------------------ look-down and spin
+
+    /**
+     * Look-down or spin: rotation only, one step per tick, with the teleport onto the spawn in the middle.
+     * {@code hold} puts a player who isn't standing on the ground on a seat until then, so they can't drift.
+     */
+    private void startTurn(Pull t, boolean hold) {
+        Player player = t.player;
+        Location from = player.getLocation();
+        if (hold && !seat(t, freeSpot(from), 0)) {
+            verbose("[respawn] %s teleported instead: could not hold them for the %s", player.getName(), t.style.key);
+            snap(t);
+            return;
+        }
+        float startYaw = from.getYaw();
+        float startPitch = from.getPitch();
+        float endYaw = t.target.getYaw();
+        float endPitch = t.target.getPitch();
+        verbose("[respawn] %s %s%s, ping %d ms", player.getName(), t.style.key, hold ? " (held on a seat)" : "",
+            player.getPing());
+        t.task = plugin.getServer().getScheduler().runTaskTimer(plugin, new Runnable() {
+            int k;
+            int held;
+
+            @Override
+            public void run() {
+                if (t.stage != Stage.RUNNING) return;
+                if (!player.isOnline()) {
+                    complete(t);
+                    return;
+                }
+                if (t.seat != null && !seated(t)) { // the seat went away underneath them: finish on the spawn
+                    snap(t);
+                    return;
+                }
+                player.setFallDistance(0);
+                k++;
+                if (t.style == Style.SPIN) {
+                    int ticks = RespawnMotion.SPIN_TICKS;
+                    float yaw = RespawnMotion.spinYaw(startYaw, endYaw, k, ticks);
+                    float pitch = RespawnMotion.spinPitch(startPitch, endPitch, k, ticks);
+                    if (k == RespawnMotion.spinTeleportTick(ticks)) jump(t, yaw, pitch);
+                    else player.setRotation(yaw, pitch);
+                    if (k >= ticks) land(t);
+                    return;
+                }
+                // look-down: tilt down (keeping their own yaw), jump, wait for the landing, tilt back up
+                int look = RespawnMotion.LOOK_TICKS;
+                if (k < look) {
+                    player.setRotation(player.getLocation().getYaw(), RespawnMotion.lookDown(startPitch, k, look));
+                    return;
+                }
+                if (k == look) {
+                    jump(t, endYaw, RespawnMotion.DOWN);
+                    return;
+                }
+                if (!t.arrived && held++ < RespawnMotion.LOOK_HOLD_MAX_TICKS) {
+                    k--; // still waiting at the bottom
+                    return;
+                }
+                int up = k - look - 1;
+                player.setRotation(endYaw, RespawnMotion.lookUp(endPitch, up, look));
+                if (up >= look) land(t);
+            }
+        }, 1L, 1L);
+    }
+
+    /** The teleport in the middle of a rotation: off the seat and onto the spawn, facing {@code yaw}/{@code pitch}. */
+    private void jump(Pull t, float yaw, float pitch) {
+        Player player = t.player;
+        removeSeat(t);
+        Location to = t.target.clone();
+        to.setYaw(yaw);
+        to.setPitch(pitch);
+        Location from = player.getLocation();
+        for (Player v : t.viewers) {
+            if (!v.isOnline()) continue;
+            if (v.getWorld() == from.getWorld()) {
+                v.spawnParticle(Particle.REVERSE_PORTAL, from.clone().add(0, 1, 0), 24, 0.25, 0.5, 0.25, 0.02);
+            }
+            if (v.getWorld() == to.getWorld()) {
+                v.playSound(to, Sound.ENTITY_ILLUSIONER_MIRROR_MOVE, 0.45f, 1.3f);
+                v.spawnParticle(Particle.REVERSE_PORTAL, to.clone().add(0, 1, 0), 24, 0.25, 0.5, 0.25, 0.02);
+            }
+        }
+        player.setVelocity(new Vector());
+        player.setFallDistance(0);
+        player.teleportAsync(to).whenComplete((ok, err) -> t.arrived = true);
+    }
+
+    /** End of a rotation: facing the spawn's direction, and on the spawn (teleported there if something moved them). */
+    private void land(Pull t) {
+        if (t.stage != Stage.RUNNING) return;
+        Player player = t.player;
+        player.setRotation(t.target.getYaw(), t.target.getPitch());
+        if (player.getWorld() == t.target.getWorld() && player.getLocation().distanceSquared(t.target) <= ON_SPAWN_SQ) {
+            complete(t);
+        } else {
+            snap(t);
+        }
+    }
+
+    // ------------------------------------------------------------------ seat
+
+    /**
+     * Puts the player on an invisible seat so their feet are at {@code feet}: a passenger can't walk, jump or steer.
+     * False when the seat could not be spawned or mounted (another plugin cancelled it).
+     */
+    private boolean seat(Pull t, Location feet, int glide) {
+        Location at = feet.clone().add(0, RIDE_OFFSET, 0);
+        at.setYaw(0);
+        at.setPitch(0);
+        ItemDisplay seat = at.getWorld().spawn(at, ItemDisplay.class, d -> {
+            d.setPersistent(false);
+            d.addScoreboardTag(SpawnRise.KEEP_TAG);
+            d.addScoreboardTag(TAG);
+            d.setTeleportDuration(glide);
+        });
+        t.seat = seat;
+        boolean mounted;
+        t.movingSeat = true; // mounting re-sends the player's position: not a teleport from something else
+        try {
+            mounted = seat.isValid() && seat.addPassenger(t.player);
+        } finally {
+            t.movingSeat = false;
+        }
+        if (!mounted) {
+            removeSeat(t);
+            return false;
+        }
+        return true;
+    }
+
+    /** True while the player still rides their seat. */
+    private static boolean seated(Pull t) {
+        ItemDisplay seat = t.seat;
+        return seat != null && seat.isValid() && t.player.getVehicle() == seat;
+    }
+
+    /** Moves the seat (and the player on it) so the player's feet are at {@code feet}. */
+    private static void moveSeat(Pull t, Location feet) {
+        ItemDisplay seat = t.seat;
+        if (seat == null) return;
+        Location at = feet.clone().add(0, RIDE_OFFSET, 0);
+        at.setYaw(0);
+        at.setPitch(0);
+        t.movingSeat = true;
+        try {
+            seat.teleport(at); // riders come along (Paper 26.2 always carries passengers)
+        } finally {
+            t.movingSeat = false;
+        }
+    }
+
+    /** Takes the player off the seat and removes it (the dismount is allowed: the seat is forgotten first). */
+    private static void removeSeat(Pull t) {
+        ItemDisplay seat = t.seat;
+        if (seat == null) return;
+        t.seat = null;
+        if (seat.isValid()) {
+            seat.removePassenger(t.player);
+            seat.remove();
+        }
+    }
+
+    // ------------------------------------------------------------------ effects
+
+    private static void trail(Pull t, Location at) {
+        for (Player v : t.viewers) {
+            if (v.isOnline() && v.getWorld() == at.getWorld()) {
+                v.spawnParticle(Particle.CLOUD, at, 2, 0.1, 0.1, 0.1, 0.01);
+            }
+        }
+    }
+
+    private static void landingEffects(List<Player> viewers, Location target) {
+        for (Player v : viewers) {
+            if (!v.isOnline() || v.getWorld() != target.getWorld()) continue;
+            v.playSound(target, Sound.ENTITY_PLAYER_BIG_FALL, 0.8f, 0.9f);
+            v.spawnParticle(Particle.CLOUD, target.clone().add(0, 0.1, 0), 8, 0.3, 0.05, 0.3, 0.02);
+        }
+    }
+
+    /** True when the player stands on a solid block (checked on the server, not the client's own claim). */
+    private static boolean standing(Player player) {
+        return player.getLocation().subtract(0, 0.08, 0).getBlock().isSolid();
+    }
+
     /** The nearest spot at or above {@code loc} where a player fits (feet and head not in solid blocks). */
     private static Location freeSpot(Location loc) {
         Location l = loc.clone();
@@ -271,23 +495,15 @@ public final class RespawnPull implements Listener {
         return loc;
     }
 
-    private static void landingEffects(List<Player> viewers, Location target) {
-        for (Player v : viewers) {
-            if (!v.isOnline() || v.getWorld() != target.getWorld()) continue;
-            v.playSound(target, Sound.ENTITY_PLAYER_BIG_FALL, 0.8f, 0.9f);
-            v.spawnParticle(Particle.CLOUD, target.clone().add(0, 0.1, 0), 8, 0.3, 0.05, 0.3, 0.02);
-        }
-    }
+    // ------------------------------------------------------------------ ending
 
-    /**
-     * Ends the flight on the target: steering stops, a zero velocity goes out, and the teleport follows on the next
-     * tick so it reaches the client after every velocity packet ({@code now}: teleport right away).
-     */
-    private void snap(Throw t, boolean now) {
-        if (t.stage != Stage.FLYING) return;
+    /** Ends the animation on the target: off the seat and teleported onto it; {@code done} runs once it landed. */
+    private void snap(Pull t) {
+        if (t.stage != Stage.RUNNING) return;
         t.stage = Stage.SNAPPING;
         if (t.task != null) t.task.cancel();
         t.task = null;
+        removeSeat(t);
         Player p = t.player;
         if (!p.isOnline()) {
             complete(t);
@@ -295,38 +511,20 @@ public final class RespawnPull implements Listener {
         }
         p.setVelocity(new Vector());
         p.setFallDistance(0);
-        boolean sameWorld = p.getWorld() == t.target.getWorld();
-        if (plugin.settings().verbose && sameWorld) {
-            plugin.getLogger().info(String.format(java.util.Locale.ROOT, "[throw] %s landed %.2f blocks from the spawn",
+        if (plugin.settings().verbose && p.getWorld() == t.target.getWorld()) {
+            plugin.getLogger().info(String.format(java.util.Locale.ROOT, "[respawn] %s ended %.2f blocks from the spawn",
                 p.getName(), p.getLocation().distance(t.target)));
         }
-        if (sameWorld && p.getLocation().distanceSquared(t.target) <= 0.25) {
-            complete(t);
-            return;
-        }
-        if (now) teleport(t);
-        else t.task = plugin.getServer().getScheduler().runTaskLater(plugin, () -> teleport(t), 1L);
+        p.teleportAsync(t.target).whenComplete((ok, err) -> complete(t));
     }
 
-    private void teleport(Throw t) {
-        if (t.stage != Stage.SNAPPING) return;
-        t.stage = Stage.DONE;
-        t.task = null;
-        active.remove(t.player.getUniqueId(), t);
-        if (!t.player.isOnline()) {
-            t.done.run();
-            return;
-        }
-        t.player.setFallDistance(0);
-        t.player.teleportAsync(t.target).whenComplete((ok, err) -> t.done.run());
-    }
-
-    /** Ends a throw where the player is (no velocity, no teleport) and runs its callback. */
-    private void complete(Throw t) {
+    /** Ends the animation where the player is (no teleport) and runs its callback, once. */
+    private void complete(Pull t) {
         if (t.stage == Stage.DONE) return;
         t.stage = Stage.DONE;
         if (t.task != null) t.task.cancel();
         t.task = null;
+        removeSeat(t);
         active.remove(t.player.getUniqueId(), t);
         t.done.run();
     }
@@ -335,26 +533,42 @@ public final class RespawnPull implements Listener {
         if (plugin.settings().verbose) plugin.getLogger().info(String.format(java.util.Locale.ROOT, format, args));
     }
 
-    /** Ends a throw early; the player still ends up on the target. */
+    /** Ends an animation early; the player still ends up on the target. */
     public void cancel(UUID player) {
-        Throw t = active.get(player);
-        if (t == null) return;
-        if (t.stage == Stage.FLYING) snap(t, true);
-        else if (t.stage == Stage.SNAPPING) {
-            if (t.task != null) t.task.cancel();
-            teleport(t);
-        }
+        Pull t = active.get(player);
+        if (t != null) snap(t);
     }
 
-    /** Ends a throw without moving the player (the match ended mid-flight). */
+    /** Ends an animation without moving the player (the match ended mid-flight). */
     public void abort(UUID player) {
-        Throw t = active.get(player);
+        Pull t = active.get(player);
         if (t != null) complete(t);
     }
 
     public void cancelAll() {
-        for (Throw t : new ArrayList<>(active.values())) complete(t);
+        for (Pull t : new ArrayList<>(active.values())) complete(t);
         active.clear();
+    }
+
+    /** Sneaking off the seat is not allowed while it carries the player. */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onDismount(EntityDismountEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        Pull t = active.get(player.getUniqueId());
+        if (t != null && t.seat != null && event.getDismounted() == t.seat && event.isCancellable()) {
+            event.setCancelled(true);
+        }
+    }
+
+    /**
+     * Something else teleported a seated player (a command, the match sending them away): the animation gives way and
+     * ends where they go, without its own teleport.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onTeleport(PlayerTeleportEvent event) {
+        Pull t = active.get(event.getPlayer().getUniqueId());
+        if (t == null || t.seat == null || t.movingSeat) return;
+        complete(t);
     }
 
     @EventHandler(priority = EventPriority.LOWEST)

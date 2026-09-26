@@ -209,7 +209,7 @@ public final class MatchListener implements Listener {
         Player player = event.getPlayer();
         Match m = match(player);
         if (m == null || !plugin.matches().isFrozen(m) || m.arena() == null) return;
-        if (plugin.respawnPull().pulling(player.getUniqueId())) return; // being thrown back to the spawn
+        if (plugin.respawnPull().carried(player.getUniqueId())) return; // on a respawn animation's seat (moved by it)
         if (plugin.spawnRise().rising(player.getUniqueId())) return; // coming up out of the ground at the spawn
         Location from = event.getFrom();
         Location to = event.getTo();
