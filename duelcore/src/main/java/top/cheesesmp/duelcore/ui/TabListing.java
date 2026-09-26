@@ -12,13 +12,16 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.match.Match;
+import top.cheesesmp.duelcore.profile.PlayerProfile;
+import top.cheesesmp.duelcore.profile.Setting;
 
 /**
  * Who is listed in whose tab list, and the tab status icons.
  *
  * <p>Someone in a match (fighting or spectating) only sees the players of that match in the tab list: the fighters
  * and its spectators (who look like spectator-mode entries, see {@link TagService}). Everyone else sees everyone.
- * Players are only hidden from the list, not from the world. The status shown next to a name in the tab list (in a
+ * Fighters who turned off {@link Setting#TAB_SPECTATORS} don't see their match's spectators listed either. Players
+ * are only hidden from the list, not from the world. The status shown next to a name in the tab list (in a
  * match, queueing, nothing in the lobby) is refreshed from here whenever it changes. Runs every 10 ticks.
  */
 public final class TabListing implements Runnable, Listener {
@@ -57,9 +60,11 @@ public final class TabListing implements Runnable, Listener {
         }
         for (Player viewer : online) {
             Match vc = contexts.get(viewer.getUniqueId());
+            boolean hideSpectators = vc != null && vc == plugin.matches().match(viewer.getUniqueId()) && !wantsSpectators(viewer);
             for (Player other : online) {
                 if (other == viewer) continue;
                 boolean listed = vc == null || Objects.equals(vc, contexts.get(other.getUniqueId()));
+                if (listed && hideSpectators && plugin.spectate().spectating(other.getUniqueId()) == vc) listed = false;
                 if (listed != viewer.isListed(other)) {
                     if (listed) viewer.listPlayer(other);
                     else viewer.unlistPlayer(other);
@@ -70,6 +75,12 @@ public final class TabListing implements Runnable, Listener {
             Status s = status(p);
             if (shown.put(p.getUniqueId(), s) != s) plugin.tags().update(p);
         }
+    }
+
+    /** A fighter's {@link Setting#TAB_SPECTATORS}. */
+    private boolean wantsSpectators(Player viewer) {
+        PlayerProfile profile = plugin.profiles().get(viewer);
+        return profile == null || profile.setting(Setting.TAB_SPECTATORS);
     }
 
     @EventHandler

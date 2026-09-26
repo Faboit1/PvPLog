@@ -194,7 +194,9 @@ public final class QueueDialog {
         stopAnimation(player);
         UUID uuid = player.getUniqueId();
         Map<String, Reveal> reveals = new LinkedHashMap<>();
-        if (plugin.settings().animQueueProgress && plugin.matches().match(uuid) == null) {
+        PlayerProfile own = plugin.profiles().get(player);
+        boolean wanted = own == null || own.setting(Setting.PROGRESS_REVEAL); // the player's "Rank-up animations"
+        if (plugin.settings().animQueueProgress && wanted && plugin.matches().match(uuid) == null) {
             Set<String> favorites = Objects.requireNonNullElse(plugin.queue().prefs().favorites(uuid), Set.of());
             for (Kit kit : kits(tab, favorites)) {
                 Reveal r = plugin.progress().pendingReveal(uuid, kit.id());

@@ -60,6 +60,8 @@ public final class MatchService implements Runnable {
 
     /** Minimum ticks between "match found" and teleporting, so the totem pop plays in the hub. */
     private static final int FOUND_DELAY_TICKS = 20;
+    /** Ticks after the match end before the auto-GG lines (after the results title and chat summary). */
+    private static final long AUTO_GG_DELAY = 20L;
     private static final int ARENA_TIMEOUT_TICKS = 20 * 30;
 
     private final DuelCorePlugin plugin;
@@ -173,8 +175,8 @@ public final class MatchService implements Runnable {
             player.getInventory().clear();
             player.setLevel(0); // the hub XP bar (matches never show it)
             player.setExp(0f);
-            if (plugin.settings().totemPop) TotemPop.play(plugin, player, kit.icon());
-            MatchSounds.play(plugin, player, foundSounds, 1);
+            if (plugin.settings().totemPop && profileWants(player, Setting.MATCH_FOUND_POP)) TotemPop.play(plugin, player, kit.icon());
+            MatchSounds.playMatch(plugin, player, foundSounds, 1);
             Participant opp = match.opponentOf(p);
             PlayerProfile oppProfile = opp == null ? null : plugin.profiles().get(opp.uuid());
             Component subtitle = plugin.messages().get(match.ffa() ? "party.match.found-ffa" : "match.found-subtitle",
@@ -372,7 +374,7 @@ public final class MatchService implements Runnable {
                 player.showTitle(Title.title(plugin.messages().get("match.fight"), Component.empty(),
                     Title.Times.times(Duration.ZERO, Duration.ofMillis(600), Duration.ofMillis(250))));
             }
-            MatchSounds.play(plugin, player, fightSounds, 0);
+            MatchSounds.playMatch(plugin, player, fightSounds, 0);
         }
     }
 
@@ -821,6 +823,7 @@ public final class MatchService implements Runnable {
     private void celebrate(Match m) {
         int winner = m.winnerTeam();
         List<Player> audience = audience(m);
+        autoGg(m, audience);
         for (Participant p : m.participants()) {
             Player player = Bukkit.getPlayer(p.uuid());
             if (player == null || p.left() || winner < 0) continue;
@@ -836,6 +839,25 @@ public final class MatchService implements Runnable {
             if (sp != null) plugin.animations().fx().spectatorResult(sp, winner < 0 ? null : m.teamName(winner), m.score(0),
                 m.score(1), m.ffa());
         }
+    }
+
+    /**
+     * Fighters with {@link Setting#AUTO_GG} say "gg" to the match (its fighters and spectators, nobody else) a moment
+     * after the results: messages.yml {@code match.auto-gg}.
+     */
+    private void autoGg(Match m, List<Player> audience) {
+        List<String> names = new ArrayList<>();
+        for (Participant p : m.participants()) {
+            Player player = Bukkit.getPlayer(p.uuid());
+            if (player != null && !p.left() && profileWants(player, Setting.AUTO_GG)) names.add(player.getName());
+        }
+        if (names.isEmpty()) return;
+        List<Player> to = List.copyOf(audience);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            for (String name : names) {
+                for (Player v : to) if (v.isOnline()) plugin.messages().send(v, "match.auto-gg", Messages.text("player", name));
+            }
+        }, AUTO_GG_DELAY);
     }
 
     private void applyRatings(Match m, int winnerTeam, List<ProfileService.RatingWrite> writes) {
@@ -986,10 +1008,16 @@ public final class MatchService implements Runnable {
         return list;
     }
 
+    /** A plain match sound (countdown tick, round result), unless the player turned match sounds off. */
     private void sound(Player p, Sound sound, float pitch) {
-        PlayerProfile profile = plugin.profiles().get(p);
-        if (profile != null && !profile.setting(Setting.SOUNDS)) return;
+        if (!MatchSounds.matchSounds(plugin, p)) return;
         p.playSound(p.getLocation(), sound, 0.7f, pitch);
+    }
+
+    /** A player's setting (its default for a player without a loaded profile). */
+    private boolean profileWants(Player player, Setting setting) {
+        PlayerProfile profile = plugin.profiles().get(player);
+        return profile == null ? setting.defaultValue() : profile.setting(setting);
     }
 
     public @Nullable Tier tierOf(Participant p, boolean after) {

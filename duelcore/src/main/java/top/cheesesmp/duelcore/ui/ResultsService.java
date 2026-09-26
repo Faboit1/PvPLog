@@ -16,11 +16,14 @@ import top.cheesesmp.duelcore.config.Messages;
 import top.cheesesmp.duelcore.kit.Kit;
 import top.cheesesmp.duelcore.match.Match;
 import top.cheesesmp.duelcore.match.Participant;
+import top.cheesesmp.duelcore.profile.PlayerProfile;
+import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.queue.QueueMode;
 
 /**
  * Post-match presentation: an instant title + chat summary, then a results dialog once the player is back in
- * the hub (a dialog opened in the arena would be closed by the world change).
+ * the hub (a dialog opened in the arena would be closed by the world change). Players who turned off
+ * {@link Setting#RESULTS_SCREEN} only get the title and the chat summary.
  */
 public final class ResultsService implements org.bukkit.event.Listener {
 
@@ -81,6 +84,8 @@ public final class ResultsService implements org.bukkit.event.Listener {
     public void showPending(Player player) {
         Pending p = pending.remove(player.getUniqueId());
         if (p == null || System.currentTimeMillis() - p.at() > 60_000) return;
+        PlayerProfile profile = plugin.profiles().get(player);
+        if (profile != null && !profile.setting(Setting.RESULTS_SCREEN)) return;
         plugin.dialogs().results(player, p.lines(), p.title(), p.kit(), p.requeue());
     }
 

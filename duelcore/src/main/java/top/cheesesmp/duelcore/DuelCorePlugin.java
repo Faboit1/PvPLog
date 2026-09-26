@@ -159,6 +159,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         clicks = new ClickRouter(this);
         pm.registerEvents(clicks, this);
         clicks.register("queue", dialogs.queueMenu()::click);
+        clicks.register("settings", dialogs.settingsMenu()::click);
         pm.registerEvents(hints, this);
         pm.registerEvents(results, this);
         pm.registerEvents(respawnPull, this);

@@ -73,7 +73,7 @@ class FriendMessagesTest {
             if (!messages.containsKey(key)) missing.add(key);
         }
         assertTrue(missing.isEmpty(), "missing in messages.yml: " + missing);
-        for (String key : List.of("dialog.settings.friend-alerts", "dialog.settings.party-invites")) {
+        for (String key : List.of("dialog.settings.items.friend-alerts.name", "dialog.settings.items.party-invites.name")) {
             assertTrue(messages.containsKey(key), key);
         }
     }

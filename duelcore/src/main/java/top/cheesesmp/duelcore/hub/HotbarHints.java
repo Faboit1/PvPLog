@@ -17,6 +17,8 @@ import org.bukkit.inventory.ItemStack;
 import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.config.GuiConfig;
+import top.cheesesmp.duelcore.profile.PlayerProfile;
+import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.ui.anim.Channel;
 
 /**
@@ -25,6 +27,7 @@ import top.cheesesmp.duelcore.ui.anim.Channel;
  * The hint is also shown when items are given (join, leaving a match, starting to spectate). While queued the
  * "searching" action bar has priority, except for a moment right after switching items. Players in a match are never
  * touched, and neither is a running action bar animation ({@code plugin.anim().busy(player, Channel.ACTION_BAR)}).
+ * Players who turned off {@link Setting#HOTBAR_HINTS} get none (a hint on screen is cleared like an empty hand's).
  */
 public final class HotbarHints implements Listener, Runnable {
 
@@ -122,6 +125,8 @@ public final class HotbarHints implements Listener, Runnable {
     }
 
     private @Nullable Component hint(Player player, @Nullable ItemStack stack) {
+        PlayerProfile profile = plugin.profiles().get(player);
+        if (profile != null && !profile.setting(Setting.HOTBAR_HINTS)) return null;
         String action = plugin.hub().action(stack);
         if (action == null) return null;
         GuiConfig.HotbarItem def = plugin.gui().item(action);
@@ -131,7 +136,7 @@ public final class HotbarHints implements Listener, Runnable {
 
     /** True when the queue shows its searching action bar to this player. */
     private boolean searching(Player player) {
-        return plugin.settings().queueSearchingActionBar && plugin.queue().isQueued(player.getUniqueId());
+        return plugin.queue().searching().showsBar(player);
     }
 
     /** True while an action bar animation runs for this player (see ui/anim/AnimationService). */
