@@ -121,7 +121,7 @@ queue-menu:
   # on the client, which scrolls back to the top, so on longer tabs (they need scrolling on small screens or a big
   # GUI scale) the time is shown in whole minutes (<1m, 2m) and the menu is only sent again when a minute or a count
   # changes. 0 = always minutes, 1000 = always the clock.
-  clock-max-kits: 5
+  clock-max-kits: 1000
   # Tab icons: an atlas sprite ("items:item/diamond_sword", "blocks:block/obsidian", optional #rrggbb tint)
   # or "head" for the viewer's own head.
   tab-icons:
