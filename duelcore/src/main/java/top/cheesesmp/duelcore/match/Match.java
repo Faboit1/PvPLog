@@ -28,7 +28,9 @@ public final class Match {
         /** A ranked player's connection dropped and a disconnect save voided the match (no Elo change). */
         CONNECTION_LOST(7),
         /** A player used /leave before the first fight started: no result, nothing is saved. */
-        LEFT_BEFORE_START(8);
+        LEFT_BEFORE_START(8),
+        /** Both players agreed to a draw (/draw): no Elo change for anyone. */
+        AGREED_DRAW(9);
 
         private final int id;
 
@@ -72,6 +74,17 @@ public final class Match {
     /** Fighters still being carried back to their spawn (respawn animation). */
     int pulling;
     boolean persisted;
+    /**
+     * 1v1 trade window: the player who just died ({@code tradeVictim}) may still land a lethal hit on their killer
+     * until {@code tradeUntil} (ms, their ping). Such a hit, or the killer dying too, draws the round.
+     */
+    @Nullable UUID tradeVictim;
+    long tradeUntil;
+    /** Rounds drawn by a double kill so far (see match.trade-draws-max). */
+    int tradeDraws;
+    /** A pending /draw offer: who offered and when (ms). */
+    @Nullable UUID drawOffer;
+    long drawOfferAt;
     @Nullable String arenaName;
 
     public Match(int id, Kit kit, boolean ranked, Origin origin, List<Participant> participants) {

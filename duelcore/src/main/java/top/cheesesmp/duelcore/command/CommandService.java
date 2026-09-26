@@ -50,6 +50,7 @@ public final class CommandService {
     public void register(Commands commands) {
         commands.register(queue(), "Pick a kit and join a queue", List.of("play", "q"));
         commands.register(leave(), "Leave the queue, stop spectating or forfeit", List.of("forfeit"));
+        commands.register(draw(), "Offer your opponent a draw, or accept theirs", List.of());
         commands.register(profile(), "Show a duel profile", List.of("stats"));
         commands.register(leaderboard(), "Show leaderboards", List.of("lb", "top"));
         commands.register(spectate(), "Watch a live match", List.of("spec"));
@@ -244,6 +245,22 @@ public final class CommandService {
                 plugin.queue().leave(p, true);
                 return Command.SINGLE_SUCCESS;
             }).build();
+    }
+
+    // ------------------------------------------------------------------ /draw
+
+    private LiteralCommandNode<CommandSourceStack> draw() {
+        return Commands.literal("draw").requires(perm("duelcore.draw"))
+            .executes(ctx -> {
+                Player p = player(ctx);
+                if (p != null) plugin.matches().draw(p);
+                return Command.SINGLE_SUCCESS;
+            })
+            .then(Commands.literal("deny").executes(ctx -> {
+                Player p = player(ctx);
+                if (p != null) plugin.matches().denyDraw(p);
+                return Command.SINGLE_SUCCESS;
+            })).build();
     }
 
     // ------------------------------------------------------------------ /profile

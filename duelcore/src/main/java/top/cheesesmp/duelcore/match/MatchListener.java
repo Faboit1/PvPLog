@@ -132,6 +132,10 @@ public final class MatchListener implements Listener {
         }
         Participant ap = am.participant(attacker.getUniqueId());
         Participant vp = am.participant(victim.getUniqueId());
+        if (ap != null && vp != null && !ap.alive && ap.team() != vp.team()) {
+            // just died: a lethal hit still on its way within their ping trades the kill (the hit itself is cancelled)
+            plugin.matches().tradeHit(am, attacker, victim, event.getFinalDamage());
+        }
         if (ap == null || vp == null || !ap.alive || (ap != vp && ap.team() == vp.team())) {
             event.setCancelled(true);
         }
@@ -464,7 +468,7 @@ public final class MatchListener implements Listener {
         String label = event.getMessage().substring(1).split(" ", 2)[0].toLowerCase(Locale.ROOT);
         int colon = label.indexOf(':');
         if (colon >= 0) label = label.substring(colon + 1);
-        if (label.equals("leave") || label.equals("spectate") || plugin.settings().allowedCommands.contains(label)) return;
+        if (label.equals("leave") || label.equals("draw") || label.equals("spectate") || plugin.settings().allowedCommands.contains(label)) return;
         if (label.equals("pc") || label.equals("party") || label.equals("p")) return; // party chat and menu work anywhere
         event.setCancelled(true);
         plugin.messages().send(player, "match.command-blocked");

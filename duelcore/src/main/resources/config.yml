@@ -120,8 +120,24 @@ match:
   # isn't queued again by Keep Queuing. Allowed this many times in a row (playing a fight resets it); after that
   # /leave is a normal forfeit. 0 = off.
   leave-before-start-max: 2
+  # /draw in a 1v1: offers the opponent a draw (they accept with /draw or the chat button). An agreed draw ends the
+  # match with no winner and nobody's Elo changes. Offers expire after offer-seconds; a player can offer again after
+  # offer-cooldown-seconds.
+  draw:
+    enabled: true
+    offer-seconds: 30
+    offer-cooldown-seconds: 30
+  # Trades (1v1): when a player dies, hits they already sent still count for as long as their ping (capped at
+  # window-max-ms, plus one tick). If such a hit would have killed their opponent (armour, absorption and a held
+  # totem counted), both died at the same time and the round is a draw with no point for anyone. Both dying on the
+  # same tick counts the same way. After draws-max such draws in a match, the next double kill gives the round to a
+  # random side. window-max-ms: 0 = off (the first kill always wins the round). Keep it low: a high cap lets
+  # laggy players trade kills they didn't earn.
+  trade:
+    window-max-ms: 250
+    draws-max: 2
   # Commands usable during a match (everything else is blocked). Admins with duelcore.bypass.commands ignore this.
-  allowed-commands: [leave, forfeit, msg, tell, w, r, reply, profile, ping]
+  allowed-commands: [leave, forfeit, draw, msg, tell, w, r, reply, profile, ping]
   # Play the totem animation with the kit's item when a match is found (silent: animations.match-found-sounds play).
   totem-pop: true
   # Out of bounds: a player this many blocks below the arena floor counts as dead.

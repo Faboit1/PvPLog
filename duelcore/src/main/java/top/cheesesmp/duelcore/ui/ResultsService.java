@@ -116,6 +116,8 @@ public final class ResultsService implements org.bukkit.event.Listener {
             lines.add(plugin.messages().get("results.forfeit"));
         } else if (m.endReason() == Match.EndReason.CONNECTION_LOST) {
             lines.add(plugin.messages().get("results.connection-lost"));
+        } else if (m.endReason() == Match.EndReason.AGREED_DRAW) {
+            lines.add(plugin.messages().get("results.agreed-draw"));
         }
         lines.add(Component.empty());
         lines.add(plugin.messages().get("results.stat-hits", Messages.num("you", self.hits()),
