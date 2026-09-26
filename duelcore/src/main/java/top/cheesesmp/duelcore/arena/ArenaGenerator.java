@@ -3,15 +3,23 @@ package top.cheesesmp.duelcore.arena;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.SplittableRandom;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Built-in arena maps so a fresh install works immediately: patches of natural, mostly flat terrain, each in its
  * own biome (the biome is applied to the instance when it is pasted). They are plain snapshots, written to
  * {@code arenas/<name>.dca} + {@code .yml} on first start and editable afterwards like any other arena.
  *
- * <p>Every map is {@value #SIZE}×{@value #SIZE} blocks with a bedrock floor, fenced by invisible barrier walls and a
- * barrier ceiling. Hills get gentler towards the middle, the ground around both spawns is levelled, and trees stay out
- * of the corridor between the spawns so the fighting area stays open.
+ * <p>Every map is {@value #SIZE}×{@value #SIZE} blocks with a bedrock floor about {@value #GROUND} blocks under the
+ * surface, fenced by a {@value #RING}-block-thick ring of invisible barrier from just above the bedrock up to a
+ * {@value #RING}-block-thick barrier ceiling (only the ring's top surface block and its plant are left, so the edge
+ * still looks natural; digging into it hits barrier; the outermost column is solid barrier so mining those surface
+ * blocks never opens a way out). Hills get gentler towards the middle, the ground around both
+ * spawns is levelled, and trees stay out of the ring and the corridor between the spawns so the fighting area stays
+ * open.
+ *
+ * <p>Maps written to disk carry {@link #VERSION} ({@code generator-version} in their yml); a change to the generated
+ * maps bumps it, and {@link ArenaManager#loadTemplates()} then rewrites the older copies on existing servers.
  */
 public final class ArenaGenerator {
 
@@ -19,10 +27,25 @@ public final class ArenaGenerator {
                             RelPos spawn1, RelPos spawn2, int buildHeight, String biome) {
     }
 
+    /**
+     * Version of the generated maps. Bump it whenever the output changes: existing servers regenerate every built-in
+     * map written by an older version (see {@link ArenaManager#loadTemplates()}).
+     * <ul>
+     *   <li>1: the first 180×56×180 maps, ~10 blocks of ground, 1-thick fence, with Blossom (cherry grove).</li>
+     *   <li>2: ~30 blocks of ground, 3-thick barrier ring and ceiling, no Blossom.</li>
+     * </ul>
+     */
+    public static final int VERSION = 2;
+    /** Built-in maps that older versions generated and this one no longer does: removed on existing servers. */
+    public static final List<String> REMOVED = List.of("blossom");
+
     static final int SIZE = 180;
-    static final int HEIGHT = 56;
-    /** Mean surface height inside the snapshot. */
-    static final int GROUND = 10;
+    /** Mean surface height inside the snapshot (the bedrock floor is at y = 0). */
+    static final int GROUND = 30;
+    /** Thickness of the barrier ring around the map and of the barrier ceiling. */
+    static final int RING = 3;
+    /** Room for {@value #GROUND} blocks of ground and the same 44 blocks of air above the mean surface as version 1. */
+    static final int HEIGHT = GROUND + 45 + RING;
     /** The spawns sit on the middle line, {@code SPAWN_Z2 - SPAWN_Z1} (61) blocks apart. */
     static final int SPAWN_Z1 = 59;
     static final int SPAWN_Z2 = SIZE - 1 - SPAWN_Z1;
@@ -35,7 +58,7 @@ public final class ArenaGenerator {
     private static final String AIR = "minecraft:air";
     private static final String BARRIER = "minecraft:barrier";
 
-    private enum Tree { OAK, BIRCH, SPRUCE, CHERRY, ACACIA, CACTUS }
+    private enum Tree { OAK, BIRCH, SPRUCE, ACACIA, CACTUS }
 
     /** Block for a terrain column: {@code depth} 0 is the surface, 1 the block below it, and so on. */
     @FunctionalInterface
@@ -56,10 +79,21 @@ public final class ArenaGenerator {
     private ArenaGenerator() {
     }
 
+    /** Names of the maps {@link #defaults()} generates. */
+    public static List<String> names() {
+        return styles().stream().map(Style::name).toList();
+    }
+
     public static List<Generated> defaults() {
         List<Generated> list = new ArrayList<>();
         for (Style s : styles()) list.add(generate(s));
         return list;
+    }
+
+    /** One built-in map by name, or null when there is no such map. */
+    public static @Nullable Generated generate(String name) {
+        for (Style s : styles()) if (s.name().equals(name)) return generate(s);
+        return null;
     }
 
     private static List<Style> styles() {
@@ -92,16 +126,6 @@ public final class ArenaGenerator {
             new Style("mesa", "Mesa", "minecraft:badlands", 41, 3.5,
                 (x, y, z, d, patch, r) -> d <= 1 ? "minecraft:red_sand" : bands[Math.floorMod(y, bands.length)],
                 (surface, patch, r) -> r.nextDouble() < 0.025 ? "minecraft:dead_bush" : null, List.of(Tree.CACTUS), 6),
-            new Style("blossom", "Blossom", "minecraft:cherry_grove", 53, 3.0,
-                (x, y, z, d, patch, r) -> d == 0 ? "minecraft:grass_block[snowy=false]" : d <= 3 ? "minecraft:dirt" : stone(r),
-                (surface, patch, r) -> {
-                    double v = r.nextDouble();
-                    if (v < 0.18) {
-                        return "minecraft:pink_petals[facing=" + facings[r.nextInt(4)] + ",flower_amount=" + (1 + r.nextInt(4)) + "]";
-                    }
-                    if (v < 0.24) return "minecraft:short_grass";
-                    return null;
-                }, List.of(Tree.CHERRY), 8),
             new Style("savanna", "Savanna", "minecraft:savanna", 67, 2.5,
                 (x, y, z, d, patch, r) -> d == 0 ? (patch > 0.35 ? "minecraft:coarse_dirt" : "minecraft:grass_block[snowy=false]")
                     : d <= 3 ? "minecraft:dirt" : stone(r),
@@ -139,21 +163,31 @@ public final class ArenaGenerator {
                 for (int y = 1; y <= top; y++) set(grid, x, y, z, s.column().block(x, y, z, top - y, patch, r));
             }
         }
-        // decorations first, trees overwrite them
-        for (int x = 1; x < SIZE - 1; x++) {
-            for (int z = 1; z < SIZE - 1; z++) {
+        // decorations first, trees overwrite them (the ring keeps its plants too, so the edge looks natural)
+        for (int x = 0; x < SIZE; x++) {
+            for (int z = 0; z < SIZE; z++) {
                 int top = h[x][z];
                 String deco = s.deco().block(get(grid, x, top, z), noise(s.seed() + 99, x / 7.0, z / 7.0), r);
                 if (deco != null) set(grid, x, top + 1, z, deco);
             }
         }
         plantTrees(s, grid, h, r);
-        // invisible fence: walls on the border columns and a ceiling
+        // invisible fence: the ring is barrier from the bedrock up, except its surface block and plant, then a ceiling.
+        // The outermost column keeps nothing: mining the kept surface blocks (and plants) of the ring must not open a
+        // tunnel (crawling, or two high where plants stood) out of the map.
         for (int x = 0; x < SIZE; x++) {
             for (int z = 0; z < SIZE; z++) {
-                boolean edge = x == 0 || z == 0 || x == SIZE - 1 || z == SIZE - 1;
-                if (edge) for (int y = h[x][z] + 1; y < HEIGHT; y++) set(grid, x, y, z, BARRIER);
-                set(grid, x, HEIGHT - 1, z, BARRIER);
+                int top = h[x][z];
+                if (inRing(x, z)) {
+                    boolean outer = x == 0 || z == 0 || x == SIZE - 1 || z == SIZE - 1;
+                    String deco = get(grid, x, top + 1, z);
+                    for (int y = 1; y < HEIGHT; y++) {
+                        boolean kept = y == top || (y == top + 1 && deco != null && !deco.equals(AIR));
+                        if (kept && !outer) continue;
+                        set(grid, x, y, z, BARRIER);
+                    }
+                }
+                for (int y = HEIGHT - RING; y < HEIGHT; y++) set(grid, x, y, z, BARRIER);
             }
         }
         ArenaSnapshot.Builder b = new ArenaSnapshot.Builder(SIZE, HEIGHT, SIZE);
@@ -167,7 +201,7 @@ public final class ArenaGenerator {
         }
         int y1 = h[SIZE / 2][SPAWN_Z1] + 1;
         int y2 = h[SIZE / 2][SPAWN_Z2] + 1;
-        int buildHeight = 24;
+        int buildHeight = 24; // above the lowest spawn, far below the ceiling
         return new Generated(s.name(), s.display(), TAGS, b.build(),
             new RelPos(SIZE / 2.0, y1, SPAWN_Z1 + 0.5, 0, 0), new RelPos(SIZE / 2.0, y2, SPAWN_Z2 + 0.5, 180, 0),
             buildHeight, s.biome());
@@ -197,7 +231,7 @@ public final class ArenaGenerator {
                     if (d <= 4) v = level;
                     else if (d < 9) v = level + (v - level) * (d - 4) / 5;
                 }
-                h[x][z] = (int) Math.clamp(Math.round(v), 3, HEIGHT - 20);
+                h[x][z] = (int) Math.clamp(Math.round(v), GROUND - 20, HEIGHT - RING - 30);
             }
         }
         return h;
@@ -209,8 +243,9 @@ public final class ArenaGenerator {
         double c = (SIZE - 1) / 2.0;
         int target = (int) Math.round(s.treeCount() * AREA_SCALE);
         for (int attempt = 0; attempt < target * 60 && placed.size() < target; attempt++) {
-            int x = 4 + r.nextInt(SIZE - 8);
-            int z = 4 + r.nextInt(SIZE - 8);
+            // trunks stay 3 columns clear of the ring (acacia branches reach 2 out, leaves are cut at the ring)
+            int x = RING + 3 + r.nextInt(SIZE - 2 * (RING + 3));
+            int z = RING + 3 + r.nextInt(SIZE - 2 * (RING + 3));
             // keep the fighting corridor between (and a bit around) the spawns open
             double along = Math.clamp(z, SPAWN_Z1 - 8, SPAWN_Z2 + 8);
             if (Math.hypot(x - SIZE / 2.0, z - along) < CORRIDOR) continue;
@@ -231,7 +266,6 @@ public final class ArenaGenerator {
                 case BIRCH -> roundTree(grid, x, base, z, 5 + r.nextInt(2), "minecraft:birch_log[axis=y]",
                     "minecraft:birch_leaves[persistent=true]", r);
                 case SPRUCE -> spruce(grid, x, base, z, 7 + r.nextInt(3), s.biome().contains("snowy"));
-                case CHERRY -> cherry(grid, x, base, z, 4 + r.nextInt(2));
                 case ACACIA -> acacia(grid, x, base, z, r);
                 case CACTUS -> {
                     int height = 2 + r.nextInt(2);
@@ -277,21 +311,6 @@ public final class ArenaGenerator {
         }
     }
 
-    private static void cherry(String[] grid, int x, int y, int z, int height) {
-        String leaves = "minecraft:cherry_leaves[persistent=true]";
-        for (int i = 0; i < height; i++) set(grid, x, y + i, z, "minecraft:cherry_log[axis=y]");
-        int top = y + height;
-        for (int dy = -1; dy <= 1; dy++) {
-            int radius = dy == 1 ? 2 : 3;
-            for (int dx = -radius; dx <= radius; dx++) {
-                for (int dz = -radius; dz <= radius; dz++) {
-                    if (Math.abs(dx) + Math.abs(dz) > radius + 1) continue;
-                    leaf(grid, x + dx, top + dy, z + dz, leaves);
-                }
-            }
-        }
-    }
-
     private static void acacia(String[] grid, int x, int y, int z, SplittableRandom r) {
         String log = "minecraft:acacia_log[axis=y]";
         String leaves = "minecraft:acacia_leaves[persistent=true]";
@@ -317,9 +336,14 @@ public final class ArenaGenerator {
     }
 
     private static void leaf(String[] grid, int x, int y, int z, String leaves) {
-        if (x < 1 || z < 1 || x > SIZE - 2 || z > SIZE - 2 || y >= HEIGHT - 1) return;
+        if (inRing(x, z) || y >= HEIGHT - RING) return;
         String existing = get(grid, x, y, z);
         if (existing == null || !existing.contains("_log")) set(grid, x, y, z, leaves);
+    }
+
+    /** True for the {@value #RING} outer columns on every side (and anything outside the map). */
+    static boolean inRing(int x, int z) {
+        return x < RING || z < RING || x >= SIZE - RING || z >= SIZE - RING;
     }
 
     private static void set(String[] grid, int x, int y, int z, String block) {
