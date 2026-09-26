@@ -30,6 +30,7 @@ import top.cheesesmp.duelcore.match.MatchService;
 import top.cheesesmp.duelcore.match.SpectateService;
 import top.cheesesmp.duelcore.profile.ProfileService;
 import top.cheesesmp.duelcore.queue.QueueService;
+import top.cheesesmp.duelcore.rating.AdjustedRating;
 import top.cheesesmp.duelcore.rating.EloRating;
 import top.cheesesmp.duelcore.rating.Glicko2Rating;
 import top.cheesesmp.duelcore.rating.RatingSystem;
@@ -54,6 +55,7 @@ public final class DuelCorePlugin extends JavaPlugin {
     private VisibilityService visibility;
     private SidebarService sidebar;
     private TagService tags;
+    private top.cheesesmp.duelcore.ui.TabListing tabListing;
     private QueueService queue;
     private top.cheesesmp.duelcore.queue.QueueMusic queueMusic;
     private MatchService matches;
@@ -152,10 +154,13 @@ public final class DuelCorePlugin extends JavaPlugin {
         pm.registerEvents(duels, this);
         pm.registerEvents(sidebar, this);
         pm.registerEvents(tags, this);
+        tabListing = new top.cheesesmp.duelcore.ui.TabListing(this);
+        pm.registerEvents(tabListing, this);
         pm.registerEvents(new top.cheesesmp.duelcore.chat.ChatFilterListener(this), this);
         clicks = new ClickRouter(this);
         pm.registerEvents(clicks, this);
         clicks.register("queue", dialogs.queueMenu()::click);
+        clicks.register("settings", dialogs.settingsMenu()::click);
         pm.registerEvents(hints, this);
         pm.registerEvents(results, this);
         pm.registerEvents(respawnPull, this);
@@ -182,6 +187,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         scheduler.runTaskTimer(this, hubProgress, 20L, top.cheesesmp.duelcore.hub.HubProgress.PERIOD);
         scheduler.runTaskTimer(this, hints, 20L, 20L);
         scheduler.runTaskTimer(this, tags, 40L, 40L);
+        scheduler.runTaskTimer(this, tabListing, 20L, 10L);
         scheduler.runTaskTimer(this, duels, 20L, 20L);
         scheduler.runTaskTimer(this, leaderboards, 200L, 200L);
         scheduler.runTaskTimer(this, profiles::sweep, 1200L, 1200L);
@@ -279,10 +285,12 @@ public final class DuelCorePlugin extends JavaPlugin {
 
     private RatingSystem buildRatingSystem() {
         MainConfig c = settings();
-        if ("glicko2".equals(c.ratingSystem)) {
-            return new Glicko2Rating(c.glickoTau, c.ratingDefault, c.glickoMinRd, c.glickoDefaultRd, c.ratingFloor);
-        }
-        return new EloRating(c.eloK, c.eloProvisionalK, tiers().placementMatches(), c.ratingFloor);
+        // the floor is applied after the gain multiplier and bonus, so the inner system gets none
+        double noFloor = Double.NEGATIVE_INFINITY;
+        RatingSystem inner = "glicko2".equals(c.ratingSystem)
+            ? new Glicko2Rating(c.glickoTau, c.ratingDefault, c.glickoMinRd, c.glickoDefaultRd, noFloor)
+            : new EloRating(c.eloK, c.eloProvisionalK, tiers().placementMatches(), noFloor);
+        return new AdjustedRating(inner, c.ratingGainMultiplier, c.ratingBonusPerMatch, c.ratingFloor);
     }
 
     // ------------------------------------------------------------------ accessors
@@ -341,6 +349,10 @@ public final class DuelCorePlugin extends JavaPlugin {
 
     public top.cheesesmp.duelcore.chat.ChatFilter chatFilter() {
         return config.chatFilter();
+    }
+
+    public top.cheesesmp.duelcore.ui.TabListing tabListing() {
+        return tabListing;
     }
 
     public TagService tags() {

@@ -21,6 +21,8 @@ import top.cheesesmp.duelcore.config.GuiConfig;
 import top.cheesesmp.duelcore.config.MainConfig;
 import top.cheesesmp.duelcore.config.Messages;
 import top.cheesesmp.duelcore.kit.Kit;
+import top.cheesesmp.duelcore.profile.PlayerProfile;
+import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.ui.anim.Animation;
 import top.cheesesmp.duelcore.ui.anim.Channel;
 import top.cheesesmp.duelcore.ui.anim.Ease;
@@ -33,7 +35,7 @@ import top.cheesesmp.duelcore.ui.anim.TextFx;
  * {@value #FRAME} ticks (the plain bar every 2 seconds) and leaves the action bar to a hotbar hint right after a
  * switch and to action bar animations ({@code plugin.anim().busy}). {@link #stop} clears it the moment a player stops
  * searching (left the queue or matched). One timer (every 2 ticks, started by {@link QueueService}) serves every
- * searching player. Main thread only.
+ * searching player. Players who turned off {@link Setting#SEARCHING_BAR} don't get it. Main thread only.
  */
 public final class SearchingFeedback implements Runnable {
 
@@ -76,7 +78,7 @@ public final class SearchingFeedback implements Runnable {
         for (UUID uuid : searching) {
             Player p = Bukkit.getPlayer(uuid);
             if (p == null || plugin.matches().match(uuid) != null) continue;
-            if (!barFrame || plugin.hints().recent(uuid) || plugin.anim().busy(p, Channel.ACTION_BAR)) continue;
+            if (!barFrame || !wantsBar(p) || plugin.hints().recent(uuid) || plugin.anim().busy(p, Channel.ACTION_BAR)) continue;
             Search s = plugin.queue().search(uuid, now);
             Component bar = s == null ? null : actionBar(s, ticks);
             if (bar == null) continue;
@@ -85,7 +87,17 @@ public final class SearchingFeedback implements Runnable {
         }
     }
 
-    /** The player stopped searching: the searching action bar is cleared right away. */
+    /** Whether the player is searching and gets the searching action bar (config.yml and their own setting). */
+    public boolean showsBar(Player player) {
+        return plugin.settings().queueSearchingActionBar && plugin.queue().isQueued(player.getUniqueId()) && wantsBar(player);
+    }
+
+    private boolean wantsBar(Player player) {
+        PlayerProfile profile = plugin.profiles().get(player);
+        return profile == null || profile.setting(Setting.SEARCHING_BAR);
+    }
+
+    /** The player stopped searching (or turned the bar off): the searching action bar is cleared right away. */
     public void stop(UUID uuid) {
         boolean had = drawn.remove(uuid);
         Player p = Bukkit.getPlayer(uuid);

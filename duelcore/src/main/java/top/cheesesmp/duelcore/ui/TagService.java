@@ -98,6 +98,21 @@ public final class TagService implements Listener, Runnable {
         return new Shown(best, bestTier, spectator);
     }
 
+    /** After the name in the tab list: the status icon (in a match / queueing, nothing in the lobby) and the admin star. */
+    private Component suffix(Player player) {
+        GuiConfig gui = plugin.gui();
+        Component out = Component.empty();
+        TabListing listing = plugin.tabListing(); // (null while the plugin is still enabling)
+        String status = listing == null ? "" : switch (listing.status(player)) {
+            case MATCH -> gui.tabStatusMatch;
+            case QUEUE -> gui.tabStatusQueue;
+            case LOBBY -> "";
+        };
+        if (!status.isBlank()) out = out.append(Component.space()).append(Icons.parse(status));
+        if (player.isOp() && !gui.tabAdmin.isBlank()) out = out.append(plugin.messages().parse(gui.tabAdmin));
+        return out;
+    }
+
     /** Icon + tier, or empty for "nothing ranked" when hide-unranked is on. */
     private Component tagFor(Shown s) {
         if (s.kit() == null) {
@@ -153,15 +168,17 @@ public final class TagService implements Listener, Runnable {
         Component tag = tagFor(s);
         tags.put(player.getUniqueId(), tag);
         Shown before = shown.put(player.getUniqueId(), s);
+        Component suffix = suffix(player);
+        boolean plain = suffix.equals(Component.empty());
         if (s.spectator()) {
             player.playerListName(plugin.messages().parse(plugin.gui().tabSpectatorFormat, Messages.comp("tier", tag),
-                Messages.text("name", player.getName())));
-        } else if (plugin.settings().tabTag) {
-            player.playerListName(tag.equals(Component.empty())
-                ? null
-                : plugin.messages().parse(plugin.gui().tabFormat, Messages.comp("tier", tag),
-                    Messages.text("name", player.getName())));
-        } else if (before != null && before.spectator()) {
+                Messages.text("name", player.getName())).append(suffix));
+        } else if (plugin.settings().tabTag && !tag.equals(Component.empty())) {
+            player.playerListName(plugin.messages().parse(plugin.gui().tabFormat, Messages.comp("tier", tag),
+                Messages.text("name", player.getName())).append(suffix));
+        } else if (!plain) {
+            player.playerListName(Component.text(player.getName()).append(suffix));
+        } else {
             player.playerListName(null);
         }
         plugin.sidebar().board(player);

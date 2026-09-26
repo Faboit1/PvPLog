@@ -104,12 +104,20 @@ final class AdminCommand {
                 .executes(ctx -> debugDialog(ctx, CommandService.player(ctx)))
                 .then(Commands.argument("player", StringArgumentType.word()).suggests(cmd.onlineNames())
                     .executes(ctx -> debugDialog(ctx, Bukkit.getPlayerExact(StringArgumentType.getString(ctx, "player")))))))
-            // preview the respawn throw: lands on the ground <distance> blocks ahead of where the player looks
+            // preview the respawn animation: lands on the ground <distance> blocks ahead of where the player looks,
+            // in the given style (throw, look-down, spin) or one picked like between rounds
             .then(Commands.literal("throw").then(Commands.argument("player", StringArgumentType.word())
                 .suggests(cmd.onlineNames())
-                .executes(ctx -> throwPreview(ctx, 40))
+                .executes(ctx -> throwPreview(ctx, 40, null))
                 .then(Commands.argument("distance", IntegerArgumentType.integer(1, 150))
-                    .executes(ctx -> throwPreview(ctx, IntegerArgumentType.getInteger(ctx, "distance")))))));
+                    .executes(ctx -> throwPreview(ctx, IntegerArgumentType.getInteger(ctx, "distance"), null))
+                    .then(Commands.argument("style", StringArgumentType.word())
+                        .suggests((c, b) -> {
+                            for (var s : top.cheesesmp.duelcore.ui.RespawnMotion.Style.values()) b.suggest(s.key);
+                            return b.buildFuture();
+                        })
+                        .executes(ctx -> throwPreview(ctx, IntegerArgumentType.getInteger(ctx, "distance"),
+                            StringArgumentType.getString(ctx, "style"))))))));
         root.then(Commands.literal("forceend").requires(CommandService.perm("duelcore.admin.match"))
             .then(Commands.argument("player", StringArgumentType.word()).suggests(cmd.onlineNames()).executes(ctx -> {
                 Player target = Bukkit.getPlayerExact(StringArgumentType.getString(ctx, "player"));
@@ -149,11 +157,20 @@ final class AdminCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    private int throwPreview(CommandContext<CommandSourceStack> ctx, int distance) {
+    private int throwPreview(CommandContext<CommandSourceStack> ctx, int distance,
+                             @org.jspecify.annotations.Nullable String styleName) {
         Player target = Bukkit.getPlayerExact(StringArgumentType.getString(ctx, "player"));
         if (target == null) {
             ctx.getSource().getSender().sendMessage("Player not online.");
             return 0;
+        }
+        top.cheesesmp.duelcore.ui.RespawnMotion.Style style = null;
+        if (styleName != null) {
+            style = top.cheesesmp.duelcore.ui.RespawnMotion.Style.parse(styleName);
+            if (style == null) {
+                ctx.getSource().getSender().sendMessage("Styles: throw, look-down, spin.");
+                return 0;
+            }
         }
         if (plugin.matches().match(target.getUniqueId()) != null) {
             ctx.getSource().getSender().sendMessage("Not during a match.");
@@ -173,8 +190,9 @@ final class AdminCommand {
         to.setY(y);
         to.setYaw(from.getYaw());
         to.setPitch(0);
-        plugin.respawnPull().pull(target, to, plugin.settings().animRespawnThrowHeight, List.of(target), () -> { });
-        ctx.getSource().getSender().sendMessage("Throwing " + target.getName() + " " + distance + " blocks.");
+        plugin.respawnPull().pull(target, to, plugin.settings().animRespawnThrowHeight, List.of(target), style, () -> { });
+        ctx.getSource().getSender().sendMessage("Respawn animation " + (style == null ? "(random)" : style.key) + " for "
+            + target.getName() + " over " + distance + " blocks.");
         return Command.SINGLE_SUCCESS;
     }
 

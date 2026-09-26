@@ -275,7 +275,7 @@ public final class QueueService implements Listener, Runnable {
     private void afterMatch(Match m) {
         Match.EndReason reason = m.endReason();
         boolean requeue = (m.origin() == Match.Origin.QUEUE || m.origin() == Match.Origin.DUEL)
-            && reason != Match.EndReason.CANCELLED && reason != Match.EndReason.NO_ARENA;
+            && reason != Match.EndReason.CANCELLED && reason != Match.EndReason.NO_ARENA; // (an early leave requeues the opponent)
         for (Participant p : m.participants()) {
             // gone early (forfeit or quit): what they chose since belongs to their next queue, not to this match
             if (p.left() || plugin.matches().match(p.uuid()) != null || isQueued(p.uuid())) continue;

@@ -66,14 +66,15 @@ public final class MainConfig {
     public final int maxRounds;
     public final int disconnectSavesPerDay;
     public final int disconnectIdleSeconds;
+    public final int leaveBeforeStartMax;
     public final Set<String> allowedCommands;
     public final boolean totemPop;
     public final boolean animRespawnThrow;
     public final double animRespawnThrowHeight;
     /** Players with a higher ping are teleported instead of thrown (0 = always throw). */
     public final int animRespawnThrowMaxPing;
-    /** Ticks (plus the player's ping) after which a throw the server never saw move is replaced by a teleport. */
-    public final int animRespawnThrowStallTicks;
+    /** The respawn animations to pick from at random, with their weights (throw, look-down, spin). */
+    public final top.cheesesmp.duelcore.ui.RespawnMotion.Pool animRespawnStyles;
     public final boolean animDeath;
     public final boolean animRoundWin;
     public final boolean animMatchWin;
@@ -130,7 +131,10 @@ public final class MainConfig {
     public final boolean animPlayersLeft;
     public final top.cheesesmp.duelcore.ui.SoundPool matchFoundSounds;
     public final top.cheesesmp.duelcore.ui.SoundPool fightStartSounds;
-    /** Sound lines (match-found-sounds, fight-start-sounds, queue music) that could not be read (reported on load and reload). */
+    /**
+     * Sound lines (match-found-sounds, fight-start-sounds, queue music) and respawn-styles entries that could not be
+     * read (reported on load and reload).
+     */
     public final List<String> soundProblems = new java.util.ArrayList<>();
     public final int voidDepth;
 
@@ -138,6 +142,9 @@ public final class MainConfig {
     public final String ratingSystem;
     public final double ratingDefault;
     public final double ratingFloor;
+    /** Each ranked rating change is {@code ratingGainMultiplier × change + ratingBonusPerMatch} (see rating.AdjustedRating). */
+    public final double ratingGainMultiplier;
+    public final double ratingBonusPerMatch;
     public final double eloK;
     public final double eloProvisionalK;
     public final double glickoTau;
@@ -245,12 +252,14 @@ public final class MainConfig {
         maxRounds = Math.max(1, c.getInt("match.max-rounds", 15));
         disconnectSavesPerDay = Math.max(0, c.getInt("match.disconnect-saves-per-day", 5));
         disconnectIdleSeconds = Math.max(0, c.getInt("match.disconnect-idle-seconds", 5));
+        leaveBeforeStartMax = Math.max(0, c.getInt("match.leave-before-start-max", 2));
         allowedCommands = lower(c.getStringList("match.allowed-commands"));
         totemPop = c.getBoolean("match.totem-pop", true);
         animRespawnThrow = c.getBoolean("animations.respawn-throw", true);
         animRespawnThrowHeight = Math.clamp(c.getDouble("animations.respawn-throw-height", 10), 2, 40);
         animRespawnThrowMaxPing = Math.max(0, c.getInt("animations.respawn-throw-max-ping", 350));
-        animRespawnThrowStallTicks = Math.clamp(c.getInt("animations.respawn-throw-stall-ticks", 10), 4, 60);
+        animRespawnStyles = top.cheesesmp.duelcore.ui.RespawnMotion.Pool.parse(c.isString("animations.respawn-styles")
+            ? List.of(c.getString("animations.respawn-styles", "")) : c.getStringList("animations.respawn-styles"));
         animDeath = c.getBoolean("animations.death", true);
         animRoundWin = c.getBoolean("animations.round-win", true);
         animMatchWin = c.getBoolean("animations.match-win", true);
@@ -293,14 +302,17 @@ public final class MainConfig {
         var fightStart = top.cheesesmp.duelcore.ui.SoundPool.parse(c.getStringList("animations.fight-start-sounds"));
         for (String p : matchFoundSounds.problems()) soundProblems.add("animations.match-found-sounds: " + p);
         for (String p : fightStart.problems()) soundProblems.add("animations.fight-start-sounds: " + p);
+        for (String p : animRespawnStyles.problems()) soundProblems.add("animations.respawn-styles: " + p);
         // a round always started with a pling; keep it when every configured line is broken
         fightStartSounds = fightStart.combos().isEmpty() && !fightStart.problems().isEmpty()
             ? top.cheesesmp.duelcore.ui.SoundPool.parse(List.of("block.note_block.pling 1.6")) : fightStart;
         voidDepth = Math.max(1, c.getInt("match.void-depth", 6));
 
         ratingSystem = c.getString("rating.system", "elo").toLowerCase(Locale.ROOT);
-        ratingDefault = c.getDouble("rating.default", 1000);
-        ratingFloor = c.getDouble("rating.floor", 100);
+        ratingDefault = c.getDouble("rating.default", 750);
+        ratingFloor = c.getDouble("rating.floor", 50);
+        ratingGainMultiplier = Math.max(0, c.getDouble("rating.gain-multiplier", 3));
+        ratingBonusPerMatch = c.getDouble("rating.bonus-per-match", 3);
         eloK = c.getDouble("rating.elo.k-factor", 32);
         eloProvisionalK = c.getDouble("rating.elo.provisional-k-factor", 48);
         glickoTau = c.getDouble("rating.glicko2.tau", 0.5);

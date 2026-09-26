@@ -20,12 +20,12 @@ import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.config.Messages;
 import top.cheesesmp.duelcore.kit.Kit;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
-import top.cheesesmp.duelcore.profile.Setting;
+import top.cheesesmp.duelcore.profile.DuelRequests;
 
 /** Unranked challenges: /duel &lt;player&gt; &lt;kit&gt;, accept or deny within 60 seconds. */
 public final class DuelRequestService implements Listener, Runnable {
 
-    public enum Result { SENT, SELF, OFFLINE, DISABLED_BY_TARGET, BUSY, TARGET_BUSY, ALREADY_SENT, NO_REQUEST, ACCEPTED }
+    public enum Result { SENT, SELF, OFFLINE, DISABLED_BY_TARGET, FRIENDS_ONLY, BUSY, TARGET_BUSY, ALREADY_SENT, NO_REQUEST, ACCEPTED }
 
     public record Request(UUID from, String fromName, UUID to, String kit, long expires) {
     }
@@ -45,7 +45,11 @@ public final class DuelRequestService implements Listener, Runnable {
         if (plugin.matches().match(from.getUniqueId()) != null) return Result.BUSY;
         if (plugin.matches().match(to.getUniqueId()) != null) return Result.TARGET_BUSY;
         PlayerProfile target = plugin.profiles().get(to);
-        if (target != null && !target.setting(Setting.DUEL_REQUESTS)) return Result.DISABLED_BY_TARGET;
+        if (target != null) {
+            DuelRequests who = target.duelRequests();
+            if (who == DuelRequests.NOBODY) return Result.DISABLED_BY_TARGET;
+            if (!who.allows(friends(from, to))) return Result.FRIENDS_ONLY;
+        }
         List<Request> list = incoming.computeIfAbsent(to.getUniqueId(), k -> new ArrayList<>());
         for (Request r : list) if (r.from().equals(from.getUniqueId())) return Result.ALREADY_SENT;
         list.add(new Request(from.getUniqueId(), from.getName(), to.getUniqueId(), kit.id(), System.currentTimeMillis() + LIFETIME));
@@ -60,6 +64,18 @@ public final class DuelRequestService implements Listener, Runnable {
         plugin.messages().send(from, "duel.sent", Messages.text("player", to.getName()), Messages.comp("kit", kit.displayName()),
             Messages.comp("kit_icon", kit.sprite()));
         return Result.SENT;
+    }
+
+    /** True when the two follow each other (and the friends feature runs). */
+    private boolean friends(Player a, Player b) {
+        var friends = plugin.friends();
+        return friends != null && friends.areFriends(a.getUniqueId(), b.getUniqueId());
+    }
+
+    /** Whether {@code from} may challenge {@code to} now, by {@code to}'s duel request setting (for the opponent picker). */
+    public boolean accepts(Player from, Player to) {
+        PlayerProfile target = plugin.profiles().get(to);
+        return target == null || target.duelRequests().allows(friends(from, to));
     }
 
     public Result accept(Player to, UUID from) {

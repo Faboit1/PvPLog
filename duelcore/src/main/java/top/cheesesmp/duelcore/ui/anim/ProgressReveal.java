@@ -15,7 +15,9 @@ import top.cheesesmp.duelcore.config.GuiConfig;
 import top.cheesesmp.duelcore.config.MainConfig;
 import top.cheesesmp.duelcore.config.Messages;
 import top.cheesesmp.duelcore.kit.Kit;
+import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.ProgressTracker.Reveal;
+import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.rating.Tier;
 
 /**
@@ -24,7 +26,8 @@ import top.cheesesmp.duelcore.rating.Tier;
  * from zero ("+20% towards your tier ▰▰▰▰▱▱▱▱▱▱" in placement, "+18 Elo 1480 → 1498" or a red "−12 Elo" counting down
  * once placed) with a tick per step, holds, blinks and fades out. A better tier gets a title celebration (the tier in
  * its tiers.yml colour, typed in and swept by a shimmer, fireworks only the player sees, a flourish), a first tier a
- * "Placed: HT3!" one, and a lower tier a quiet subtitle. Every part has its own config.yml {@code animations} switch.
+ * "Placed: HT3!" one, and a lower tier a quiet subtitle. Every part has its own config.yml {@code animations} switch;
+ * players who turned off {@link Setting#PROGRESS_REVEAL} get none of it after a match.
  */
 public final class ProgressReveal {
 
@@ -54,6 +57,8 @@ public final class ProgressReveal {
     public void playPending(Player player) {
         Reveal reveal = plugin.progress().takeLatest(player.getUniqueId());
         if (reveal == null || System.currentTimeMillis() - reveal.at() > 60_000) return;
+        PlayerProfile profile = plugin.profiles().get(player);
+        if (profile != null && !profile.setting(Setting.PROGRESS_REVEAL)) return; // "Rank-up animations" off
         play(player, reveal);
     }
 

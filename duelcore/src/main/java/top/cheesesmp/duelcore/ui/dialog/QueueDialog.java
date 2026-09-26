@@ -194,7 +194,9 @@ public final class QueueDialog {
         stopAnimation(player);
         UUID uuid = player.getUniqueId();
         Map<String, Reveal> reveals = new LinkedHashMap<>();
-        if (plugin.settings().animQueueProgress && plugin.matches().match(uuid) == null) {
+        PlayerProfile own = plugin.profiles().get(player);
+        boolean wanted = own == null || own.setting(Setting.PROGRESS_REVEAL); // the player's "Rank-up animations"
+        if (plugin.settings().animQueueProgress && wanted && plugin.matches().match(uuid) == null) {
             Set<String> favorites = Objects.requireNonNullElse(plugin.queue().prefs().favorites(uuid), Set.of());
             for (Kit kit : kits(tab, favorites)) {
                 Reveal r = plugin.progress().pendingReveal(uuid, kit.id());
@@ -635,10 +637,11 @@ public final class QueueDialog {
             return;
         }
         int pm = plugin.tiers().placementMatches();
+        double start = plugin.settings().ratingDefault; // a new player's rating
         double ht3 = plugin.tiers().ladder().threshold(kit.id(), Tier.HT3);
         Reveal r = switch (sample) {
-            case PLACEMENT -> sample(kit.id(), Math.max(0, pm - 3), Math.max(0, pm - 3) + 1, 1000, 1026);
-            case PLACED -> sample(kit.id(), Math.max(0, pm - 1), Math.max(1, pm), 1000, ht3 + 20);
+            case PLACEMENT -> sample(kit.id(), Math.max(0, pm - 3), Math.max(0, pm - 3) + 1, start, start + 26);
+            case PLACED -> sample(kit.id(), Math.max(0, pm - 1), Math.max(1, pm), start, ht3 + 20);
             case ELO_UP -> sample(kit.id(), pm + 4, pm + 5, ht3 + 12, ht3 + 30);
             case ELO_DOWN -> sample(kit.id(), pm + 4, pm + 5, ht3 + 30, ht3 + 18);
             case TIER_UP -> sample(kit.id(), pm + 4, pm + 5, ht3 - 8, ht3 + 12);

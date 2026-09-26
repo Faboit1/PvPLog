@@ -89,6 +89,9 @@ match:
   opponent-quit: "<muted><text><player></text> left the match and forfeits.</muted>"
   opponent-forfeit: "<muted><text><player></text> forfeited.</muted>"
   # A ranked opponent's connection dropped and one of their disconnect saves voided the match.
+  # /leave before the first fight: the match ends with no result. <left> = early leaves left before it's a forfeit.
+  left-before-start: "<muted>You left before the fight started. No result.</muted> <text><left></text><muted> more early leaves in a row are allowed.</muted>"
+  opponent-left-before-start: "<muted><text><player></text> left before the fight started. No result, no Elo change.</muted>"
   opponent-connection-lost: "<muted><text><player></text> lost connection. No result, no Elo change.</muted>"
   # Told on the next join after a saved drop. <left> of <per_day> saves are left today.
   connection-saved: "<muted>Your connection dropped in a ranked match: no Elo lost.</muted> <text><left></text><muted>/<per_day> disconnect saves left today.</muted>"
@@ -96,6 +99,8 @@ match:
   forfeited: "<muted>You forfeited the match.</muted>"
   command-blocked: "<muted>You can't use that command during a match.</muted>"
   cancelled: "<muted>The match was cancelled. Nothing was rated.</muted>"
+  # Settings → Auto GG: said for the player to their match (fighters and spectators) a second after it ends.
+  auto-gg: "<muted>[Match]</muted> <text><player></text><muted>:</muted> gg"
   no-arena: "<bad>No arena was free for your match. Nothing was rated, you can queue again."
   # In-match animations (config.yml animations; colours in gui.yml match-fx).
   fx:
@@ -163,6 +168,7 @@ duel:
     self: "<bad>You can't duel yourself."
     offline: "<bad>That player isn't online."
     disabled_by_target: "<muted><text><player></text> isn't accepting challenges.</muted>"
+    friends_only: "<muted><text><player></text> only accepts challenges from friends.</muted>"
     busy: "<bad>Finish your match first."
     target_busy: "<muted><text><player></text> is in a match.</muted>"
     already_sent: "<muted>You already challenged <text><player></text>.</muted>"
@@ -181,9 +187,6 @@ spectate:
     busy: "<bad>Finish your match first."
     disallowed: "<muted><text><player></text> doesn't allow spectators.</muted>"
     no_arena: "<muted>That match is still starting, try again in a second.</muted>"
-
-settings:
-  saved: "<muted>Settings saved · region <text><region></text> · max ping <text><max_ping></text></muted>"
 
 chat:
   blocked: "<bad>Your message was blocked: it contains a slur or harassment.</bad>"
@@ -730,24 +733,149 @@ dialog:
     all-regions-selected: "<accent>All</accent>"
     region: "<muted><region></muted>"
     region-selected: "<accent><region></accent>"
+  # The settings menu (Settings item, /settings). Every click changes and saves a setting at once. Rows:
+  # <icon> <name> <state>, the description in the hover. Icons and width are in gui.yml (settings-menu).
   settings:
-    title: "Settings"
-    body: "<muted>Region and max ping help the matchmaker find opponents with a similar connection.</muted>"
-    duel-requests: "Allow duel requests"
-    sidebar: "Show the sidebar"
-    sounds: "Sounds"
-    chat-tags: "Show tier tags in chat"
-    hide-hub: "Hide other players in the hub"
-    spectators: "Allow spectators in my matches"
-    friend-alerts: "Friend alerts"
-    party-invites: "Party invites from anyone"
-    queue-music: "Music while searching"
-    region: "Region"
+    # <section> = the open tab's name
+    title: "Settings <dark_gray>·</dark_gray> <section>"
+    tab: "<icon> <muted><name></muted>"
+    tab-selected: "<icon> <accent><u><name></u></accent>"
+    tab-separator: "  <dark_gray>-</dark_gray>  "
+    sections:
+      gameplay: "Gameplay"
+      visuals: "Visuals"
+      sounds: "Sounds"
+      social: "Social"
+      queue: "Queue"
+    section-hover:
+      gameplay: "<text>In your matches: spectators, the action bar and the results screen.</text>"
+      visuals: "<text>The sidebar, tags, the hub and the animations you see.</text>"
+      sounds: "<text>Sound effects and the music while searching.</text>"
+      social: "<text>Who can challenge and invite you, and what you tell others.</text>"
+      queue: "<text>Searching and matchmaking.</text>"
+    # A line under the tabs.
+    section-body:
+      gameplay: "<muted>How your matches look and feel.</muted>"
+      visuals: "<muted>What you see around the hub and in matches.</muted>"
+      sounds: "<muted>What you hear. <text>All sounds</text> turns every sound effect off at once.</muted>"
+      social: "<muted>Challenges, invites and friends.</muted>"
+      queue: "<muted>Region and max ping help the matchmaker find opponents with a similar connection.</muted>"
+    footer: "<dark_gray>Hover a setting to see what it does. Changes are saved right away.</dark_gray>"
+    row: "<icon> <text><name></text>  <state>"
+    state-on: "<good>☑ On</good>"
+    state-off: "<muted>☐ Off</muted>"
+    # <description> = items.<id>.hover, <action> = one of the click-* lines
+    row-hover: "<text><name></text><newline><muted><description></muted><newline><newline><action>"
+    click-on: "<accent>Click to turn it on</accent>"
+    click-off: "<accent>Click to turn it off</accent>"
+    # <next> = the choice a click switches to
+    click-cycle: "<accent>Click to switch to</accent> <next>"
+    click-choice: "<accent>Click a choice to pick it</accent>"
+    click-steps: "<accent>Click − or + to change it</accent>"
+    click-country: "<accent>Click Change to set it</accent>"
+    duel:
+      everyone: "<good>Everyone</good>"
+      friends: "<accent>Friends only</accent>"
+      nobody: "<bad>Nobody</bad>"
+    choice: "<muted>[<name>]</muted>"
+    choice-selected: "<accent>[<u><name></u>]</accent>"
+    choice-hover: "<muted>Choose <text><name></text></muted>"
     region-none: "Not set"
-    country: "Country (2 letters)"
-    max-ping: "Max opponent ping (0 = any)"
-    save: "<good>Save</good>"
-    cancel: "<muted>Cancel</muted>"
+    ping-value: "<text><ms> ms</text>"
+    ping-any: "<text>Any</text>"
+    ping-down: "<accent>[−]</accent>"
+    ping-up: "<accent>[+]</accent>"
+    ping-down-hover: "<muted>Stricter: <value></muted>"
+    ping-up-hover: "<muted>Looser: <value></muted>"
+    country-none: "<muted>Not set</muted>"
+    country-value: "<text><country></text>"
+    country-change: "<accent>[Change]</accent>"
+    country-change-hover: "<muted>Type your country's two letters</muted>"
+    # The country dialog (Change)
+    country-title: "Country"
+    country-body: "<muted>Two letters (DE, US, …), shown on your profile. Leave it empty to remove it.</muted>"
+    country-label: "Country (2 letters)"
+    country-save: "<good>Save</good>"
+    back: "<muted>Back</muted>"
+    # Each row: its name and the description in its hover. The ids are those of gui.yml settings-menu.icons.
+    items:
+      # Gameplay
+      allow-spectators:
+        name: "Allow spectators"
+        hover: "Other players can watch your matches (Spectate menu, /spectate). Off: nobody can."
+      tab-spectators:
+        name: "Spectators in tab"
+        hover: "While you fight, the players watching your match are listed in your tab list."
+      combo-bar:
+        name: "Combo counter"
+        hover: "Your hit combo and kills pop up on the action bar during a match."
+      heartbeat:
+        name: "Low-health heartbeat"
+        hover: "A heartbeat and a red health pulse on the action bar when you're low on health."
+      results-screen:
+        name: "Results screen"
+        hover: "The match results open back in the hub after a match. Off: only the title and the chat summary."
+      # Visuals
+      sidebar:
+        name: "Sidebar"
+        hover: "The scoreboard on the right: your stats in the hub, the score in a match."
+      chat-tags:
+        name: "Tier tags in chat"
+        hover: "Players' tiers next to their names in chat."
+      hide-hub-players:
+        name: "Hide hub players"
+        hover: "Other players are invisible to you in the hub, friends and party included."
+      hotbar-hints:
+        name: "Hotbar hints"
+        hover: "The action bar says what the hub item you're holding does."
+      match-particles:
+        name: "Match particles"
+        hover: "Fight-start rings, round-win spirals, death bursts, fireworks and confetti in matches."
+      progress-reveal:
+        name: "Rank-up animations"
+        hover: "After a ranked match: the Elo count on the action bar, tier-up titles and the XP bar filling in the hub."
+      match-found-pop:
+        name: "Match found pop"
+        hover: "A totem pop with the kit's icon when a match is found."
+      # Sounds
+      sounds:
+        name: "All sounds"
+        hover: "Every DuelCore sound effect, match sounds included. The music while searching has its own switch."
+      match-sounds:
+        name: "Match sounds"
+        hover: "Match found, the countdown, FIGHT!, kills and the victory or defeat jingle."
+      queue-music:
+        name: "Music while searching"
+        hover: "A random music disc plays (only for you) while you search for a match."
+      # Social
+      duel-requests:
+        name: "Duel requests"
+        hover: "Who can challenge you with /duel or from your profile."
+      party-invites:
+        name: "Party invites from anyone"
+        hover: "Anyone can invite you to a party. Off: only your friends."
+      friend-alerts:
+        name: "Friend alerts"
+        hover: "A chat line when a friend comes online or someone follows you."
+      auto-gg:
+        name: "Auto GG"
+        hover: "Says \"gg\" to your opponents and spectators when a match of yours ends."
+      # Queue
+      keep-queuing:
+        name: "Keep queuing"
+        hover: "After a match, search again in the same kits (also in the queue menu)."
+      searching-bar:
+        name: "Searching bar"
+        hover: "The action bar shows your search: kits, wait time and rating range."
+      region:
+        name: "Region"
+        hover: "Where you play from. The matchmaker prefers opponents from the same region."
+      max-ping:
+        name: "Max opponent ping"
+        hover: "The matchmaker prefers opponents below this ping (Any: no preference)."
+      country:
+        name: "Country"
+        hover: "Shown on your profile."
   spectate:
     title: "Live <muted>· <live></muted>"
     body: "<muted>Pick a match to watch. You stay in your queue. Showing <shown> of <live>.</muted>"

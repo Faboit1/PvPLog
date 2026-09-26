@@ -19,6 +19,8 @@ import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.config.MainConfig;
 import top.cheesesmp.duelcore.config.Messages;
 import top.cheesesmp.duelcore.debug.TesterMode;
+import top.cheesesmp.duelcore.profile.PlayerProfile;
+import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.ui.anim.Animation;
 import top.cheesesmp.duelcore.ui.anim.BlinkFade;
 import top.cheesesmp.duelcore.ui.anim.Channel;
@@ -31,7 +33,9 @@ import top.cheesesmp.duelcore.ui.anim.TextFx;
  * effects stay in {@link Animations}). MatchService decides who sees what (fighters and spectators); every method
  * here checks its own config.yml {@code animations} switch and returns false when it is off, so the caller can fall
  * back to the plain title. Titles are sent part by part ({@link TitlePart}): the times once with no fade-in, then only
- * the part that changes, so a re-sent frame doesn't fade in again. Texts: messages.yml {@code match.fx}; colours:
+ * the part that changes, so a re-sent frame doesn't fade in again. Players' own settings: {@link Setting#COMBO_BAR}
+ * (combo and kill bars), {@link Setting#HEARTBEAT}, and {@link Setting#MATCH_SOUNDS} for every sound but the heartbeat's.
+ * Texts: messages.yml {@code match.fx}; colours:
  * gui.yml {@code match-fx}.
  */
 public final class MatchFx {
@@ -64,6 +68,21 @@ public final class MatchFx {
         return plugin.settings();
     }
 
+    /** A player's own setting (true without a loaded profile: these all default to on). */
+    private boolean wants(Player player, Setting setting) {
+        PlayerProfile profile = plugin.profiles().get(player);
+        return profile == null || profile.setting(setting);
+    }
+
+    /** A match sound, unless the player turned match sounds off ({@link MatchSounds#matchSounds}). */
+    private void sfx(Player player, Sfx.Note note) {
+        if (MatchSounds.matchSounds(plugin, player)) Sfx.play(plugin, player, note);
+    }
+
+    private void sfx(Player player, List<Sfx.Note> notes) {
+        if (MatchSounds.matchSounds(plugin, player)) Sfx.play(plugin, player, notes);
+    }
+
     private MatchFxStyle style() {
         return plugin.gui().matchFx;
     }
@@ -84,9 +103,9 @@ public final class MatchFx {
         MatchFxStyle s = style();
         TextColor color = MatchFxMath.countdownColor(s.countdownColors(), secs, TextFx.WHITE);
         int semis = MatchFxMath.countdownSemitones(secs, shown);
-        Sfx.play(plugin, viewer, new Sfx.Note(Sfx.HAT, Sfx.pitch(1.0f, semis), 0.6f, 0));
-        Sfx.play(plugin, viewer, new Sfx.Note(Sfx.PLING, Sfx.pitch(0.9f, semis), 0.3f, 0));
-        if (pulse && secs == shown) Sfx.play(plugin, viewer, new Sfx.Note(Sfx.BELL, 0.7f, 0.5f, 0));
+        sfx(viewer, new Sfx.Note(Sfx.HAT, Sfx.pitch(1.0f, semis), 0.6f, 0));
+        sfx(viewer, new Sfx.Note(Sfx.PLING, Sfx.pitch(0.9f, semis), 0.3f, 0));
+        if (pulse && secs == shown) sfx(viewer, new Sfx.Note(Sfx.BELL, 0.7f, 0.5f, 0));
         int frames = pulse ? 8 : 4;
         plugin.anim().start(viewer, Channel.TITLE, new Animation() {
             @Override
@@ -111,8 +130,8 @@ public final class MatchFx {
         if (!cfg().animFightSweep) return false;
         MatchFxStyle s = style();
         String text = plain(msg().get("match.fx.fight"));
-        Sfx.play(plugin, fighter, new Sfx.Note(PUNCH, 0.75f, 0.8f, 0));
-        Sfx.play(plugin, fighter, new Sfx.Note(Sfx.BASS, 0.6f, 0.7f, 0));
+        sfx(fighter, new Sfx.Note(PUNCH, 0.75f, 0.8f, 0));
+        sfx(fighter, new Sfx.Note(Sfx.BASS, 0.6f, 0.7f, 0));
         plugin.anim().start(fighter, Channel.TITLE, new Animation() {
             @Override
             public boolean frame(Player p, int tick) {
@@ -144,7 +163,7 @@ public final class MatchFx {
             case SPECTATOR -> "match.fx.round-spectator";
         };
         Component title = msg().get(key, Messages.num("round", round), Messages.text("winner", winner));
-        Sfx.play(plugin, viewer, switch (kind) {
+        sfx(viewer, switch (kind) {
             case WON -> Sfx.arpeggio(Sfx.CHIME, 3, 1.2f, 4, 2, 0.55f);
             case LOST -> Sfx.settle(false);
             case DRAW -> List.of(new Sfx.Note(Sfx.HAT, 1.0f, 0.5f, 0));
@@ -181,7 +200,7 @@ public final class MatchFx {
 
     /** The attacker's hit combo (from 2 hits on): the counter pops on every hit, holds, then fades out. */
     public boolean combo(Player attacker, int combo) {
-        if (!cfg().animComboBar || combo < 2) return false;
+        if (!cfg().animComboBar || combo < 2 || !wants(attacker, Setting.COMBO_BAR)) return false;
         plugin.anim().start(attacker, Channel.ACTION_BAR,
             popBar(stage -> msg().get("match.fx.combo", Messages.comp("count", pop(combo, stage, null))), COMBO_HOLD));
         return true;
@@ -189,13 +208,13 @@ public final class MatchFx {
 
     /** "+1 kill · 3 hit combo" for the killer, while the round goes on. */
     public boolean kill(Player killer, int combo) {
-        if (!cfg().animComboBar) return false;
+        if (!cfg().animComboBar || !wants(killer, Setting.COMBO_BAR)) return false;
         Component comboText = combo >= 2
             ? msg().get("match.fx.kill-combo", Messages.comp("count", Component.text(combo))) : Component.empty();
         Component text = msg().get("match.fx.kill", Messages.comp("combo", comboText));
         TextColor flash = style().pop();
         plugin.anim().start(killer, Channel.ACTION_BAR, popBar(stage -> stage == 0 ? TextFx.recolor(text, flash) : text, KILL_HOLD));
-        Sfx.play(plugin, killer, new Sfx.Note(Sfx.ORB, 1.3f, 0.5f, 0));
+        sfx(killer, new Sfx.Note(Sfx.ORB, 1.3f, 0.5f, 0));
         return true;
     }
 
@@ -231,8 +250,8 @@ public final class MatchFx {
      * "lub-dub" pulse of the health there. The caller spaces the beats (faster when lower).
      */
     public boolean heartbeat(Player player, double hp) {
-        if (!cfg().animHeartbeat) return false;
-        Sfx.play(plugin, player, new Sfx.Note(HEARTBEAT, 1.0f, 0.6f, 0));
+        if (!cfg().animHeartbeat || !wants(player, Setting.HEARTBEAT)) return false;
+        Sfx.play(plugin, player, new Sfx.Note(HEARTBEAT, 1.0f, 0.6f, 0)); // (its own setting, not match sounds)
         if (plugin.anim().busy(player, Channel.ACTION_BAR)) return true; // a combo bar or a round result wins
         Component text = msg().get("match.fx.heartbeat", Messages.text("hp", String.format(Locale.ROOT, "%.1f", hp / 2)));
         MatchFxStyle s = style();
@@ -263,7 +282,7 @@ public final class MatchFx {
      */
     public boolean victory(Player winner) {
         if (!cfg().animVictoryTitle) return false;
-        Sfx.play(plugin, winner, MatchFxMath.victoryJingle());
+        sfx(winner, MatchFxMath.victoryJingle());
         if (plugin.anim().busy(winner, Channel.TITLE)) return true;
         Component title = msg().get("results.title-victory");
         TextColor base = color(title);
@@ -287,7 +306,7 @@ public final class MatchFx {
     /** Match lost: softer. Three quiet falling notes while the results title slowly greys out a little. */
     public boolean defeat(Player loser) {
         if (!cfg().animDefeatTitle) return false;
-        Sfx.play(plugin, loser, MatchFxMath.defeatPhrase());
+        sfx(loser, MatchFxMath.defeatPhrase());
         if (plugin.anim().busy(loser, Channel.TITLE)) return true;
         Component title = msg().get("results.title-defeat");
         TextColor to = style().fade();
@@ -318,7 +337,7 @@ public final class MatchFx {
             Messages.num("first", first), Messages.num("second", second));
         TextColor base = color(plainTitle);
         TextColor shine = style().shine();
-        Sfx.play(plugin, spectator, List.of(new Sfx.Note(Sfx.CHIME, 1.2f, 0.45f, 0), new Sfx.Note(Sfx.CHIME, 1.6f, 0.45f, 3)));
+        sfx(spectator, List.of(new Sfx.Note(Sfx.CHIME, 1.2f, 0.45f, 0), new Sfx.Note(Sfx.CHIME, 1.6f, 0.45f, 3)));
         plugin.anim().start(spectator, Channel.TITLE, new Animation() {
             @Override
             public boolean frame(Player p, int tick) {
@@ -344,7 +363,7 @@ public final class MatchFx {
     /** Party FFA: someone was eliminated, "3 players left" pops in the subtitle. */
     public boolean playersLeft(Player viewer, int left) {
         if (!cfg().animPlayersLeft) return false;
-        Sfx.play(plugin, viewer, new Sfx.Note(Sfx.HAT, 1.4f, 0.4f, 0));
+        sfx(viewer, new Sfx.Note(Sfx.HAT, 1.4f, 0.4f, 0));
         plugin.anim().start(viewer, Channel.TITLE, new Animation() {
             @Override
             public boolean frame(Player p, int tick) {

@@ -39,6 +39,10 @@ public final class GuiConfig {
     public final String chatFormat;
     public final String tabFormat;
     public final String tabSpectatorFormat;
+    /** Tab list status icons ("atlas:path[#rrggbb]" sprites, "" = none) and the admin mark after op names. */
+    public final String tabStatusMatch;
+    public final String tabStatusQueue;
+    public final String tabAdmin;
     public final String nametagPrefix;
     public final boolean hideUnrankedTag;
     public final String tagIconFormat;
@@ -67,6 +71,9 @@ public final class GuiConfig {
     public final int queueWidth;
     public final int queueKitWidth;
     public final Map<String, String> queueTabIcons = new HashMap<>();
+    /** Settings menu: width of its lines, and the icons of its rows (by row id) and tabs ("section-<id>"). */
+    public final int settingsWidth;
+    public final Map<String, String> settingsIcons = new HashMap<>();
     public final int queueProgressSegments;
     /**
      * Queue menu: tabs with at most this many kits show the search time as a ticking m:ss clock; longer tabs (which
@@ -124,6 +131,9 @@ public final class GuiConfig {
         chatFormat =y.getString("tags.chat", "<tier> <text><name></text><muted>:</muted> <message>");
         tabFormat = y.getString("tags.tab", "<tier> <text><name></text>");
         tabSpectatorFormat = y.getString("tags.tab-spectator", "<gray><i><name></i></gray>");
+        tabStatusMatch = y.getString("tags.tab-status-match", "items:item/iron_sword");
+        tabStatusQueue = y.getString("tags.tab-status-queue", "items:item/clock_00");
+        tabAdmin = y.getString("tags.tab-admin", " <#ffd24a>★</#ffd24a>");
         nametagPrefix = y.getString("tags.nametag-prefix", "<tier> ");
         hideUnrankedTag = y.getBoolean("tags.hide-unranked", false);
         tagIconFormat = y.getString("tags.icon-tier", "<icon><tier>");
@@ -151,6 +161,11 @@ public final class GuiConfig {
         queueKitWidth = Math.clamp(y.getInt("queue-menu.kit-width", 250), 50, 1024);
         ConfigurationSection icons = y.getConfigurationSection("queue-menu.tab-icons");
         if (icons != null) for (String key : icons.getKeys(false)) queueTabIcons.put(key, icons.getString(key, ""));
+        settingsWidth = Math.clamp(y.getInt("settings-menu.width", 300), 100, 1024);
+        ConfigurationSection settingIcons = y.getConfigurationSection("settings-menu.icons");
+        if (settingIcons != null) {
+            for (String key : settingIcons.getKeys(false)) settingsIcons.put(key, settingIcons.getString(key, ""));
+        }
         queueProgressSegments = Math.clamp(y.getInt("queue-menu.progress.segments", 10), 1, 30);
         queueClockKits = Math.clamp(y.getInt("queue-menu.clock-max-kits", 5), 0, 1000);
         queueProgressDone = y.getString("queue-menu.progress.done", "");

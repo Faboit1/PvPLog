@@ -14,6 +14,7 @@ import top.cheesesmp.duelcore.config.Messages;
 import top.cheesesmp.duelcore.kit.Kit;
 import top.cheesesmp.duelcore.match.Match;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
+import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.ui.anim.Animation;
 import top.cheesesmp.duelcore.ui.anim.Channel;
 import top.cheesesmp.duelcore.ui.anim.Ease;
@@ -24,8 +25,8 @@ import top.cheesesmp.duelcore.ui.anim.TextFx;
  * The animated "match found" title ({@code animations.match-found-reveal}): "MATCH FOUND" (messages.yml
  * {@code match.found-reveal}) brightens out of the dark while a light band sweeps over it, then the subtitle (the
  * opponent with their tier, the kit and the mode: {@code match.found-subtitle}) is typed out. A whoosh plays at the
- * start and a chime once the name is there ({@code animations.queue-sounds}, the player's sound setting). The totem
- * pop and the {@code match-found-sounds} pool are played by MatchService as before.
+ * start and a chime once the name is there ({@code animations.queue-sounds}, the player's sound and match sound
+ * settings). The totem pop and the {@code match-found-sounds} pool are played by MatchService as before.
  *
  * <p>Runs on the {@link Channel#TITLE} channel and survives the teleport into the arena. It is over after about
  * 1.4 s, before the first countdown title, and stops early if the countdown has begun anyway.
@@ -64,7 +65,7 @@ public final class MatchFoundReveal {
                 if (match != null && (match.isOver() || match.state() == Match.State.COUNTDOWN || match.state() == Match.State.FIGHTING)) {
                     return false;
                 }
-                if (tick == 0 && sounds) Sfx.play(plugin, p, notes());
+                if (tick == 0 && sounds && MatchSounds.matchSounds(plugin, p)) Sfx.play(plugin, p, notes());
                 TextColor color = TextFx.lerp(DARK, base, Ease.easeOutCubic(Ease.progress(tick, BRIGHTEN)));
                 Component title = TextFx.shimmer(text, color, shine, Ease.easeInOutSine(Ease.progress(tick, SWEEP)), 2.0);
                 Component sub = TextFx.typewriter(subtitle, Ease.easeOutQuad(Ease.progress(tick - TYPE_START, TYPE)));
@@ -112,8 +113,10 @@ public final class MatchFoundReveal {
             Messages.text("mode", plugin.messages().raw("mode.ranked")),
             Messages.text("region", profile == null || profile.region() == null ? "" : profile.region()),
             Messages.num("players", 2));
-        if (plugin.settings().totemPop) TotemPop.play(plugin, player, kit.icon());
-        MatchSounds.play(plugin, player, plugin.settings().matchFoundSounds.pick(ThreadLocalRandom.current()), 1);
+        if (plugin.settings().totemPop && (profile == null || profile.setting(Setting.MATCH_FOUND_POP))) {
+            TotemPop.play(plugin, player, kit.icon());
+        }
+        MatchSounds.playMatch(plugin, player, plugin.settings().matchFoundSounds.pick(ThreadLocalRandom.current()), 1);
         if (plugin.settings().animMatchFound) {
             play(player, null, subtitle);
         } else {

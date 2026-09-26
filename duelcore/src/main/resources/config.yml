@@ -4,7 +4,7 @@
 #  kits in kits/*.yml and arenas in arenas/*.yml.
 #  Reload everything with /duelcore reload (running matches keep their kit).
 # ─────────────────────────────────────────────────────────────
-config-version: 4
+config-version: 5
 
 database:
   # sqlite (default, file in the plugin folder) or mysql (MySQL 8 / MariaDB 10.5+)
@@ -116,6 +116,10 @@ match:
   # movement or input for disconnect-idle-seconds before it (0 = only the server's own timeout reasons).
   disconnect-saves-per-day: 5
   disconnect-idle-seconds: 5
+  # /leave before the first fight of a 1v1 starts ends it at once with no result (no Elo, not saved) and the leaver
+  # isn't queued again by Keep Queuing. Allowed this many times in a row (playing a fight resets it); after that
+  # /leave is a normal forfeit. 0 = off.
+  leave-before-start-max: 2
   # Commands usable during a match (everything else is blocked). Admins with duelcore.bypass.commands ignore this.
   allowed-commands: [leave, forfeit, msg, tell, w, r, reply, profile, ping]
   # Play the totem animation with the kit's item when a match is found (silent: animations.match-found-sounds play).
@@ -124,18 +128,24 @@ match:
   void-depth: 6
 
 animations:
-  # From round 2 on, both fighters are thrown back to their spawn along a real Minecraft arc (normal player gravity)
-  # instead of teleporting. They can look around but can't steer.
+  # From round 2 on, both fighters are brought back to their spawn with a respawn animation (respawn-styles) instead
+  # of a plain teleport. They can't move, jump or steer until they stand on the spawn.
   respawn-throw: true
-  # How high the top of the arc is at least, in blocks above the higher end (longer throws go a bit higher; arcs that
-  # would clip trees or hills go higher still, or become a teleport).
+  # The respawn animations, one picked at random for each fighter every round. Write "<style>" or "<style> <weight>"
+  # (a style with weight 2 comes twice as often; 0 turns it off):
+  #   throw      carried back along a real Minecraft arc (normal player gravity); they can still look around
+  #   look-down  the view tilts slowly down to the ground, they're teleported, and it tilts slowly back up
+  #   spin       one smooth 360° turn, teleported exactly half way through it
+  respawn-styles:
+    - throw
+    - look-down
+    - spin
+  # How high the top of the throw's arc is at least, in blocks above the higher end (longer throws go a bit higher;
+  # arcs that would clip trees or hills go higher still, or become a teleport).
   respawn-throw-height: 10
-  # Players with a ping above this (ms) are teleported to their spawn instead: their client lags too far behind the
-  # throw. 0 = always throw.
+  # Players with a ping above this (ms) are teleported to their spawn instead of animated: their client lags too far
+  # behind. 0 = always animate.
   respawn-throw-max-ping: 350
-  # A throw the server hasn't seen the player follow after this many ticks (plus the player's ping) is ended with a
-  # teleport to the spawn (4-60).
-  respawn-throw-stall-ticks: 10
   # Red burst and soul where a fighter dies.
   death: true
   # Golden spiral around the round winner.
@@ -249,9 +259,15 @@ animations:
 rating:
   # elo or glicko2
   system: elo
-  default: 1000
+  # Rating of a player's first match in a kit (existing ratings are never changed by editing this).
+  default: 750
   # Ratings never drop below this.
-  floor: 100
+  floor: 50
+  # Every ranked result: change = gain-multiplier × the system's change + bonus-per-match, for both players.
+  # With 3 and 3 an even Elo match (K 32) is +51 for the winner and -45 for the loser; a draw is +3 each.
+  # 1 and 0 = the plain rating system.
+  gain-multiplier: 3
+  bonus-per-match: 3
   elo:
     k-factor: 32
     # K-factor during placement (provisional) games, see tiers.yml placement-matches.

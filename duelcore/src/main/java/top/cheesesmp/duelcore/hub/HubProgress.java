@@ -18,6 +18,7 @@ import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.profile.KitStats;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
+import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.rating.Tier;
 import top.cheesesmp.duelcore.rating.TierLadder;
 import top.cheesesmp.duelcore.ui.anim.Ease;
@@ -33,7 +34,7 @@ import top.cheesesmp.duelcore.ui.anim.Sfx;
  * with soft XP orb sounds ({@code animations.hub-xp-fill}), and a kit that reached a better tier gets a sparkle ring
  * in the tier's colour rising from the player's feet ({@code animations.tier-ring}; only they see it). Both run on
  * this service's own 2-tick timer, stop as soon as the player leaves the lobby, and everything is per-player memory
- * cleared on quit. Testers (/animtest) see the fill on every return to the hub, even after unrated matches.
+ * cleared on quit. Players who turned off {@link Setting#PROGRESS_REVEAL} get the bar without fill or ring. Testers (/animtest) see the fill on every return to the hub, even after unrated matches.
  */
 public final class HubProgress implements Listener, Runnable {
 
@@ -103,7 +104,8 @@ public final class HubProgress implements Listener, Runnable {
         Map<String, Tier> tiers = kitTiers(profile);
         Map<String, Tier> old = kitTiers.put(uuid, tiers);
         Tier better = old == null ? null : better(old, tiers);
-        if (better != null && plugin.settings().animTierRing) ring(player, better, RING_DELAY);
+        boolean animate = profile.setting(Setting.PROGRESS_REVEAL); // the player's "Rank-up animations"
+        if (better != null && animate && plugin.settings().animTierRing) ring(player, better, RING_DELAY);
         if (!plugin.settings().animHubXp) {
             shown.remove(uuid);
             fills.remove(uuid);
@@ -114,7 +116,7 @@ public final class HubProgress implements Listener, Runnable {
         if (now.equals(before) && plugin.tester().enabled(uuid)) {
             before = shown(now.ranked(), now.ranked() ? now.level() - 25 : Math.max(0, now.level() - 1)); // as if gained
         }
-        if (plugin.settings().animHubXpFill && before != null && !before.equals(now)) {
+        if (animate && plugin.settings().animHubXpFill && before != null && !before.equals(now)) {
             apply(player, before);
             fills.put(uuid, new Fill(before, now));
         } else {
