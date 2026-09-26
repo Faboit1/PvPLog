@@ -306,7 +306,7 @@ public final class MainConfig {
         ratingSystem = c.getString("rating.system", "elo").toLowerCase(Locale.ROOT);
         ratingDefault = c.getDouble("rating.default", 750);
         ratingFloor = c.getDouble("rating.floor", 50);
-        ratingGainMultiplier = c.getDouble("rating.gain-multiplier", 3);
+        ratingGainMultiplier = Math.max(0, c.getDouble("rating.gain-multiplier", 3));
         ratingBonusPerMatch = c.getDouble("rating.bonus-per-match", 3);
         eloK = c.getDouble("rating.elo.k-factor", 32);
         eloProvisionalK = c.getDouble("rating.elo.provisional-k-factor", 48);
