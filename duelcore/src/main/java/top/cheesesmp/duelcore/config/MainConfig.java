@@ -67,6 +67,11 @@ public final class MainConfig {
     public final int disconnectSavesPerDay;
     public final int disconnectIdleSeconds;
     public final int leaveBeforeStartMax;
+    public final boolean drawEnabled;
+    public final int drawOfferSeconds;
+    public final int drawOfferCooldownSeconds;
+    public final int tradeWindowMaxMs;
+    public final int tradeDrawsMax;
     public final Set<String> allowedCommands;
     public final boolean totemPop;
     public final boolean animRespawnThrow;
@@ -253,6 +258,11 @@ public final class MainConfig {
         disconnectSavesPerDay = Math.max(0, c.getInt("match.disconnect-saves-per-day", 5));
         disconnectIdleSeconds = Math.max(0, c.getInt("match.disconnect-idle-seconds", 5));
         leaveBeforeStartMax = Math.max(0, c.getInt("match.leave-before-start-max", 2));
+        drawEnabled = c.getBoolean("match.draw.enabled", true);
+        drawOfferSeconds = Math.max(5, c.getInt("match.draw.offer-seconds", 30));
+        drawOfferCooldownSeconds = Math.max(0, c.getInt("match.draw.offer-cooldown-seconds", 30));
+        tradeWindowMaxMs = Math.clamp(c.getInt("match.trade.window-max-ms", 250), 0, 1000);
+        tradeDrawsMax = Math.max(0, c.getInt("match.trade.draws-max", 2));
         allowedCommands = lower(c.getStringList("match.allowed-commands"));
         totemPop = c.getBoolean("match.totem-pop", true);
         animRespawnThrow = c.getBoolean("animations.respawn-throw", true);

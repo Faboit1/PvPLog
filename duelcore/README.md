@@ -170,6 +170,7 @@ Player commands (all players by default):
 | --- | --- | --- |
 | `/queue [kit]` | `/play`, `/q` | Opens the queue menu, or joins a kit's (ranked) queue directly |
 | `/leave` | `/forfeit` | Leaves the queue, stops spectating, or forfeits (asks to confirm within 5 s) |
+| `/draw` | | Offers your 1v1 opponent a draw, or accepts theirs (`/draw deny` declines). An agreed draw changes nobody's Elo |
 | `/profile [player]` | `/stats` | Profile: overall tier and Elo, per-kit tier/rating/record, recent matches. `/profile <p> legacy` shows last season |
 | `/leaderboard [kit\|overall] [region]` | `/lb`, `/top` | Leaderboards, global or per region. Test bots (names starting with `dcbot`) are never listed or counted in ranks |
 | `/spectate [player]` | `/spec` | Watch a match. Without a name it opens the live list (search; highest Elo first, then by name). `/spectate stop` |

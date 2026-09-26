@@ -97,6 +97,25 @@ match:
   connection-saved: "<muted>Your connection dropped in a ranked match: no Elo lost.</muted> <text><left></text><muted>/<per_day> disconnect saves left today.</muted>"
   forfeit-confirm: "<muted>Type <text>/leave</text> again within 5 seconds to forfeit. It counts as a loss.</muted>"
   forfeited: "<muted>You forfeited the match.</muted>"
+  # A double kill (both died at the same time, see match.trade in config.yml) drew the round. <left> = draws left
+  # before a double kill is decided by a coin flip.
+  trade-draw: "<muted>Double kill! The round is a draw.</muted> <text><left></text><muted> more double-kill draws this match.</muted>"
+  trade-coin: "<muted>Double kill again: a coin flip gives the round to <text><winner></text>.</muted>"
+  draw:
+    # To the one offering / the opponent. <player> <seconds> <accept> <deny>
+    offered: "<muted>Draw offered to <text><player></text>. It expires in <seconds>s.</muted>"
+    received: "<text><player></text> <muted>offers a draw (no Elo change).</muted>  <accept> <deny>"
+    accept-button: "<good>[Accept]</good>"
+    deny-button: "<muted>[Decline]</muted>"
+    agreed: "<muted>Both players agreed to a draw. No Elo change.</muted>"
+    denied: "<muted><text><player></text> declined your draw offer.</muted>"
+    you-denied: "<muted>Draw offer declined.</muted>"
+    no-offer: "<muted>There's no draw offer to decline.</muted>"
+    already-offered: "<muted>Your draw offer is still waiting for an answer.</muted>"
+    cooldown: "<muted>You can offer a draw again in <seconds>s.</muted>"
+    not-in-match: "<muted>You're not in a match.</muted>"
+    only-1v1: "<muted>Draws can only be offered in 1v1 matches.</muted>"
+    disabled: "<muted>Draw offers are turned off.</muted>"
   command-blocked: "<muted>You can't use that command during a match.</muted>"
   cancelled: "<muted>The match was cancelled. Nothing was rated.</muted>"
   # Settings → Auto GG: said for the player to their match (fighters and spectators) a second after it ends.
@@ -142,6 +161,7 @@ results:
   score: "<text><you></text> <accent><you_score> – <opp_score></accent> <text><opponent></text>"
   forfeit: "<muted>Ended by forfeit.</muted>"
   connection-lost: "<muted>A connection dropped: no result, no Elo change.</muted>"
+  agreed-draw: "<muted>Draw agreed: no Elo change.</muted>"
   stat-hits: "<muted>Hits</muted>  <text><you></text> <muted>· <opp></muted>"
   stat-damage: "<muted>Damage</muted>  <text><you>❤</text> <muted>· <opp>❤</muted>"
   stat-combo: "<muted>Best combo</muted>  <text><you></text> <muted>· <opp></muted>"

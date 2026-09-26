@@ -271,6 +271,8 @@ public final class MatchService implements Runnable {
             }
             case FIGHTING -> {
                 m.roundTicks++;
+                if (m.tradeVictim != null && System.currentTimeMillis() > m.tradeUntil) closeTrade(m);
+                if (m.state != Match.State.FIGHTING) return;
                 int limit = m.kit().roundTimeLimitSeconds() * 20;
                 if (limit > 0 && m.roundTicks >= limit) {
                     timeout(m);
@@ -494,14 +496,23 @@ public final class MatchService implements Runnable {
             credited = m.participant(dead.lastDamager);
         }
         if (credited != null && credited.team() != dead.team()) credited.kills++;
-        // death cam: spectate the rest of the round
-        victim.setGameMode(GameMode.SPECTATOR);
+        long window = tradeWindow(m, dead, victim);
+        if (window > 0) {
+            // their hits already on the way still count for a moment (see tradeHit); the death cam comes after
+            m.tradeVictim = dead.uuid();
+            m.tradeUntil = System.currentTimeMillis() + window;
+            victim.setInvulnerable(true);
+        } else {
+            // death cam: spectate the rest of the round
+            victim.setGameMode(GameMode.SPECTATOR);
+        }
         plugin.animations().death(victim.getLocation(), audience(m));
         for (Player p : online(m)) {
             plugin.messages().send(p, credited == null ? "match.death" : "match.death-by", Messages.text("victim", dead.name()),
                 Messages.text("killer", credited == null ? "" : credited.name()),
                 Messages.comp("hearts", killerHealth(credited)));
         }
+        if (window > 0) return; // decided when the window closes (closeTrade) or by a trade hit
         checkRoundOver(m);
         if (m.state == Match.State.FIGHTING) {
             // the round goes on: the killer's "+1 kill" bar, and how many are left in a free-for-all
@@ -509,6 +520,44 @@ public final class MatchService implements Runnable {
             if (k != null && !credited.left()) plugin.animations().fx().kill(k, credited.combo);
             if (m.ffa()) playersLeft(m);
         }
+    }
+
+    /**
+     * How long (ms) a 1v1 player who just died may still trade: their ping (capped by match.trade-window-max-ms), plus
+     * one tick for when their packets are handled. 0 = no window (off, not a 1v1, or the killer is already down).
+     */
+    private long tradeWindow(Match m, Participant dead, Player victim) {
+        int max = plugin.settings().tradeWindowMaxMs;
+        if (max <= 0 || m.ffa() || m.participants().size() != 2 || m.tradeVictim != null) return 0;
+        Participant other = m.opponentOf(dead);
+        if (other == null || !other.alive || other.left() || Bukkit.getPlayer(other.uuid()) == null) return 0;
+        return Math.min(Math.max(0, victim.getPing()), max) + 50L;
+    }
+
+    /**
+     * A player inside their trade window hit their killer (the damage itself is cancelled by the listener). A hit that
+     * would have killed them (armour, resistance and absorption counted, a usable totem saves them) means both died
+     * at the same time: the killer goes down too and the round is a double kill (see roundOver).
+     */
+    public void tradeHit(Match m, Player attacker, Player target, double damage) {
+        if (m.state != Match.State.FIGHTING || !attacker.getUniqueId().equals(m.tradeVictim)) return;
+        if (System.currentTimeMillis() > m.tradeUntil) return;
+        Participant tp = m.participant(target.getUniqueId());
+        if (tp == null || !tp.alive || damage < target.getHealth() + target.getAbsorptionAmount()) return;
+        if (m.kit().rules().totems() && (target.getInventory().getItemInMainHand().getType() == Material.TOTEM_OF_UNDYING
+            || target.getInventory().getItemInOffHand().getType() == Material.TOTEM_OF_UNDYING)) return;
+        verbose("match #" + m.id() + ": trade, " + attacker.getName() + " hit back within " + attacker.getPing() + "ms");
+        onDeath(target, attacker);
+    }
+
+    /** The trade window ran out without a lethal hit back: the kill stands. */
+    private void closeTrade(Match m) {
+        UUID victim = m.tradeVictim;
+        m.tradeVictim = null;
+        Player player = victim == null ? null : Bukkit.getPlayer(victim);
+        if (player != null && match(victim) == m) player.setGameMode(GameMode.SPECTATOR);
+        checkRoundOver(m);
+        if (m.state == Match.State.FIGHTING && m.ffa()) playersLeft(m);
     }
 
     /** Party FFA: "3 players left" for everyone watching. */
@@ -598,6 +647,19 @@ public final class MatchService implements Runnable {
     }
 
     private void roundOver(Match m, int winnerTeam) {
+        m.tradeVictim = null;
+        if (winnerTeam < 0 && !m.ffa() && m.participants().size() == 2 && m.alive() == 0 && present(m)[0] && present(m)[1]) {
+            // a double kill (a trade, or both died on the same tick): a draw round a few times, then a coin flip
+            if (m.tradeDraws < plugin.settings().tradeDrawsMax) {
+                m.tradeDraws++;
+                for (Player p : online(m)) plugin.messages().send(p, "match.trade-draw",
+                    Messages.num("left", plugin.settings().tradeDrawsMax - m.tradeDraws));
+            } else {
+                winnerTeam = java.util.concurrent.ThreadLocalRandom.current().nextInt(2);
+                for (Player p : online(m)) plugin.messages().send(p, "match.trade-coin",
+                    Messages.text("winner", m.teamName(winnerTeam)));
+            }
+        }
         m.addRoundWinner(winnerTeam);
         if (winnerTeam >= 0) m.score[winnerTeam]++;
         m.state = Match.State.ROUND_END;
@@ -696,6 +758,84 @@ public final class MatchService implements Runnable {
         forfeit(player, quit, false);
     }
 
+    // ------------------------------------------------------------------ /draw
+
+    /** Last /draw offer per player (ms), for match.draw-offer-cooldown-seconds. */
+    private final Map<UUID, Long> drawOffers = new HashMap<>();
+
+    /**
+     * /draw: offers the opponent a draw, or accepts theirs. An agreed draw ends the match with no result for anyone's
+     * Elo (1v1 only; offers expire after match.draw-offer-seconds).
+     */
+    public void draw(Player player) {
+        Match m = byPlayer.get(player.getUniqueId());
+        Participant self = m == null ? null : m.participant(player.getUniqueId());
+        if (m == null || self == null || self.left() || m.isOver()) {
+            plugin.messages().send(player, "match.draw.not-in-match");
+            return;
+        }
+        if (m.ffa() || m.participants().size() != 2) {
+            plugin.messages().send(player, "match.draw.only-1v1");
+            return;
+        }
+        MainConfig cfg = plugin.settings();
+        if (!cfg.drawEnabled) {
+            plugin.messages().send(player, "match.draw.disabled");
+            return;
+        }
+        Participant opp = m.opponentOf(self);
+        Player other = opp == null || opp.left() ? null : Bukkit.getPlayer(opp.uuid());
+        if (other == null) {
+            plugin.messages().send(player, "match.draw.not-in-match");
+            return;
+        }
+        long now = System.currentTimeMillis();
+        boolean pending = m.drawOffer != null && now - m.drawOfferAt <= cfg.drawOfferSeconds * 1000L;
+        if (pending && m.drawOffer.equals(opp.uuid())) {
+            m.drawOffer = null;
+            for (Player p : online(m)) plugin.messages().send(p, "match.draw.agreed");
+            verbose("match #" + m.id() + ": draw agreed");
+            end(m, -1, Match.EndReason.AGREED_DRAW);
+            return;
+        }
+        if (pending) {
+            plugin.messages().send(player, "match.draw.already-offered");
+            return;
+        }
+        Long last = drawOffers.get(player.getUniqueId());
+        long wait = last == null ? 0 : cfg.drawOfferCooldownSeconds * 1000L - (now - last);
+        if (wait > 0) {
+            plugin.messages().send(player, "match.draw.cooldown", Messages.num("seconds", (int) Math.ceil(wait / 1000.0)));
+            return;
+        }
+        drawOffers.put(player.getUniqueId(), now);
+        m.drawOffer = player.getUniqueId();
+        m.drawOfferAt = now;
+        plugin.messages().send(player, "match.draw.offered", Messages.text("player", other.getName()),
+            Messages.num("seconds", cfg.drawOfferSeconds));
+        Component accept = plugin.messages().get("match.draw.accept-button")
+            .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/draw"));
+        Component deny = plugin.messages().get("match.draw.deny-button")
+            .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/draw deny"));
+        plugin.messages().send(other, "match.draw.received", Messages.text("player", player.getName()),
+            Messages.num("seconds", cfg.drawOfferSeconds), Messages.comp("accept", accept), Messages.comp("deny", deny));
+        sound(other, Sound.BLOCK_NOTE_BLOCK_PLING, 1.2f);
+    }
+
+    /** /draw deny: turns down the opponent's pending offer. */
+    public void denyDraw(Player player) {
+        Match m = byPlayer.get(player.getUniqueId());
+        if (m == null || m.drawOffer == null || m.drawOffer.equals(player.getUniqueId())
+            || System.currentTimeMillis() - m.drawOfferAt > plugin.settings().drawOfferSeconds * 1000L) {
+            plugin.messages().send(player, "match.draw.no-offer");
+            return;
+        }
+        Player offerer = Bukkit.getPlayer(m.drawOffer);
+        m.drawOffer = null;
+        plugin.messages().send(player, "match.draw.you-denied");
+        if (offerer != null) plugin.messages().send(offerer, "match.draw.denied", Messages.text("player", player.getName()));
+    }
+
     /** Early leaves in a row per player (reset once they play a fight); see {@link #leaveBeforeStart}. */
     private final Map<UUID, Integer> earlyLeaves = new HashMap<>();
 
@@ -787,6 +927,7 @@ public final class MatchService implements Runnable {
         m.stateTicks = 0;
         m.winnerTeam = winnerTeam;
         m.endReason = reason;
+        for (Participant p : m.participants()) drawOffers.remove(p.uuid());
         boolean rated = m.ranked() && reason.countsForRating() && m.participants().size() == 2
             && (winnerTeam >= 0 || reason == Match.EndReason.DRAW);
         List<ProfileService.RatingWrite> writes = new ArrayList<>();

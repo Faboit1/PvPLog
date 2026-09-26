@@ -25,6 +25,7 @@ permissions:
     children:
       duelcore.queue: true
       duelcore.leave: true
+      duelcore.draw: true
       duelcore.profile: true
       duelcore.profile.others: true
       duelcore.leaderboard: true
@@ -40,6 +41,9 @@ permissions:
     default: true
   duelcore.leave:
     description: Leave a queue, stop spectating or forfeit (/leave)
+    default: true
+  duelcore.draw:
+    description: Offer or accept a draw in a 1v1 match (/draw)
     default: true
   duelcore.profile:
     description: View your own profile (/profile)
