@@ -86,7 +86,7 @@ import top.cheesesmp.duelcore.ui.anim.TextFx;
  * re-validated. While open, the menu is refreshed by {@link OpenDialogs} (search timers, player counts, queued state).
  *
  * <p>After a match ({@code animations.queue-progress}): when {@code plugin.progress()} has a reveal for a kit of the
- * opened tab, that kit's standing is animated by re-showing the menu every 2 ticks for about 1.7 s: the placement bar
+ * opened tab, that kit's standing is animated by re-showing the menu every 2 ticks for about 2.4 s: the placement bar
  * fills segment by segment from the old to the new value (the new segments highlighted, then settling), or the Elo
  * counts up ("+18 Elo", the tier switching at the end), with a rising tick per step and a flourish at the end. The
  * reveal is consumed when it starts, so it plays once. Close or Escape (both send {@code duelcore:dialog/close}),
@@ -100,8 +100,8 @@ public final class QueueDialog {
 
     /** Progress animation: ticks before the fill starts, of the fill (count) and of the settle (highlight fading). */
     private static final int ANIM_DELAY = 6;
-    private static final int ANIM_COUNT = 20;
-    private static final int ANIM_SETTLE = 8;
+    private static final int ANIM_COUNT = 30;
+    private static final int ANIM_SETTLE = 12;
     /** After the count, the change ("+20%", "+18 Elo") stays this long, then fades out over CHANGE_FADE and is gone. */
     private static final int CHANGE_HOLD = 120;
     private static final int CHANGE_FADE = 80;
