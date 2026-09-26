@@ -139,6 +139,49 @@ queue-menu:
     # "atlas:path" sprite, tinted with the progress-reveal bar colours (head-color, settling to filled-color).
     highlight: "blocks:block/white_concrete"
 
+# The settings menu (Settings hotbar item, /settings). Texts are in messages.yml (dialog.settings).
+settings-menu:
+  # Width of the menu's lines.
+  width: 300
+  # Icons: an atlas sprite ("items:item/diamond_sword", "blocks:block/obsidian", "gui:hud/heart/full", optional
+  # #rrggbb tint), "" for none. "section-<id>" are the tabs, the rest the rows (the ids of messages.yml
+  # dialog.settings.items).
+  icons:
+    section-gameplay: "items:item/iron_sword"
+    section-visuals: "items:item/spyglass"
+    section-sounds: "items:item/music_disc_cat"
+    section-social: "items:item/name_tag"
+    section-queue: "items:item/clock_00"
+    # Gameplay
+    allow-spectators: "items:item/ender_eye"
+    tab-spectators: "items:item/spyglass"
+    combo-bar: "items:item/blaze_powder"
+    heartbeat: "gui:hud/heart/full"
+    results-screen: "items:item/map"
+    # Visuals
+    sidebar: "items:item/paper"
+    chat-tags: "items:item/name_tag"
+    hide-hub-players: "items:item/phantom_membrane"
+    hotbar-hints: "items:item/oak_sign"
+    match-particles: "items:item/firework_rocket"
+    progress-reveal: "items:item/experience_bottle"
+    match-found-pop: "items:item/totem_of_undying"
+    # Sounds
+    sounds: "items:item/bell"
+    match-sounds: "items:item/goat_horn"
+    queue-music: "items:item/music_disc_cat"
+    # Social
+    duel-requests: "items:item/iron_sword"
+    party-invites: "items:item/cake"
+    friend-alerts: "items:item/emerald"
+    auto-gg: "items:item/feather"
+    # Queue
+    keep-queuing: "items:item/repeater"
+    searching-bar: "items:item/compass_00"
+    region: "items:item/filled_map"
+    max-ping: "items:item/redstone"
+    country: "items:item/book"
+
 # The kit editor (Kit Editor hotbar item, /kit edit [kit], /kiteditor [kit]). A 6-row chest laid out like the
 # inventory: rows 1-3 the inventory, row 4 the hotbar, row 5 the armour (locked), the offhand slot and an info item,
 # row 6 the buttons. Texts are in messages.yml (kit-editor).

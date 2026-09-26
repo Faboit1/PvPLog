@@ -168,7 +168,7 @@ Player commands (all players by default):
 | `/party` | `/p` | Party menu (see *Parties*). `create`, `invite <player>`, `accept\|deny [player]`, `join <leader>`, `leave`, `kick <player>`, `promote <player>`, `disband`, `chat`, `open`, `private`, `password`, `list`, `ffa [kit]`, `split [kit]`, `duel [leader] [kit]`, `duel accept\|deny [leader]` |
 | `/pc <message>` | | Party chat. Starting a chat message with `@` does the same |
 | `/duel [player] [kit]` | | Unranked challenge. Without arguments it opens a player picker. `/duel accept\|deny <player>` |
-| `/settings` | | Duel requests, sidebar, sounds, chat tags, hub visibility, spectators, friend alerts, party invites, music while searching, region, country, max ping |
+| `/settings` | | Player settings in five tabs: Gameplay, Visuals, Sounds, Social, Queue (see *Player settings*) |
 | `/friends [add\|remove <player>\|list]` | `/f`, `/friend` | Friends dialog: follows, followers and friends (mutual follows), online first, filter, add back, duel or spectate a friend. `add` works for offline players by exact name |
 | `/follow <player>`, `/unfollow <player>` | | Follow or unfollow; when both follow each other they're friends |
 | `/kit edit [kit]` | `/kiteditor [kit]` | Kit editor (see *Kit editor*): the kit picker, or the editor of one kit. `/kit` alone opens the picker too |
@@ -193,6 +193,42 @@ Staff:
 Every join is logged as `[join] <name> client <version> (protocol <n>), brand <brand>`: the version comes from
 ViaVersion when it is installed (optional), the brand from the client (logged about two seconds later when it
 arrives after the join).
+
+## Player settings
+
+The Settings hotbar item and `/settings` open the settings menu: five tabs along the top, one row per setting with
+its icon, name and state, and what it does in the row's hover. A click changes the setting and saves it at once;
+the menu stays open and shows the new state (switching tabs works the same way). Texts are in messages.yml
+(`dialog.settings`, one `items.<id>` per row), the icons and width in gui.yml (`settings-menu`).
+
+| Tab | Setting | Default | What it does |
+| --- | --- | --- | --- |
+| Gameplay | Allow spectators | on | Others can watch your matches (off: they're hidden from the spectate list and `/spectate` is refused) |
+| | Spectators in tab | on | While you fight, your match's spectators are listed in your tab list |
+| | Combo counter | on | The hit-combo and kill pop-ups on the action bar (`animations.combo-bar`) |
+| | Low-health heartbeat | on | The heartbeat sound and red health pulse when low (`animations.heartbeat`) |
+| | Results screen | on | The results dialog back in the hub after a match (off: only the title and chat summary) |
+| Visuals | Sidebar | on | The scoreboard |
+| | Tier tags in chat | on | Tiers next to names in chat |
+| | Hide hub players | off | Other players are invisible to you in the hub |
+| | Hotbar hints | on | The action bar hint of the held hub item |
+| | Match particles | on | Fight-start rings, round spirals, death bursts, fireworks and confetti of matches you're in or watch |
+| | Rank-up animations | on | After a match: the Elo / placement count, tier-up titles, the queue menu's progress animation, the hub XP bar fill and tier ring |
+| | Match found pop | on | The totem pop with the kit's icon when a match is found |
+| Sounds | All sounds | on | Every DuelCore sound effect (the master switch) |
+| | Match sounds | on | Match found, countdown, FIGHT!, round results, kills, victory / defeat jingles |
+| | Music while searching | on | A music disc while in a queue |
+| Social | Duel requests | everyone | Everyone / Friends only / Nobody (click to cycle); enforced for `/duel`, the player picker and the friends list |
+| | Party invites from anyone | on | Off: only friends can invite you |
+| | Friend alerts | on | Friend online / new follower chat lines |
+| | Auto GG | off | Says "gg" (`match.auto-gg`) to your match's fighters and spectators a second after it ends |
+| Queue | Keep queuing | off | Search again in the same kits after a match (also in the queue menu) |
+| | Searching bar | on | The queue's "searching" action bar (`queue.searching-action-bar`) |
+| | Region, Max opponent ping, Country | — | Region choices, ping in steps (50–500 ms or any), and a two-letter country set in a small dialog |
+
+Server switches in config.yml (`animations.*`, `queue.searching-action-bar`, `queue.music.enabled`) still apply first:
+a player's setting can only turn off what the server has on. Settings are bits of `dc_players.settings`
+(`profile/Setting`); bits from 10 on store "changed from the default", so new settings need no database migration.
 
 ## Permissions
 
@@ -255,7 +291,7 @@ screen after a match has an *Edit kit* button for the match's kit.
 
 **Menus** stay open while you click: a button that leads to another menu (a tab, a page, Back, a player in the
 friends list, …) swaps the menu in place instead of closing and re-opening the screen, and one that does something
-else (joins a match, starts spectating, sends a duel, saves settings, opens the kit editor) closes it. Close and
+else (joins a match, starts spectating, sends a duel, opens the kit editor) closes it. Close and
 Escape close every menu, also while a button waits for its next menu to load (it then doesn't pop up afterwards).
 While a menu is open it updates itself once a second (`dialogs.refresh`): the queue menu's search timers, player
 counts and queued kits, the party menu's and the friends list's online / in-match states, a friend's or party
@@ -263,7 +299,7 @@ member's page, `/duel`'s player list, a profile's "5m ago" and the live spectate
 when something in it changed: every update is a new screen on the client, which scrolls back to the top. So times
 under a minute read "<1m" instead of counting seconds, and the queue menu's ticking search clock (0:07) is only
 shown on tabs with at most `queue-menu.clock-max-kits` kits (gui.yml, 5); longer tabs show whole minutes. Menus
-with a text box (Add Friends, party create / join / invite / privacy, the spectate search, settings) never update
+with a text box (Add Friends, party create / join / invite / privacy, the spectate search, the settings country) never update
 by themselves, since that would clear what you typed (the live spectate list's *Search* opens the list with the
 search box); neither does the queue menu while its progress animation plays.
 

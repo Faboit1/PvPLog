@@ -56,11 +56,21 @@ public final class PlayerProfile {
     }
 
     public boolean setting(Setting s) {
-        return (settings & s.mask()) != 0;
+        return s.read(settings);
     }
 
     public void setting(Setting s, boolean value) {
-        settings = value ? settings | s.mask() : settings & ~s.mask();
+        settings = s.write(settings, value);
+    }
+
+    /** Who may send this player duel requests ({@link Setting#DUEL_REQUESTS} and {@link Setting#DUEL_FRIENDS_ONLY}). */
+    public DuelRequests duelRequests() {
+        return DuelRequests.of(setting(Setting.DUEL_REQUESTS), setting(Setting.DUEL_FRIENDS_ONLY));
+    }
+
+    public void duelRequests(DuelRequests who) {
+        setting(Setting.DUEL_REQUESTS, who != DuelRequests.NOBODY);
+        setting(Setting.DUEL_FRIENDS_ONLY, who == DuelRequests.FRIENDS);
     }
 
     public @Nullable String region() {

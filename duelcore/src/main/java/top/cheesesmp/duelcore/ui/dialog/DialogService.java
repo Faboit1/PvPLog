@@ -51,10 +51,12 @@ public final class DialogService {
 
     private final DuelCorePlugin plugin;
     private final QueueDialog queueMenu;
+    private final SettingsDialog settingsMenu;
 
     public DialogService(DuelCorePlugin plugin) {
         this.plugin = plugin;
         this.queueMenu = new QueueDialog(plugin);
+        this.settingsMenu = new SettingsDialog(plugin);
     }
 
     private Messages msg() {
@@ -141,6 +143,10 @@ public final class DialogService {
     /** The queue menu; also handles every {@code duelcore:queue/*} click. */
     public QueueDialog queueMenu() {
         return queueMenu;
+    }
+
+    public SettingsDialog settingsMenu() {
+        return settingsMenu;
     }
 
     // ------------------------------------------------------------------ profile
@@ -300,39 +306,9 @@ public final class DialogService {
 
     // ------------------------------------------------------------------ settings
 
+    /** The settings menu, on its first section ({@link SettingsDialog}). */
     public void settings(Player player) {
-        PlayerProfile p = plugin.profiles().get(player);
-        if (p == null) return;
-        List<DialogInput> inputs = new ArrayList<>();
-        inputs.add(bool("duel_requests", "dialog.settings.duel-requests", p.setting(Setting.DUEL_REQUESTS)));
-        inputs.add(bool("sidebar", "dialog.settings.sidebar", p.setting(Setting.SIDEBAR)));
-        inputs.add(bool("sounds", "dialog.settings.sounds", p.setting(Setting.SOUNDS)));
-        inputs.add(bool("chat_tags", "dialog.settings.chat-tags", p.setting(Setting.CHAT_TAGS)));
-        inputs.add(bool("hide_hub", "dialog.settings.hide-hub", p.setting(Setting.HIDE_HUB_PLAYERS)));
-        inputs.add(bool("spectators", "dialog.settings.spectators", p.setting(Setting.ALLOW_SPECTATORS)));
-        inputs.add(bool("friend_alerts", "dialog.settings.friend-alerts", p.setting(Setting.FRIEND_ALERTS)));
-        inputs.add(bool("party_invites", "dialog.settings.party-invites", p.setting(Setting.PARTY_INVITES)));
-        inputs.add(bool("queue_music", "dialog.settings.queue-music", p.setting(Setting.QUEUE_MUSIC)));
-        List<SingleOptionDialogInput.OptionEntry> regions = new ArrayList<>();
-        regions.add(SingleOptionDialogInput.OptionEntry.create("none", msg().get("dialog.settings.region-none"), p.region() == null));
-        for (String r : plugin.settings().regions) {
-            regions.add(SingleOptionDialogInput.OptionEntry.create(r, Component.text(r), r.equals(p.region())));
-        }
-        inputs.add(DialogInput.singleOption("region", msg().get("dialog.settings.region"), regions).width(250).build());
-        inputs.add(DialogInput.text("country", msg().get("dialog.settings.country")).width(250)
-            .initial(p.country() == null ? "" : p.country()).maxLength(2).build());
-        inputs.add(DialogInput.numberRange("max_ping", msg().get("dialog.settings.max-ping"), 0f, 500f)
-            .step(25f).initial((float) Math.clamp(Math.round(p.maxPing() / 25.0) * 25, 0, 500)).width(250)
-            .labelFormat("%s: %s").build());
-        ActionButton save = button(msg().get("dialog.settings.save"), null, 150, "settings/save", Map.of());
-        ActionButton cancel = button(msg().get("dialog.settings.cancel"), null, 150, OpenDialogs.CLOSE, Map.of());
-        Dialog d = dialog(msg().get("dialog.settings.title"), List.of(text(msg().get("dialog.settings.body"))), inputs,
-            DialogType.confirmation(save, cancel));
-        open().show(player, OpenDialogs.Kind.SETTINGS, d);
-    }
-
-    private DialogInput bool(String key, String label, boolean value) {
-        return DialogInput.bool(key, msg().get(label)).initial(value).build();
+        settingsMenu.open(player, null);
     }
 
     // ------------------------------------------------------------------ spectate
@@ -472,7 +448,7 @@ public final class DialogService {
         for (Player other : Bukkit.getOnlinePlayers()) {
             if (other.equals(player) || plugin.matches().match(other.getUniqueId()) != null) continue;
             PlayerProfile p = plugin.profiles().get(other);
-            if (p != null && !p.setting(Setting.DUEL_REQUESTS)) continue;
+            if (!plugin.duels().accepts(player, other)) continue; // their duel requests setting (nobody / friends only)
             buttons.add(button(msg().get("dialog.duel.player-button", Messages.comp("head", Icons.head(other.getUniqueId(), other.getName())),
                     Messages.text("player", other.getName()), Messages.comp("tier", plugin.tiers().format(p == null ? null : p.overall()))),
                 null, plugin.gui().kitButtonWidth + 40, "duel/pick", payload("target", other.getUniqueId().toString())));

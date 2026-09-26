@@ -71,6 +71,9 @@ public final class GuiConfig {
     public final int queueWidth;
     public final int queueKitWidth;
     public final Map<String, String> queueTabIcons = new HashMap<>();
+    /** Settings menu: width of its lines, and the icons of its rows (by row id) and tabs ("section-<id>"). */
+    public final int settingsWidth;
+    public final Map<String, String> settingsIcons = new HashMap<>();
     public final int queueProgressSegments;
     /**
      * Queue menu: tabs with at most this many kits show the search time as a ticking m:ss clock; longer tabs (which
@@ -158,6 +161,11 @@ public final class GuiConfig {
         queueKitWidth = Math.clamp(y.getInt("queue-menu.kit-width", 250), 50, 1024);
         ConfigurationSection icons = y.getConfigurationSection("queue-menu.tab-icons");
         if (icons != null) for (String key : icons.getKeys(false)) queueTabIcons.put(key, icons.getString(key, ""));
+        settingsWidth = Math.clamp(y.getInt("settings-menu.width", 300), 100, 1024);
+        ConfigurationSection settingIcons = y.getConfigurationSection("settings-menu.icons");
+        if (settingIcons != null) {
+            for (String key : settingIcons.getKeys(false)) settingsIcons.put(key, settingIcons.getString(key, ""));
+        }
         queueProgressSegments = Math.clamp(y.getInt("queue-menu.progress.segments", 10), 1, 30);
         queueClockKits = Math.clamp(y.getInt("queue-menu.clock-max-kits", 5), 0, 1000);
         queueProgressDone = y.getString("queue-menu.progress.done", "");

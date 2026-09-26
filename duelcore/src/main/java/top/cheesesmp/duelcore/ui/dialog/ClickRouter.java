@@ -16,12 +16,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
-import top.cheesesmp.duelcore.config.Messages;
 import top.cheesesmp.duelcore.kit.Kit;
 import top.cheesesmp.duelcore.match.Match;
 import top.cheesesmp.duelcore.match.SpectateService;
-import top.cheesesmp.duelcore.profile.PlayerProfile;
-import top.cheesesmp.duelcore.profile.Setting;
 
 /**
  * Handles every {@code duelcore:*} custom click from dialogs and chat. Payloads come from the client and are
@@ -89,12 +86,12 @@ public final class ClickRouter implements Listener {
     }
 
     /**
-     * Clicks the spam guard never drops: the close clicks and {@code party/menu}, the exit action (Back) of the party
-     * dialogs. Escape runs a dialog's exit action and closes the screen (after-action CLOSE), so a dropped one would
+     * Clicks the spam guard never drops: the close clicks, {@code party/menu}, the exit action (Back) of the party
+     * dialogs, and {@code settings/back}, the settings country dialog's. Escape runs a dialog's exit action and closes the screen (after-action CLOSE), so a dropped one would
      * leave the server tracking (and refreshing) a dialog the player closed. They only close or navigate.
      */
     static boolean unguarded(String action) {
-        return isClose(action) || action.equals("party/menu");
+        return isClose(action) || action.equals("party/menu") || action.equals("settings/back");
     }
 
     private void handle(Player player, String action, Map<String, String> data, @Nullable DialogResponseView view) {
@@ -102,17 +99,13 @@ public final class ClickRouter implements Listener {
             plugin.openDialogs().close(player);
             return;
         }
-        // queue/* clicks are handled by QueueDialog (registered prefix "queue")
+        // queue/* clicks are handled by QueueDialog (registered prefix "queue"), settings/* by SettingsDialog
         switch (action) {
             case "profile/view" -> plugin.commands().openProfile(player, data.getOrDefault("name", player.getName()), false);
             case "leaderboard/view" -> {
                 String region = data.getOrDefault("region", "");
                 if (!region.isEmpty() && !plugin.settings().regions.contains(region)) region = "";
                 plugin.dialogs().leaderboard(player, data.getOrDefault("cat", "overall"), region.isEmpty() ? null : region);
-            }
-            case "settings/save" -> {
-                saveSettings(player, view);
-                plugin.openDialogs().close(player); // the result is a chat message
             }
             case "spectate/find" -> plugin.dialogs().spectateSearch(player);
             case "spectate/search" -> {
@@ -166,42 +159,6 @@ public final class ClickRouter implements Listener {
                 if (handler != null) handler.handle(player, action, data, view);
             }
         }
-    }
-
-    private void saveSettings(Player player, @Nullable DialogResponseView view) {
-        PlayerProfile p = plugin.profiles().get(player);
-        if (p == null || view == null) return;
-        setBool(p, Setting.DUEL_REQUESTS, view.getBoolean("duel_requests"));
-        setBool(p, Setting.SIDEBAR, view.getBoolean("sidebar"));
-        setBool(p, Setting.SOUNDS, view.getBoolean("sounds"));
-        setBool(p, Setting.CHAT_TAGS, view.getBoolean("chat_tags"));
-        setBool(p, Setting.HIDE_HUB_PLAYERS, view.getBoolean("hide_hub"));
-        setBool(p, Setting.ALLOW_SPECTATORS, view.getBoolean("spectators"));
-        setBool(p, Setting.FRIEND_ALERTS, view.getBoolean("friend_alerts"));
-        setBool(p, Setting.PARTY_INVITES, view.getBoolean("party_invites"));
-        setBool(p, Setting.QUEUE_MUSIC, view.getBoolean("queue_music"));
-        String region = view.getText("region");
-        if (region != null) {
-            String up = region.toUpperCase(Locale.ROOT);
-            p.region(plugin.settings().regions.contains(up) ? up : null);
-        }
-        String country = view.getText("country");
-        if (country != null) {
-            String cc = country.trim().toUpperCase(Locale.ROOT);
-            p.country(cc.matches("[A-Z]{2}") ? cc : null);
-        }
-        Float maxPing = view.getFloat("max_ping");
-        if (maxPing != null && !maxPing.isNaN()) p.maxPing(Math.clamp(Math.round(maxPing), 0, 1000));
-        plugin.profiles().saveSettings(p);
-        plugin.sidebar().refresh(player);
-        plugin.visibility().refresh(player);
-        plugin.queueMusic().refresh(player);
-        plugin.messages().send(player, "settings.saved", Messages.text("region", p.region() == null ? "—" : p.region()),
-            Messages.num("max_ping", p.maxPing()));
-    }
-
-    private static void setBool(PlayerProfile p, Setting s, @Nullable Boolean value) {
-        if (value != null) p.setting(s, value);
     }
 
     /** Reads a flat SNBT compound of string values, e.g. {kit:"sword",mode:"ranked"}. */
