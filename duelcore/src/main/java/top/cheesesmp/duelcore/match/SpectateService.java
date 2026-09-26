@@ -10,6 +10,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
+import top.cheesesmp.duelcore.arena.ArenaInstance;
 import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.config.Messages;
@@ -18,10 +20,15 @@ import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.Setting;
 
 /**
- * Watching live matches. Spectators fly in adventure mode, are invulnerable, invisible to the fighters, and can't
- * touch anything; projectiles pass through them. They keep their queue entries.
+ * Watching live matches. Spectators are in spectator mode: the fighters can't see them in the world (or hit, or
+ * target them), but they stay in the tab list as spectators. They can fly through the arena, watch through a
+ * fighter's eyes (left-click them), and can't touch anything. The spectator menu's teleports and flying off are
+ * kept inside their match's arena. They keep their queue entries.
  */
-public final class SpectateService implements Listener {
+public final class SpectateService implements Listener, Runnable {
+
+    /** How far (blocks) spectators may fly past the arena's sides, top and floor before they're brought back. */
+    private static final double MARGIN = 24;
 
     public enum Result { OK, NOT_IN_MATCH, SELF, BUSY, DISALLOWED, NO_ARENA }
 
@@ -63,13 +70,11 @@ public final class SpectateService implements Listener {
         plugin.tags().update(viewer); // grey, italic and last in the tab list
         Location to = focus != null && match.arena().contains(focus) ? focus.clone().add(0, 3, 0) : match.arena().center().add(0, 6, 0);
         KitManager.resetState(viewer, 20);
-        viewer.setGameMode(GameMode.ADVENTURE);
+        viewer.setGameMode(GameMode.SPECTATOR);
         viewer.setInvulnerable(true);
         viewer.setCollidable(false);
         viewer.teleportAsync(to).thenRun(() -> {
             if (!viewer.isOnline() || spectating.get(viewer.getUniqueId()) != match) return;
-            viewer.setAllowFlight(true);
-            viewer.setFlying(true);
             plugin.hub().giveSpectatorItems(viewer);
             plugin.visibility().refresh(viewer);
             plugin.sidebar().refresh(viewer);
@@ -95,6 +100,7 @@ public final class SpectateService implements Listener {
         if (match == null) return false;
         match.spectators().remove(player.getUniqueId());
         plugin.tags().update(player);
+        if (player.getGameMode() == GameMode.SPECTATOR) player.setGameMode(GameMode.ADVENTURE);
         player.setCollidable(true);
         player.setAllowFlight(false);
         player.setFlying(false);
@@ -102,6 +108,32 @@ public final class SpectateService implements Listener {
         plugin.visibility().refresh(player);
         if (toHub) plugin.hub().send(player);
         return true;
+    }
+
+    /** The spectator menu (number keys) teleports to any player on the server: only within the watched arena. */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onSpectatorTeleport(PlayerTeleportEvent event) {
+        if (event.getCause() != PlayerTeleportEvent.TeleportCause.SPECTATE) return;
+        Match match = spectating.get(event.getPlayer().getUniqueId());
+        if (match == null) return;
+        ArenaInstance arena = match.arena();
+        if (arena == null || !arena.contains(event.getTo())) event.setCancelled(true);
+    }
+
+    /** Every second: spectators who flew far off their arena (spectator mode passes through anything) go back. */
+    @Override
+    public void run() {
+        for (Map.Entry<UUID, Match> e : spectating.entrySet()) {
+            Player player = plugin.getServer().getPlayer(e.getKey());
+            ArenaInstance arena = e.getValue().arena();
+            if (player == null || arena == null) continue;
+            Location loc = player.getLocation();
+            boolean away = loc.getWorld() != arena.world() || !arena.containsXZ(loc.getX(), loc.getZ(), MARGIN)
+                || loc.getY() < arena.floorY() - MARGIN || loc.getY() > arena.floorY() + arena.template().sizeY() + MARGIN;
+            if (!away) continue;
+            if (player.getSpectatorTarget() != null) player.setSpectatorTarget(null);
+            player.teleportAsync(arena.center().add(0, 6, 0));
+        }
     }
 
     @EventHandler(priority = EventPriority.LOW)

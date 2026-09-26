@@ -341,6 +341,10 @@ the overall Elo: the average rating of every kit a player has finished placement
 - `motd`: two server-list lines, centered automatically, plus the hover text.
 - `party-menu`: members per page, list lengths and widths of the party menu; `sidebar.match-ffa` and
   `sidebar.spectate-ffa` are the sidebars of a Party FFA.
+- `menu-sounds`: every menu button, clickable chat button (duel / party requests, draw offers) and hub item plays a
+  sound to the presser: `click`, `toggle-on` / `toggle-off`, `back` (also Close, Escape and declining), `confirm`,
+  `deny` (refused or failed) and `page` (tabs, pages), one per press; `enabled: false` silences them all. Same format
+  as `kit-editor.sounds` ("" = none); players' own *Sounds* setting applies. Preview: `/animtest play menu-sounds`.
 
 **chat-filter.yml**: blocks slurs and harassment, masks swearing, in chat and private messages (`/msg`, `/tell`,
 `/r`, `/me`, …). Terms are written plainly and also catch leetspeak (`n1gg3r`, `f@g`), look-alike letters from
@@ -360,7 +364,7 @@ setting. Texts are in `messages.yml` (`progress`, `animtest`), colours and the b
 
 | Key | What it does |
 | --- | --- |
-| `respawn-throw` (+ `respawn-styles`, `-height`, `-max-ping`) | From round 2 on, fighters are brought back to their spawn with a respawn animation picked at random from `respawn-styles` (`throw`: carried along an arc; `look-down`: look down, teleport, look back up; `spin`: a 360° turn, teleported half way; `"<style> <weight>"` for weights). They can't move until they stand on the spawn. Players above `-max-ping` ms (350) are teleported instead. Preview: `/duelcore debug throw <player> [distance] [style]` |
+| `respawn-throw` (+ `respawn-styles`, `-height`, `-max-ping`) | From round 2 on, fighters are brought back to their spawn with a respawn animation picked at random from `respawn-styles` (`throw`: carried along an arc; `float`: up, across and gently down; `orbit`: a rising spiral round the arena centre, camera on it; `swoop`: up and back looking over the arena, then a dive onto the spawn; `look-down`: look down, teleport, look back up; `spin`: a 360° turn, teleported half way; `"<style> <weight>"` for weights). They can't move until they stand on the spawn. Players above `-max-ping` ms (350) are teleported instead. Preview: `/duelcore debug throw <player> [distance] [style]` |
 | `spawn-rise` (+ `-depth`, `-ticks`) | Round 1: each fighter rises out of a hole at their spawn |
 | `death`, `round-win`, `match-win`, `fight-start` | Red burst on death, golden spiral for the round winner, fireworks for the match winner, white ring when a round starts |
 | `join-title` | Title on joining the hub |

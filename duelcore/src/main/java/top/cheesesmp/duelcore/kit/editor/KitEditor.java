@@ -149,8 +149,12 @@ public final class KitEditor implements Listener {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
         plugin.clicks().register("kiteditor", this::click);
         plugin.hub().registerItem("kit-editor", PERMISSION, player -> {
-            if (player.hasPermission(PERMISSION)) picker.open(player);
-            else plugin.messages().send(player, "command.no-permission");
+            if (player.hasPermission(PERMISSION)) {
+                picker.open(player);
+            } else {
+                plugin.messages().send(player, "command.no-permission");
+                plugin.menuSounds().play(player, top.cheesesmp.duelcore.ui.MenuSound.DENY);
+            }
         });
         KitManager.layouts((player, kit) -> {
             int[] layout = layouts.layout(player, kit);
@@ -745,7 +749,9 @@ public final class KitEditor implements Listener {
 
     // ------------------------------------------------------------------ sounds
 
+    /** An editor sound (gui.yml kit-editor.sounds); it is the press's menu sound, so ClickRouter's is skipped. */
     void sound(Player player, String name) {
+        plugin.menuSounds().claim(player);
         MatchSounds.play(plugin, player, plugin.gui().kitEditor.sound(name).pick(ThreadLocalRandom.current()), 0);
     }
 }

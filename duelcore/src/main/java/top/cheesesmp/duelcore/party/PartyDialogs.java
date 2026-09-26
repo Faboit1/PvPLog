@@ -36,6 +36,7 @@ import top.cheesesmp.duelcore.party.PartyService.Result;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.ui.Icons;
+import top.cheesesmp.duelcore.ui.MenuSound;
 import top.cheesesmp.duelcore.ui.dialog.DialogService;
 import top.cheesesmp.duelcore.ui.dialog.Fingerprint;
 import top.cheesesmp.duelcore.ui.dialog.OpenDialogs;
@@ -146,6 +147,12 @@ public final class PartyDialogs {
     Component error(Outcome outcome) {
         return msg().get("party.result." + outcome.result().name().toLowerCase(Locale.ROOT),
             Messages.text("player", outcome.subject()));
+    }
+
+    /** {@link #error}, with the deny menu sound for the player whose action was refused. */
+    private Component refused(Player player, Outcome outcome) {
+        plugin.menuSounds().play(player, MenuSound.DENY);
+        return error(outcome);
     }
 
     private Component status(UUID uuid) {
@@ -388,7 +395,7 @@ public final class PartyDialogs {
     public void openInvite(Player player, @Nullable Component notice) {
         Party party = parties.party(player.getUniqueId());
         if (party != null && !party.isLeader(player.getUniqueId())) {
-            openMenu(player, 0, error(Outcome.of(Result.NOT_LEADER)));
+            openMenu(player, 0, refused(player, Outcome.of(Result.NOT_LEADER)));
             return;
         }
         GuiConfig gui = plugin.gui();
@@ -423,7 +430,7 @@ public final class PartyDialogs {
     public void openPrivacy(Player player, @Nullable Component notice) {
         Party party = parties.party(player.getUniqueId());
         if (party == null || !party.isLeader(player.getUniqueId())) {
-            openMenu(player, 0, error(Outcome.of(party == null ? Result.NOT_IN_PARTY : Result.NOT_LEADER)));
+            openMenu(player, 0, refused(player, Outcome.of(party == null ? Result.NOT_IN_PARTY : Result.NOT_LEADER)));
             return;
         }
         int width = Math.min(plugin.gui().partyWidth, 300);
@@ -448,12 +455,12 @@ public final class PartyDialogs {
     public void openKits(Player player, Mode mode, @Nullable String target) {
         Party party = parties.party(player.getUniqueId());
         if (party == null || !party.isLeader(player.getUniqueId())) {
-            openMenu(player, 0, error(Outcome.of(party == null ? Result.NOT_IN_PARTY : Result.NOT_LEADER)));
+            openMenu(player, 0, refused(player, Outcome.of(party == null ? Result.NOT_IN_PARTY : Result.NOT_LEADER)));
             return;
         }
         Party targetParty = parties.byId(target);
         if (mode == Mode.PVP && targetParty == null) {
-            openPvp(player, error(Outcome.of(Result.NO_PARTY)));
+            openPvp(player, refused(player, Outcome.of(Result.NO_PARTY)));
             return;
         }
         GuiConfig gui = plugin.gui();
@@ -474,7 +481,7 @@ public final class PartyDialogs {
     public void openPvp(Player player, @Nullable Component notice) {
         Party own = parties.party(player.getUniqueId());
         if (own == null || !own.isLeader(player.getUniqueId())) {
-            openMenu(player, 0, error(Outcome.of(own == null ? Result.NOT_IN_PARTY : Result.NOT_LEADER)));
+            openMenu(player, 0, refused(player, Outcome.of(own == null ? Result.NOT_IN_PARTY : Result.NOT_LEADER)));
             return;
         }
         List<Party> targets = parties.challengeable(own);
@@ -527,6 +534,7 @@ public final class PartyDialogs {
     void click(Player player, String action, Map<String, String> data, @Nullable DialogResponseView view) {
         if (!player.hasPermission(PartyService.PERMISSION)) {
             msg().send(player, "command.no-permission");
+            plugin.menuSounds().play(player, MenuSound.DENY);
             return;
         }
         boolean fromChat = "chat".equals(data.get("from"));
@@ -540,7 +548,7 @@ public final class PartyDialogs {
                 parties.create(player, password.isEmpty() ? null : password).thenAccept(o ->
                     plugin.openDialogs().continueAwait(player, ticket, () -> {
                         if (o.ok()) openMenu(player, 0, null);
-                        else openNone(player, error(o));
+                        else openNone(player, refused(player, o));
                     }));
             }
             case "party/join-menu" -> openJoin(player, "", null);
@@ -548,6 +556,7 @@ public final class PartyDialogs {
                 String leader = input(view, "leader");
                 String password = input(view, "password");
                 if (leader.isEmpty()) {
+                    plugin.menuSounds().play(player, MenuSound.DENY);
                     openJoin(player, "", msg().get("party.dialog.leader-missing"));
                     return;
                 }
@@ -556,8 +565,9 @@ public final class PartyDialogs {
             case "party/join-open" -> {
                 Party party = parties.byId(data.get("party"));
                 if (party == null) {
-                    openNone(player, error(Outcome.of(Result.NO_PARTY)));
+                    openNone(player, refused(player, Outcome.of(Result.NO_PARTY)));
                 } else if (party.hasPassword() && parties.invites(player.getUniqueId()).stream().noneMatch(i -> i.partyId().equals(party.id()))) {
+                    plugin.menuSounds().play(player, MenuSound.DENY);
                     openJoin(player, leaderName(party), msg().get("party.result.needs_password"));
                 } else {
                     afterJoin(player, leaderName(party), parties.join(player, party, null));
@@ -570,7 +580,7 @@ public final class PartyDialogs {
                 } else if (fromChat) {
                     feedback(player, o);
                 } else {
-                    openNone(player, error(o));
+                    openNone(player, refused(player, o));
                 }
             }
             case "party/deny" -> {
@@ -588,35 +598,36 @@ public final class PartyDialogs {
                 Player target = picked ? player(data.get("target")) : name.isEmpty() ? null : Bukkit.getPlayerExact(name);
                 if (target == null) {
                     // a picked player who just went offline simply drops out of the refreshed list
+                    if (!picked) plugin.menuSounds().play(player, MenuSound.DENY);
                     openInvite(player, picked ? null : name.isEmpty() ? msg().get("party.dialog.name-missing")
-                        : error(Outcome.of(Result.OFFLINE, name)));
+                        : refused(player, Outcome.of(Result.OFFLINE, name)));
                     return;
                 }
                 Outcome o = parties.invite(player, target);
-                openInvite(player, o.ok() ? msg().get("party.dialog.invited", Messages.text("player", target.getName())) : error(o));
+                openInvite(player, o.ok() ? msg().get("party.dialog.invited", Messages.text("player", target.getName())) : refused(player, o));
             }
             case "party/chat" -> {
                 Outcome o = parties.toggleChat(player);
-                openMenu(player, number(data.get("page")), o.ok() ? null : error(o));
+                openMenu(player, number(data.get("page")), o.ok() ? null : refused(player, o));
             }
             case "party/member" -> openMember(player, uuid(data.get("id")));
             case "party/kick" -> {
                 Outcome o = parties.kick(player, uuid(data.get("id")));
-                openMenu(player, 0, o.ok() ? null : error(o));
+                openMenu(player, 0, o.ok() ? null : refused(player, o));
             }
             case "party/promote" -> {
                 Outcome o = parties.promote(player, uuid(data.get("id")));
-                openMenu(player, 0, o.ok() ? null : error(o));
+                openMenu(player, 0, o.ok() ? null : refused(player, o));
             }
             case "party/leave" -> {
                 Outcome o = parties.leave(player);
-                openNone(player, o.ok() ? null : error(o));
+                openNone(player, o.ok() ? null : refused(player, o));
             }
             case "party/disband" -> openDisband(player);
             case "party/disband-confirm" -> {
                 Outcome o = parties.disband(player);
                 if (o.ok()) openNone(player, null);
-                else openMenu(player, 0, error(o));
+                else openMenu(player, 0, refused(player, o));
             }
             case "party/privacy" -> openPrivacy(player, null);
             case "party/privacy-save" -> savePrivacy(player, view);
@@ -633,7 +644,7 @@ public final class PartyDialogs {
                 Outcome o = parties.acceptChallenge(player, data.get("party"));
                 if (o.ok()) return;
                 if ("menu".equals(data.get("from"))) {
-                    openMenu(player, 0, error(o));
+                    openMenu(player, 0, refused(player, o));
                 } else {
                     feedback(player, o);
                     if (!fromChat) plugin.openDialogs().close(player);
@@ -642,7 +653,7 @@ public final class PartyDialogs {
             case "party/duel-deny" -> {
                 Outcome o = parties.denyChallenge(player, data.get("party"));
                 if ("menu".equals(data.get("from"))) {
-                    openMenu(player, 0, o.ok() ? null : error(o));
+                    openMenu(player, 0, o.ok() ? null : refused(player, o));
                 } else {
                     if (!o.ok()) feedback(player, o);
                     if (!fromChat) plugin.openDialogs().close(player);
@@ -658,7 +669,7 @@ public final class PartyDialogs {
         long ticket = plugin.openDialogs().awaitNext(player);
         result.thenAccept(o -> plugin.openDialogs().continueAwait(player, ticket, () -> {
             if (o.ok()) openMenu(player, 0, null);
-            else openJoin(player, leader, error(o));
+            else openJoin(player, leader, refused(player, o));
         }));
     }
 
@@ -668,13 +679,13 @@ public final class PartyDialogs {
         String password = input(view, "password");
         Boolean remove = view.getBoolean("remove_password");
         if (!password.isEmpty() && !PartyPasswords.valid(password)) {
-            openPrivacy(player, error(Outcome.of(Result.BAD_PASSWORD)));
+            openPrivacy(player, refused(player, Outcome.of(Result.BAD_PASSWORD)));
             return;
         }
         if (open != null) {
             Outcome o = parties.setOpen(player, open);
             if (!o.ok()) {
-                openMenu(player, 0, error(o));
+                openMenu(player, 0, refused(player, o));
                 return;
             }
         }
@@ -684,7 +695,7 @@ public final class PartyDialogs {
         long ticket = plugin.openDialogs().awaitNext(player); // (a new password is hashed off the main thread)
         change.thenAccept(o -> plugin.openDialogs().continueAwait(player, ticket, () -> {
             if (o.ok()) openMenu(player, 0, null);
-            else openPrivacy(player, error(o));
+            else openPrivacy(player, refused(player, o));
         }));
     }
 
@@ -696,7 +707,7 @@ public final class PartyDialogs {
             return;
         }
         if (kit == null || !kit.enabled()) {
-            openMenu(player, 0, error(Outcome.of(Result.KIT_DISABLED)));
+            openMenu(player, 0, refused(player, Outcome.of(Result.KIT_DISABLED)));
             return;
         }
         Outcome o = switch (mode) {
@@ -704,12 +715,13 @@ public final class PartyDialogs {
             case SPLIT -> parties.startSplit(player, kit);
             case PVP -> parties.challenge(player, data.get("target"), kit);
         };
-        if (!o.ok()) openMenu(player, 0, error(o));
+        if (!o.ok()) openMenu(player, 0, refused(player, o));
         else if (mode == Mode.PVP) openMenu(player, 0, msg().get("party.dialog.challenge-sent"));
         // FFA and Party Duel: the match closed everyone's dialogs
     }
 
     private void feedback(Player player, Outcome outcome) {
+        plugin.menuSounds().play(player, MenuSound.DENY); // (only for refusals)
         msg().send(player, "party.result." + outcome.result().name().toLowerCase(Locale.ROOT),
             Messages.text("player", outcome.subject()));
     }

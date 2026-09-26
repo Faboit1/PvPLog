@@ -12,7 +12,7 @@ class EaseTest {
     @Test
     void curvesStartAtZeroEndAtOneAndClamp() {
         for (DoubleUnaryOperator f : List.of(Ease.LINEAR, Ease.OUT_QUAD, Ease.OUT_CUBIC, Ease.IN_CUBIC, Ease.IN_OUT_CUBIC,
-            Ease.OUT_BACK, Ease.IN_OUT_SINE, Ease.OUT_EXPO)) {
+            Ease.OUT_BACK, Ease.IN_OUT_SINE, Ease.OUT_EXPO, Ease.SMOOTHER)) {
             assertEquals(0, f.applyAsDouble(0), 1e-9);
             assertEquals(1, f.applyAsDouble(1), 1e-9);
             assertEquals(0, f.applyAsDouble(-3), 1e-9);
@@ -26,6 +26,10 @@ class EaseTest {
         assertTrue(Ease.easeInCubic(0.5) < 0.2, "in-cubic is slow first");
         assertEquals(0.5, Ease.easeInOutSine(0.5), 1e-9);
         assertEquals(0.5, Ease.easeInOutCubic(0.5), 1e-9);
+        assertEquals(0.5, Ease.smootherstep(0.5), 1e-9);
+        // smootherstep starts and stops flatter than ease-in-out sine (no jolt at either end)
+        assertTrue(Ease.smootherstep(0.05) < Ease.easeInOutSine(0.05));
+        assertTrue(1 - Ease.smootherstep(0.95) < 1 - Ease.easeInOutSine(0.95));
         double max = 0;
         for (int i = 0; i <= 100; i++) max = Math.max(max, Ease.easeOutBack(i / 100.0));
         assertTrue(max > 1.05 && max < 1.15, "out-back overshoots a little: " + max);

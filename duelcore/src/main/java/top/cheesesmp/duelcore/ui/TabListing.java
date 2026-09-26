@@ -65,9 +65,13 @@ public final class TabListing implements Runnable, Listener {
                 if (other == viewer) continue;
                 boolean listed = vc == null || Objects.equals(vc, contexts.get(other.getUniqueId()));
                 if (listed && hideSpectators && plugin.spectate().spectating(other.getUniqueId()) == vc) listed = false;
-                if (listed != viewer.isListed(other)) {
+                // (a player hidden from the viewer has no tab entry at all; listPlayer would throw and stop the loop)
+                if (!viewer.canSee(other) || listed == viewer.isListed(other)) continue;
+                try {
                     if (listed) viewer.listPlayer(other);
                     else viewer.unlistPlayer(other);
+                } catch (IllegalStateException ex) {
+                    // hidden in between: nothing to (un)list
                 }
             }
         }

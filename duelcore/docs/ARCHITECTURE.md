@@ -164,12 +164,16 @@ A server shutdown during a match cancels it without any rating change. `/duelcor
   stops as soon as the player is matched, leaves every queue, spectates or quits (QueueService stops it on removal).
 * **Hub flight**: `HubService.prepare` allows flight in the hub (`hub.allow-flight`); every way into an arena
   (spawn rise, respawn throw, kit reset) takes it away again, and plugin disable revokes it.
-* **Respawn animations** (`ui/RespawnPull`, styles and camera math in `ui/RespawnMotion`, arc in `ui/ThrowMath`):
-  one style per fighter per round from `animations.respawn-styles`. The throw carries the player on an invisible,
-  non-persistent `ItemDisplay` seat (tagged `duelcore_seat`, so arena resets skip it) teleported along the arc every
-  tick with client-side teleport interpolation; dismounting is cancelled while it runs, so there is no air control.
-  Look-down and spin are per-tick `Player#setRotation` updates with the teleport in the middle; a player who isn't
-  standing on the ground is held on a seat until then. Arcs are raised over terrain (or become a teleport),
+* **Respawn animations** (`ui/RespawnPull`, styles and camera math in `ui/RespawnMotion`, arc in `ui/ThrowMath`,
+  float/orbit/swoop paths in `ui/RespawnPaths`): one style per fighter per round from `animations.respawn-styles`.
+  Throw, float, orbit and swoop carry the player on an invisible, non-persistent `ItemDisplay` seat (tagged
+  `duelcore_seat`, so arena resets skip it) teleported along the path every tick with client-side teleport
+  interpolation; dismounting is cancelled while it runs, so there is no air control, and the player never gets
+  velocity (anticheat-safe). Paths are timed with zero speed at both ends (the throw's arc is time-warped by
+  `ThrowMath.soften`), and the view is turned with relative `Player#setRotation(Angle, Angle)` steps so mouse
+  movement isn't snapped back; every style ends facing the spawn's way. Look-down and spin are rotation only with the
+  teleport in the middle; a player who isn't standing on the ground is held on a seat until then. A float, orbit or
+  swoop that doesn't fit the arena tries smaller shapes, then becomes a throw. Arcs are raised over terrain (or become a teleport),
   high-ping players are teleported instead, and every exit (arrival, quit, match end, another plugin's teleport,
   plugin disable) removes the seat and runs the callback exactly once.
 * **Animations toolkit** (`ui/anim`): `AnimationService` (`plugin.anim()`) gives every player one animation slot per

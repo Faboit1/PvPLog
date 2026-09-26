@@ -49,7 +49,7 @@ class ConfigUpgradeTest {
     @Test
     void emptyOrCurrentFilesAreLeftAlone() throws Exception {
         assertFalse(ConfigManager.upgrade(new YamlConfiguration(), LOG));
-        YamlConfiguration current = yml("config-version: 5\nqueue:\n  unranked: true\nanimations:\n  countdown-pop: true\n"
+        YamlConfiguration current = yml("config-version: 6\nqueue:\n  unranked: true\nanimations:\n  countdown-pop: true\n"
             + "rating:\n  default: 1000\n");
         assertFalse(ConfigManager.upgrade(current, LOG));
         assertTrue(current.getBoolean("queue.unranked"));
@@ -118,7 +118,7 @@ class ConfigUpgradeTest {
         assertEquals(750, y.getInt("rating.default"));
         assertEquals(50, y.getInt("rating.floor"));
         assertEquals("elo", y.getString("rating.system"));
-        assertEquals(5, y.getInt("config-version"));
+        assertEquals(ConfigManager.CONFIG_VERSION, y.getInt("config-version"));
         // set back by hand afterwards: stays
         y.set("rating.default", 1000);
         assertFalse(ConfigManager.upgrade(y, LOG));
@@ -137,6 +137,26 @@ class ConfigUpgradeTest {
     }
 
     @Test
+    void oldDefaultRespawnStylesGetTheNewAnimationsOnce() throws Exception {
+        YamlConfiguration y = yml("config-version: 5\nanimations:\n  respawn-styles:\n    - throw\n    - \" look-down \"\n"
+            + "    - spin\n");
+        assertTrue(ConfigManager.upgrade(y, LOG));
+        assertEquals(ConfigManager.RESPAWN_STYLES, y.getStringList("animations.respawn-styles"));
+        assertEquals(ConfigManager.CONFIG_VERSION, y.getInt("config-version"));
+        // trimmed back by hand afterwards: stays
+        y.set("animations.respawn-styles", ConfigManager.OLD_RESPAWN_STYLES);
+        assertFalse(ConfigManager.upgrade(y, LOG));
+        assertEquals(ConfigManager.OLD_RESPAWN_STYLES, y.getStringList("animations.respawn-styles"));
+    }
+
+    @Test
+    void customRespawnStylesAreKept() throws Exception {
+        YamlConfiguration y = yml("config-version: 5\nanimations:\n  respawn-styles:\n    - throw 3\n    - spin\n");
+        assertTrue(ConfigManager.upgrade(y, LOG));
+        assertEquals(List.of("throw 3", "spin"), y.getStringList("animations.respawn-styles"));
+    }
+
+    @Test
     void bundledConfigMatchesTheUpgrade() throws Exception {
         try (var in = ConfigUpgradeTest.class.getResourceAsStream("/config.yml")) {
             YamlConfiguration bundled = YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
@@ -149,6 +169,7 @@ class ConfigUpgradeTest {
             for (ConfigManager.NumberDefault d : ConfigManager.RATING_DEFAULTS) {
                 assertEquals(d.now(), bundled.getDouble(d.key()), 0, d.key());
             }
+            assertEquals(ConfigManager.RESPAWN_STYLES, bundled.getStringList("animations.respawn-styles"));
         }
     }
 

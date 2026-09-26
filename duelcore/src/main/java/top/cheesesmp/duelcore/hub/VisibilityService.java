@@ -8,7 +8,8 @@ import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.Setting;
 
 /**
- * Who sees whom. Fighters never see spectators; hub players can hide each other (setting or config).
+ * Who sees whom. Hub players can hide each other (setting or config); spectators are hidden from fighters by being in
+ * spectator mode (see SpectateService).
  * Other cases are left to the game (different worlds / far apart slots are never rendered anyway).
  */
 public final class VisibilityService {
@@ -35,12 +36,9 @@ public final class VisibilityService {
     }
 
     private boolean canSee(Player viewer, Player target) {
-        Match targetSpectating = plugin.spectate().spectating(target.getUniqueId());
-        if (targetSpectating != null) {
-            // spectators are visible only to other spectators of the same match
-            Match viewerSpectating = plugin.spectate().spectating(viewer.getUniqueId());
-            return viewerSpectating == targetSpectating;
-        }
+        // spectators are in spectator mode: the game already hides them from the fighters, and hiding them here
+        // would also take them out of the tab list
+        if (plugin.spectate().spectating(target.getUniqueId()) != null) return true;
         boolean viewerInHub = plugin.matches().match(viewer.getUniqueId()) == null
             && plugin.spectate().spectating(viewer.getUniqueId()) == null;
         boolean targetInHub = plugin.matches().match(target.getUniqueId()) == null;

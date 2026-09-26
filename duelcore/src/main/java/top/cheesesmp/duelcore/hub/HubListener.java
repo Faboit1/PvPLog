@@ -28,8 +28,9 @@ import org.bukkit.inventory.EquipmentSlot;
 import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.queue.QueueMode;
+import top.cheesesmp.duelcore.ui.MenuSound;
 
-/** Protects the hub and turns hotbar clicks into menus. */
+/** Protects the hub and turns hotbar clicks into menus (each with a menu sound, {@link MenuSound#forHubItem}). */
 public final class HubListener implements Listener {
 
     public static final String BUILD_PERMISSION = "duelcore.hub.build";
@@ -196,6 +197,8 @@ public final class HubListener implements Listener {
         if (last != null && now - last < 300) return;
         lastUse.put(player.getUniqueId(), now);
         runAction(player, action);
+        // after the action, so a sound of its own (a refusal, the kit editor) wins
+        plugin.menuSounds().play(player, MenuSound.forHubItem(action));
     }
 
     public void runAction(Player player, String action) {

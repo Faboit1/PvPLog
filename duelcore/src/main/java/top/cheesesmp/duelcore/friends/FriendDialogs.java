@@ -22,6 +22,7 @@ import top.cheesesmp.duelcore.match.Match;
 import top.cheesesmp.duelcore.match.SpectateService;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.ui.Icons;
+import top.cheesesmp.duelcore.ui.MenuSound;
 import top.cheesesmp.duelcore.ui.dialog.DialogService;
 import top.cheesesmp.duelcore.ui.dialog.Fingerprint;
 import top.cheesesmp.duelcore.ui.dialog.OpenDialogs;
@@ -321,6 +322,7 @@ public final class FriendDialogs {
     void click(Player player, String action, Map<String, String> data, @Nullable DialogResponseView view) {
         if (!player.hasPermission(FriendService.PERMISSION)) {
             msg().send(player, "command.no-permission");
+            deny(player);
             return;
         }
         int page = Math.max(0, parseInt(data.get("page")));
@@ -354,6 +356,7 @@ public final class FriendDialogs {
                     || plugin.matches().match(other.getUniqueId()) != null
                     || plugin.matches().match(player.getUniqueId()) != null) {
                     msg().send(player, "friends.not-free", Messages.text("player", other == null ? "?" : other.getName()));
+                    deny(player);
                     return;
                 }
                 plugin.dialogs().duelPicker(player, other);
@@ -362,6 +365,7 @@ public final class FriendDialogs {
                 Player other = target == null ? null : Bukkit.getPlayer(target);
                 if (other == null || !player.hasPermission("duelcore.spectate")) {
                     msg().send(player, "duel.result.offline");
+                    deny(player);
                     return;
                 }
                 plugin.openDialogs().close(player);
@@ -369,6 +373,7 @@ public final class FriendDialogs {
                 if (r != SpectateService.Result.OK) {
                     msg().send(player, "spectate.result." + r.name().toLowerCase(Locale.ROOT),
                         Messages.text("player", other.getName()));
+                    deny(player);
                 }
             }
             default -> {
@@ -379,13 +384,17 @@ public final class FriendDialogs {
     /**
      * A follow's (or reload's) "then": the click's dialog waits for {@code next} (the follow may be saved first), which
      * isn't shown when the player closed the dialog meanwhile; when the follow fails (told in chat) the dialog is
-     * closed at once. Without a {@code next} (a chat click) nothing waits and the click closes its dialog.
+     * closed at once, with the deny menu sound. Without a {@code next} (a chat click) nothing waits and the click closes
+     * its dialog.
      */
     private FriendService.@Nullable Then awaiting(Player player, @Nullable Runnable next) {
         if (next == null) return null;
         long ticket = plugin.openDialogs().awaitNext(player);
         return new FriendService.Then(() -> plugin.openDialogs().continueAwait(player, ticket, next),
-            () -> plugin.openDialogs().abandon(player, ticket));
+            () -> {
+                if (player.isOnline()) deny(player); // (the reason is told in chat)
+                plugin.openDialogs().abandon(player, ticket);
+            });
     }
 
     /** What to show after a follow or unfollow, from the click's "back" field. */
@@ -401,6 +410,10 @@ public final class FriendDialogs {
             }
             default -> null;
         };
+    }
+
+    private void deny(Player player) {
+        plugin.menuSounds().play(player, MenuSound.DENY);
     }
 
     private static int parseInt(@Nullable String raw) {
