@@ -637,10 +637,11 @@ public final class QueueDialog {
             return;
         }
         int pm = plugin.tiers().placementMatches();
+        double start = plugin.settings().ratingDefault; // a new player's rating
         double ht3 = plugin.tiers().ladder().threshold(kit.id(), Tier.HT3);
         Reveal r = switch (sample) {
-            case PLACEMENT -> sample(kit.id(), Math.max(0, pm - 3), Math.max(0, pm - 3) + 1, 1000, 1026);
-            case PLACED -> sample(kit.id(), Math.max(0, pm - 1), Math.max(1, pm), 1000, ht3 + 20);
+            case PLACEMENT -> sample(kit.id(), Math.max(0, pm - 3), Math.max(0, pm - 3) + 1, start, start + 26);
+            case PLACED -> sample(kit.id(), Math.max(0, pm - 1), Math.max(1, pm), start, ht3 + 20);
             case ELO_UP -> sample(kit.id(), pm + 4, pm + 5, ht3 + 12, ht3 + 30);
             case ELO_DOWN -> sample(kit.id(), pm + 4, pm + 5, ht3 + 30, ht3 + 18);
             case TIER_UP -> sample(kit.id(), pm + 4, pm + 5, ht3 - 8, ht3 + 12);

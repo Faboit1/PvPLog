@@ -4,7 +4,7 @@
 #  kits in kits/*.yml and arenas in arenas/*.yml.
 #  Reload everything with /duelcore reload (running matches keep their kit).
 # ─────────────────────────────────────────────────────────────
-config-version: 4
+config-version: 5
 
 database:
   # sqlite (default, file in the plugin folder) or mysql (MySQL 8 / MariaDB 10.5+)
@@ -259,9 +259,15 @@ animations:
 rating:
   # elo or glicko2
   system: elo
-  default: 1000
+  # Rating of a player's first match in a kit (existing ratings are never changed by editing this).
+  default: 750
   # Ratings never drop below this.
-  floor: 100
+  floor: 50
+  # Every ranked result: change = gain-multiplier × the system's change + bonus-per-match, for both players.
+  # With 3 and 3 an even Elo match (K 32) is +51 for the winner and -45 for the loser; a draw is +3 each.
+  # 1 and 0 = the plain rating system.
+  gain-multiplier: 3
+  bonus-per-match: 3
   elo:
     k-factor: 32
     # K-factor during placement (provisional) games, see tiers.yml placement-matches.
