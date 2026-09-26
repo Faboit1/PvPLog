@@ -62,7 +62,6 @@ public final class MatchService implements Runnable {
     private static final int FOUND_DELAY_TICKS = 20;
     /** Ticks after the match end before the auto-GG lines (after the results title and chat summary). */
     private static final long AUTO_GG_DELAY = 20L;
-    private static final int ARENA_TIMEOUT_TICKS = 20 * 30;
 
     private final DuelCorePlugin plugin;
     private final Map<Integer, Match> matches = new LinkedHashMap<>();
@@ -197,8 +196,10 @@ public final class MatchService implements Runnable {
             plugin.tags().update(player); // the tag now shows this match's kit and tier
         }
         Bukkit.getPluginManager().callEvent(new MatchStartEvent(match));
-        plugin.arenas().acquire(kit.arenaTags()).whenComplete((instance, error) ->
+        match.arenaFuture = plugin.arenas().acquire(kit.arenaTags());
+        match.arenaFuture.whenComplete((instance, error) ->
             Bukkit.getScheduler().runTask(plugin, () -> {
+                if (error instanceof java.util.concurrent.CancellationException) return; // the match stopped waiting
                 if (error != null) {
                     plugin.getLogger().log(Level.WARNING, "No arena for match #" + match.id(), error);
                     if (!match.isOver()) end(match, -1, Match.EndReason.NO_ARENA);
@@ -242,7 +243,10 @@ public final class MatchService implements Runnable {
         switch (m.state) {
             case STARTING -> {
                 if (m.arena != null && m.stateTicks >= FOUND_DELAY_TICKS) startRound(m);
-                else if (m.stateTicks > ARENA_TIMEOUT_TICKS) end(m, -1, Match.EndReason.NO_ARENA);
+                else if (m.stateTicks > cfg.arenaWaitSeconds * 20) end(m, -1, Match.EndReason.NO_ARENA);
+                else if (m.arena == null && m.stateTicks > FOUND_DELAY_TICKS && m.stateTicks % 40 == 0) {
+                    for (Player p : online(m)) plugin.messages().actionBar(p, "match.preparing-arena");
+                }
             }
             case PREPARING -> {
                 // waiting for the between-round arena reset and the respawn animation (with a safety cap)
@@ -928,6 +932,8 @@ public final class MatchService implements Runnable {
         m.winnerTeam = winnerTeam;
         m.endReason = reason;
         for (Participant p : m.participants()) drawOffers.remove(p.uuid());
+        // stopped waiting for an arena: its paste finishes in the background and is kept for the next match
+        if (m.arena == null && m.arenaFuture != null) m.arenaFuture.cancel(false);
         boolean rated = m.ranked() && reason.countsForRating() && m.participants().size() == 2
             && (winnerTeam >= 0 || reason == Match.EndReason.DRAW);
         List<ProfileService.RatingWrite> writes = new ArrayList<>();

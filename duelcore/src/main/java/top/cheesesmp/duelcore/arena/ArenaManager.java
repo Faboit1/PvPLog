@@ -59,7 +59,9 @@ public final class ArenaManager {
     private final List<ArenaInstance> instances = new ArrayList<>();
     private final Map<Integer, ArenaInstance> bySlot = new HashMap<>();
     private final Map<String, Deque<ArenaInstance>> idle = new HashMap<>();
-    private final Deque<Pending> waiting = new ArrayDeque<>();
+    private final java.util.LinkedList<Pending> waiting = new java.util.LinkedList<>();
+    /** Pastes started for waiting matches, oldest first; the first waiting.size() of them run urgent. */
+    private final List<RegionJob> building = new ArrayList<>();
     private final Map<Integer, SlotRecord> manifest = new java.util.TreeMap<>();
     private SlotGrid slots;
     private World world;
@@ -83,7 +85,8 @@ public final class ArenaManager {
             t.setDaemon(true);
             return t;
         });
-        this.queue = new BlockJobQueue(plugin.getLogger(), plugin.settings().blockBudgetMs);
+        this.queue = new BlockJobQueue(plugin.getLogger(), plugin.settings().blockBudgetMs,
+            plugin.settings().blockBudgetUrgentMs);
     }
 
     public BlockJobQueue queue() {
@@ -177,6 +180,7 @@ public final class ArenaManager {
         worker.shutdownNow();
         for (Pending p : waiting) p.future().cancel(false);
         waiting.clear();
+        building.clear();
         instances.clear();
         bySlot.clear();
         idle.clear();
@@ -235,7 +239,7 @@ public final class ArenaManager {
             if (reusable) {
                 kept.merge(t.name(), 1, Integer::sum);
                 reuse++;
-                paste(t, slot).thenAccept(instance -> {
+                paste(t, slot, BlockJobQueue.NORMAL).thenAccept(instance -> {
                     restored++;
                     if (handToWaiting(instance)) return;
                     instance.state(ArenaInstance.State.READY);
@@ -259,7 +263,8 @@ public final class ArenaManager {
     private void clearSlot(int slot, SlotRecord rec) {
         ArenaSnapshot empty = ArenaSnapshot.empty(rec.sx(), rec.sy(), rec.sz());
         BlockData[] air = {Bukkit.createBlockData(org.bukkit.Material.AIR)};
-        RegionJob job = new RegionJob(plugin, world, rec.ox(), rec.oy(), rec.oz(), empty, air, worker, false, true);
+        RegionJob job = new RegionJob(plugin, world, rec.ox(), rec.oy(), rec.oz(), empty, air, worker, false, true)
+            .priority(BlockJobQueue.LOW);
         queue.submit(job);
         job.future().whenComplete((r, e) -> {
             if (e != null) {
@@ -669,7 +674,12 @@ public final class ArenaManager {
         return list;
     }
 
-    /** Gets an arena for a kit's tags: an idle instance if any, otherwise a fresh paste (or waits for a free one). */
+    /**
+     * Gets an arena for a kit's tags: an idle instance if any, otherwise the match waits while an urgent paste is
+     * started for it (the first one to finish goes to the longest-waiting match; see {@link #servePending}). Cancel
+     * the returned future when the match stops waiting: its paste then drops to background priority and the arena
+     * is kept for the next match.
+     */
     public CompletableFuture<ArenaInstance> acquire(List<String> tags) {
         List<ArenaTemplate> candidates = candidates(tags);
         if (candidates.isEmpty()) return CompletableFuture.failedFuture(new IllegalStateException("no arenas configured"));
@@ -681,17 +691,13 @@ public final class ArenaManager {
             instance.markUsed();
             return CompletableFuture.completedFuture(instance);
         }
-        if (liveInstances() >= plugin.settings().maxInstances) {
-            CompletableFuture<ArenaInstance> future = new CompletableFuture<>();
-            waiting.addLast(new Pending(List.copyOf(tags), future));
-            return future;
-        }
-        ArenaTemplate t = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
-        return create(t).thenApply(instance -> {
-            instance.state(ArenaInstance.State.IN_USE);
-            instance.markUsed();
-            return instance;
+        CompletableFuture<ArenaInstance> future = new CompletableFuture<>();
+        waiting.addLast(new Pending(List.copyOf(tags), future));
+        future.whenComplete((i, e) -> {
+            if (future.isCancelled()) servePending(); // stopped waiting: its paste no longer needs to be urgent
         });
+        servePending();
+        return future;
     }
 
     private void prewarm(ArenaTemplate template) {
@@ -699,19 +705,25 @@ public final class ArenaManager {
         for (ArenaInstance i : instances) {
             if (i.template() == template && i.state() == ArenaInstance.State.PASTING) return; // being restored
         }
-        create(template).thenAccept(instance -> {
+        create(template, BlockJobQueue.LOW).thenAccept(instance -> {
+            if (handToWaiting(instance)) return;
             instance.state(ArenaInstance.State.READY);
             idleOf(template).addLast(instance);
             servePending();
         });
     }
 
-    private CompletableFuture<ArenaInstance> create(ArenaTemplate template) {
-        return paste(template, slots.acquire());
+    private CompletableFuture<ArenaInstance> create(ArenaTemplate template, int priority) {
+        return paste(template, slots.acquire(), priority);
     }
 
     /** Pastes a template into an already reserved slot (a diff: blocks that already match are left alone). */
-    private CompletableFuture<ArenaInstance> paste(ArenaTemplate template, int slot) {
+    private CompletableFuture<ArenaInstance> paste(ArenaTemplate template, int slot, int priority) {
+        return paste(template, slot, priority, null);
+    }
+
+    private CompletableFuture<ArenaInstance> paste(ArenaTemplate template, int slot, int priority,
+                                                   java.util.function.@Nullable Consumer<RegionJob> started) {
         int ox = slots.originX(slot) - template.sizeX() / 2;
         int oz = slots.originZ(slot) - template.sizeZ() / 2;
         int oy = plugin.settings().arenaBaseY;
@@ -720,7 +732,9 @@ public final class ArenaManager {
         bySlot.put(slot, instance);
         SlotRecord rec = record(template, slot);
         if (!rec.equals(manifest.put(slot, rec))) saveManifest();
-        RegionJob job = new RegionJob(plugin, world, ox, oy, oz, template.snapshot(), template.palette(), worker, true, false);
+        RegionJob job = new RegionJob(plugin, world, ox, oy, oz, template.snapshot(), template.palette(), worker, true, false)
+            .priority(priority);
+        if (started != null) started.accept(job);
         queue.submit(job);
         return job.future().handle((result, error) -> {
             if (error != null) {
@@ -766,7 +780,8 @@ public final class ArenaManager {
     public CompletableFuture<RegionJob.Result> resetForNextRound(ArenaInstance instance) {
         instance.clearPlaced();
         RegionJob job = new RegionJob(plugin, world, instance.originX(), instance.originY(), instance.originZ(),
-            instance.template().snapshot(), instance.template().palette(), worker, false, false);
+            instance.template().snapshot(), instance.template().palette(), worker, false, false)
+            .priority(BlockJobQueue.ROUND); // both players are waiting for the next round
         queue.submit(job);
         return job.future().whenComplete((r, e) -> {
             if (r != null) {
@@ -801,9 +816,12 @@ public final class ArenaManager {
                 servePending();
                 return;
             }
-            if (handToWaiting(instance)) return;
+            if (handToWaiting(instance)) {
+                servePending(); // one match fewer waiting: its paste can drop to the background
+                return;
+            }
             Deque<ArenaInstance> pool = idleOf(instance.template());
-            if (pool.size() < plugin.settings().keepIdlePerTemplate) {
+            if (pool.size() < plugin.settings().keepIdlePerTemplate || !building.isEmpty()) {
                 instance.state(ArenaInstance.State.READY);
                 pool.addLast(instance);
             } else {
@@ -831,25 +849,37 @@ public final class ArenaManager {
         return false;
     }
 
-    /** Starts pastes for waiting matches while capacity allows. */
-    private void servePending() {
-        while (!waiting.isEmpty() && liveInstances() < plugin.settings().maxInstances) {
-            Pending p = waiting.pollFirst();
-            if (p.future().isDone()) continue;
+    /**
+     * Keeps one paste going per waiting match (while max-instances allows). The oldest {@code waiting.size()} of them
+     * run urgent, in order, so the first match gets its arena quickly; the rest (their matches stopped waiting) run
+     * in the background and are kept as idle arenas. A finished paste goes to the longest-waiting match it suits.
+     */
+    public void servePending() {
+        waiting.removeIf(p -> p.future().isDone());
+        while (waiting.size() > building.size() && liveInstances() < plugin.settings().maxInstances) {
+            Pending p = waiting.get(building.size());
             List<ArenaTemplate> candidates = candidates(p.tags());
             if (candidates.isEmpty()) {
+                waiting.remove(p);
                 p.future().completeExceptionally(new IllegalStateException("no arenas configured"));
                 continue;
             }
             ArenaTemplate t = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
-            create(t).whenComplete((instance, error) -> {
-                if (error != null) p.future().completeExceptionally(error);
-                else {
-                    instance.state(ArenaInstance.State.IN_USE);
-                    instance.markUsed();
-                    if (!p.future().complete(instance)) release(instance);
+            RegionJob[] job = new RegionJob[1];
+            paste(t, slots.acquire(), BlockJobQueue.URGENT, j -> {
+                job[0] = j;
+                building.add(j);
+            }).whenComplete((instance, error) -> {
+                building.remove(job[0]);
+                if (error == null && !handToWaiting(instance)) {
+                    instance.state(ArenaInstance.State.READY);
+                    idleOf(instance.template()).addLast(instance); // fresh: kept for the next match
                 }
+                servePending();
             });
+        }
+        for (int i = 0; i < building.size(); i++) {
+            building.get(i).priority(i < waiting.size() ? BlockJobQueue.URGENT : BlockJobQueue.LOW);
         }
     }
 
@@ -860,7 +890,7 @@ public final class ArenaManager {
         ArenaSnapshot empty = ArenaSnapshot.empty(t.sizeX(), t.sizeY(), t.sizeZ());
         BlockData[] air = {Bukkit.createBlockData(org.bukkit.Material.AIR)};
         RegionJob job = new RegionJob(plugin, world, instance.originX(), instance.originY(), instance.originZ(), empty,
-            air, worker, false, true);
+            air, worker, false, true).priority(BlockJobQueue.LOW);
         queue.submit(job);
         job.future().whenComplete((r, e) -> {
             instance.state(ArenaInstance.State.DEAD);

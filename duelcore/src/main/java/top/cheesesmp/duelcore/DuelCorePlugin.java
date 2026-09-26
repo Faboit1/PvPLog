@@ -264,7 +264,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         problems.addAll(kits.load());
         profiles.syncKits(kits.ids());
         problems.addAll(arenas.loadTemplates());
-        arenas.queue().budget(settings().blockBudgetMs);
+        arenas.queue().budget(settings().blockBudgetMs, settings().blockBudgetUrgentMs);
         queue.reload();
         problems.addAll(queueMusic.reload());
         problems.addAll(kitEditor.reload()); // layouts made for a kit that changed are reset (players are told)
