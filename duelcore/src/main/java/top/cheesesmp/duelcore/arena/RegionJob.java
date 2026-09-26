@@ -43,6 +43,10 @@ public final class RegionJob {
     private final boolean releaseTickets;
     private final CompletableFuture<Result> future = new CompletableFuture<>();
     private final long started = System.currentTimeMillis();
+    /** {@link BlockJobQueue#URGENT} (a match is waiting), {@link BlockJobQueue#NORMAL} or {@link BlockJobQueue#LOW}. */
+    private volatile int priority = BlockJobQueue.NORMAL;
+    /** Submission order (FIFO within a priority). */
+    long seq;
 
     private final List<long[]> chunkCoords = new ArrayList<>();
     private final List<Chunk> chunks = new ArrayList<>();
@@ -83,6 +87,15 @@ public final class RegionJob {
         for (int cx = minCx; cx <= maxCx; cx++) {
             for (int cz = minCz; cz <= maxCz; cz++) chunkCoords.add(new long[] {cx, cz});
         }
+    }
+
+    public int priority() {
+        return priority;
+    }
+
+    public RegionJob priority(int priority) {
+        this.priority = priority;
+        return this;
     }
 
     public CompletableFuture<Result> future() {

@@ -97,6 +97,8 @@ match:
   connection-saved: "<muted>Your connection dropped in a ranked match: no Elo lost.</muted> <text><left></text><muted>/<per_day> disconnect saves left today.</muted>"
   forfeit-confirm: "<muted>Type <text>/leave</text> again within 5 seconds to forfeit. It counts as a loss.</muted>"
   forfeited: "<muted>You forfeited the match.</muted>"
+  # Action bar while a new arena is being built for the match.
+  preparing-arena: "<muted>Preparing your arena…</muted>"
   # A double kill (both died at the same time, see match.trade in config.yml) drew the round. <left> = draws left
   # before a double kill is decided by a coin flip.
   trade-draw: "<muted>Double kill! The round is a draw.</muted> <text><left></text><muted> more double-kill draws this match.</muted>"

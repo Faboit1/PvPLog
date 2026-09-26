@@ -61,6 +61,8 @@ public final class Match {
     private final long createdAt = System.currentTimeMillis();
 
     @Nullable ArenaInstance arena;
+    /** The arena request while the match waits for one (cancelled if it ends first). */
+    java.util.concurrent.@Nullable CompletableFuture<ArenaInstance> arenaFuture;
     State state = State.STARTING;
     int stateTicks;
     int round;

@@ -311,14 +311,21 @@ arena:
   # Distance between instance slots. Must be larger than your biggest arena plus render distance.
   slot-spacing: 1024
   base-y: 64
-  # Max instances alive at once (limits memory). Matches wait for a free arena when all are busy.
-  max-instances: 48
+  # Max instances alive at once (limits memory). 0 = unlimited: a new arena is pasted whenever none is free.
+  max-instances: 0
   # Ready-to-use instances kept per template after matches end (instant match starts).
   keep-idle-per-template: 2
   # Paste one instance of every template at startup.
   prewarm: true
-  # Main-thread time budget per tick for pasting/resetting blocks (milliseconds).
+  # Main-thread time budget per tick for pasting/resetting blocks (milliseconds). Jobs a match is waiting for run
+  # first (oldest first), background work (pre-warming, clearing old slots) only gets what they leave.
   block-budget-ms: 4
+  # While a match is waiting for its arena (or its next round's reset), the budget grows up to this, as long as the
+  # whole tick stays under 45 ms.
+  block-budget-urgent-ms: 15
+  # A match gives up ("No arena was free") after waiting this long for its arena. Its arena is still finished and
+  # kept for the next match.
+  wait-timeout-seconds: 120
   # Arenas are reset between rounds (true) or only after the match (false).
   reset-between-rounds: true
   # View distance in the arena world (simulation distance is capped at 4). The default maps are 180 blocks wide.

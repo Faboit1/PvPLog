@@ -168,6 +168,8 @@ public final class MainConfig {
     public final int keepIdlePerTemplate;
     public final boolean prewarm;
     public final double blockBudgetMs;
+    public final double blockBudgetUrgentMs;
+    public final int arenaWaitSeconds;
     public final boolean resetBetweenRounds;
     public final int arenaViewDistance;
     public final boolean arenaPersistentWorld;
@@ -336,10 +338,13 @@ public final class MainConfig {
         editorWorld = c.getString("arena.editor-world", "editor").toLowerCase(Locale.ROOT);
         slotSpacing = Math.max(128, c.getInt("arena.slot-spacing", 1024));
         arenaBaseY = c.getInt("arena.base-y", 64);
-        maxInstances = Math.max(2, c.getInt("arena.max-instances", 48));
+        int maxInst = c.getInt("arena.max-instances", 0);
+        maxInstances = maxInst <= 0 ? Integer.MAX_VALUE : Math.max(2, maxInst); // 0 = unlimited
         keepIdlePerTemplate = Math.max(0, c.getInt("arena.keep-idle-per-template", 2));
         prewarm = c.getBoolean("arena.prewarm", true);
         blockBudgetMs = Math.max(0.5, c.getDouble("arena.block-budget-ms", 4));
+        blockBudgetUrgentMs = Math.max(blockBudgetMs, c.getDouble("arena.block-budget-urgent-ms", 15));
+        arenaWaitSeconds = Math.max(15, c.getInt("arena.wait-timeout-seconds", 120));
         resetBetweenRounds = c.getBoolean("arena.reset-between-rounds", true);
         arenaViewDistance = Math.clamp(c.getInt("arena.view-distance", 7), 2, 32);
         arenaPersistentWorld = c.getBoolean("arena.persistent-world", true);
