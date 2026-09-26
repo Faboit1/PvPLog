@@ -2,7 +2,6 @@ package top.cheesesmp.duelcore.arena;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -108,8 +107,8 @@ public final class BlockJobQueue implements Runnable {
         int rounds = 0;
         while (!jobs.isEmpty() && System.nanoTime() < deadline && rounds++ < jobs.size() * 4 + 4) {
             boolean progressed = false;
-            for (Iterator<RegionJob> it = jobs.iterator(); it.hasNext(); ) {
-                RegionJob job = it.next();
+            // a copy: a finished job's callbacks may submit new jobs (a reset, a clear) while we walk the list
+            for (RegionJob job : List.copyOf(jobs)) {
                 RegionJob.Phase before = job.phase();
                 boolean done;
                 try {
@@ -122,7 +121,7 @@ public final class BlockJobQueue implements Runnable {
                     done = true;
                 }
                 if (done) {
-                    it.remove();
+                    jobs.remove(job);
                     completed++;
                     progressed = true;
                 } else if (job.phase() != before) {

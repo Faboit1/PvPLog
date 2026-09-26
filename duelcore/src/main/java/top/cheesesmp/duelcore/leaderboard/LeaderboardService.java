@@ -50,27 +50,34 @@ public final class LeaderboardService implements Runnable {
     }
 
     private CompletableFuture<List<LeaderboardDao.Row>> fetch(Key key) {
-        return inflight.computeIfAbsent(key, k -> {
-            int season = plugin.profiles().season().id();
-            int limit = plugin.settings().leaderboardSize;
-            int placement = plugin.tiers().placementMatches();
-            CompletableFuture<List<LeaderboardDao.Row>> f;
-            if (OVERALL.equals(k.category())) {
-                f = db.submit(c -> LeaderboardDao.overall(c, season, k.region(), k.country(), limit));
-            } else {
-                int kitId;
-                try {
-                    kitId = plugin.profiles().kitId(k.category());
-                } catch (IllegalStateException e) {
-                    return CompletableFuture.completedFuture(List.of());
-                }
-                f = db.submit(c -> LeaderboardDao.kit(c, season, kitId, placement, k.region(), k.country(), limit));
+        CompletableFuture<List<LeaderboardDao.Row>> running = inflight.get(key);
+        if (running != null) return running;
+        int season = plugin.profiles().season().id();
+        int limit = plugin.settings().leaderboardSize;
+        int placement = plugin.tiers().placementMatches();
+        CompletableFuture<List<LeaderboardDao.Row>> f;
+        if (OVERALL.equals(key.category())) {
+            f = db.submit(c -> LeaderboardDao.overall(c, season, key.region(), key.country(), limit));
+        } else {
+            int kitId;
+            try {
+                kitId = plugin.profiles().kitId(key.category());
+            } catch (IllegalStateException e) {
+                return CompletableFuture.completedFuture(List.of());
             }
-            return f.whenComplete((rows, err) -> {
-                inflight.remove(k);
-                if (rows != null) boards.put(k, new Board(rows, System.currentTimeMillis(), System.currentTimeMillis()));
-            });
+            f = db.submit(c -> LeaderboardDao.kit(c, season, kitId, placement, key.region(), key.country(), limit));
+        }
+        // registered before the completion callback: the query may already be done (it takes well under a
+        // millisecond), and the callback must be able to take it out again. (It used to be removed from inside
+        // computeIfAbsent, which throws when the query finished first and left a failed fetch in the map for good:
+        // that board never opened again until a restart.)
+        CompletableFuture<List<LeaderboardDao.Row>> prev = inflight.putIfAbsent(key, f);
+        if (prev != null) return prev;
+        f.whenComplete((rows, err) -> {
+            inflight.remove(key, f);
+            if (rows != null) boards.put(key, new Board(rows, System.currentTimeMillis(), System.currentTimeMillis()));
         });
+        return f;
     }
 
     /** Marks a kit's boards and the overall boards stale. */

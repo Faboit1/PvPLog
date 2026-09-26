@@ -247,9 +247,15 @@ public final class DialogService {
         if (!cat.equals(LeaderboardService.OVERALL) && plugin.kits().get(cat) == null) cat = LeaderboardService.OVERALL;
         String finalCat = cat;
         long ticket = open().awaitNext(viewer);
-        plugin.leaderboards().get(cat, region, null).thenAccept(rows ->
-            Bukkit.getScheduler().runTask(plugin, () ->
-                open().continueAwait(viewer, ticket, () -> showLeaderboard(viewer, finalCat, region, rows))));
+        plugin.leaderboards().get(cat, region, null).whenComplete((rows, error) ->
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (error != null) {
+                    // shown empty rather than not at all (the menu used to just never open)
+                    plugin.getLogger().log(java.util.logging.Level.WARNING, "Loading the " + finalCat + " leaderboard failed", error);
+                }
+                List<LeaderboardDao.Row> shown = rows != null ? rows : List.of();
+                open().continueAwait(viewer, ticket, () -> showLeaderboard(viewer, finalCat, region, shown));
+            }));
     }
 
     private void showLeaderboard(Player viewer, String category, @Nullable String region, List<LeaderboardDao.Row> rows) {
