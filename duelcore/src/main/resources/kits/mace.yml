@@ -1,7 +1,8 @@
 # Mace: the MCPVP mace kit. Maxed netherite, a Density V + Wind Burst mace and a Breach IV mace, sword, axe,
-# shield, elytra with 3 rockets, 2 totems, 64 pearls, 128 gapples and 128 wind charges. No potions.
+# shield, elytra with 3 rockets, 2 totems, 64 pearls, 128 gapples, 128 wind charges and splash potions: 8 Strength II,
+# 8 Speed II and 4 Fire Resistance.
 display-name: "Mace"
-description: "Density and Breach maces, wind charges, elytra and two totems."
+description: "Density and Breach maces, wind charges, elytra, two totems and potions."
 icon: mace
 category: weapons
 order: 3
@@ -40,11 +41,31 @@ loadout:
     7: { item: mace, enchants: { breach: 4, unbreaking: 3, mending: 1 } }
     8: { item: shield, enchants: { unbreaking: 3, mending: 1 } }
     9: { item: ender_pearl, amount: 16 }
+    10: { item: splash_potion, potion: strong_strength }
+    11: { item: splash_potion, potion: strong_strength }
+    12: { item: splash_potion, potion: strong_swiftness }
     13: totem_of_undying
+    14: { item: splash_potion, potion: strong_swiftness }
+    15: { item: splash_potion, potion: long_fire_resistance }
+    16: { item: splash_potion, potion: long_fire_resistance }
     17: { item: firework_rocket, amount: 3 }
     18: { item: ender_pearl, amount: 16 }
+    19: { item: splash_potion, potion: strong_strength }
+    20: { item: splash_potion, potion: strong_strength }
+    21: { item: splash_potion, potion: strong_strength }
+    22: { item: splash_potion, potion: strong_swiftness }
+    23: { item: splash_potion, potion: strong_swiftness }
+    24: { item: splash_potion, potion: strong_swiftness }
+    25: { item: splash_potion, potion: long_fire_resistance }
     26: { item: golden_apple, amount: 64 }
     27: { item: ender_pearl, amount: 16 }
+    28: { item: splash_potion, potion: strong_strength }
+    29: { item: splash_potion, potion: strong_strength }
+    30: { item: splash_potion, potion: strong_strength }
+    31: { item: splash_potion, potion: strong_swiftness }
+    32: { item: splash_potion, potion: strong_swiftness }
+    33: { item: splash_potion, potion: strong_swiftness }
     34: { item: wind_charge, amount: 64 }
+    35: { item: splash_potion, potion: long_fire_resistance }
   offhand: totem_of_undying
 effects: []
