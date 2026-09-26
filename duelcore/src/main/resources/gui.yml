@@ -396,14 +396,14 @@ tab:
     - ""
     - "<#8b9099>Ping</#8b9099> <#d8dbe0><ping>ms</#d8dbe0> <#4b4f57>·</#4b4f57> <#8b9099>TPS</#8b9099> <#d8dbe0><tps></#d8dbe0>"
     - "<#8b9099><spectators> spectating</#8b9099>"
-    - "<#4b4f57>cheesesmp.top</#4b4f57>"
+    - "<#4b4f57>pvp.cheesesmp.top</#4b4f57>"
     - ""
   # Footer instead of the one above for players in a match or spectating one. Empty = the normal footer.
   footer-match:
     - ""
     - "<#8b9099>Ping</#8b9099> <#d8dbe0><ping>ms</#d8dbe0> <#4b4f57>·</#4b4f57> <#8b9099>TPS</#8b9099> <#d8dbe0><tps></#d8dbe0>"
     - "<#8b9099><watching> watching this match</#8b9099> <#4b4f57>·</#4b4f57> <#8b9099><spectators> spectating</#8b9099>"
-    - "<#4b4f57>cheesesmp.top</#4b4f57>"
+    - "<#4b4f57>pvp.cheesesmp.top</#4b4f57>"
     - ""
 
 dialogs:
