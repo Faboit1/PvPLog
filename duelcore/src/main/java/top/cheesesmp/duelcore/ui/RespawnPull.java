@@ -117,6 +117,16 @@ public final class RespawnPull implements Listener {
         return active.containsKey(player);
     }
 
+    /**
+     * True while the player rides an animation's seat: the server moves them, so the freeze's move rollback must leave
+     * them alone. A player standing through a look-down or spin is not carried and stays under the rollback, so a
+     * client that ignores the walk speed still can't walk off during the turn.
+     */
+    public boolean carried(UUID player) {
+        Pull t = active.get(player);
+        return t != null && t.seat != null;
+    }
+
     public int activeCount() {
         return active.size();
     }
@@ -405,7 +415,14 @@ public final class RespawnPull implements Listener {
             d.setTeleportDuration(glide);
         });
         t.seat = seat;
-        if (!seat.isValid() || !seat.addPassenger(t.player)) {
+        boolean mounted;
+        t.movingSeat = true; // mounting re-sends the player's position: not a teleport from something else
+        try {
+            mounted = seat.isValid() && seat.addPassenger(t.player);
+        } finally {
+            t.movingSeat = false;
+        }
+        if (!mounted) {
             removeSeat(t);
             return false;
         }
