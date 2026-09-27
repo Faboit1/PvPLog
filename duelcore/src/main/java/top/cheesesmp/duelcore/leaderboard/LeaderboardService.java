@@ -3,6 +3,7 @@ package top.cheesesmp.duelcore.leaderboard;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import org.jspecify.annotations.Nullable;
@@ -12,7 +13,8 @@ import top.cheesesmp.duelcore.db.dao.LeaderboardDao;
 
 /**
  * Cached leaderboards. A board is fetched on first request, kept for {@code refresh-seconds}, refreshed in the
- * background while it's being viewed, and invalidated when a match of its kit ends.
+ * background while it's being viewed, and invalidated when a match of its kit ends. Boards can be filtered by a
+ * region or a country; ranks are counted within the filter, so a country board ranks its players 1, 2, 3, …
  */
 public final class LeaderboardService implements Runnable {
 
@@ -29,10 +31,41 @@ public final class LeaderboardService implements Runnable {
     private final Database db;
     private final Map<Key, Board> boards = new ConcurrentHashMap<>();
     private final Map<Key, CompletableFuture<List<LeaderboardDao.Row>>> inflight = new ConcurrentHashMap<>();
+    private volatile CountryNames countries;
 
     public LeaderboardService(DuelCorePlugin plugin, Database db) {
         this.plugin = plugin;
         this.db = db;
+        this.countries = CountryNames.load(plugin);
+    }
+
+    /** {@code /duelcore reload}: drops the cached boards and reads the country names again. */
+    public void reload() {
+        clear();
+        countries = CountryNames.load(plugin);
+    }
+
+    /** A country's name from countries.yml, or its code when it isn't listed there. */
+    public String countryName(String code) {
+        String name = countries.name(code);
+        return name != null ? name : code.toUpperCase(Locale.ROOT);
+    }
+
+    /**
+     * {@code raw} as a country a board may be filtered by: two letters that countries.yml lists, or the viewer's own
+     * country ({@code own}, which players may set to any two letters). Null for anything else: dialog payloads and
+     * command arguments are untrusted, and this also bounds how many country boards can be cached.
+     */
+    public @Nullable String countryFilter(@Nullable String raw, @Nullable String own) {
+        if (raw == null) return null;
+        String code = raw.strip().toUpperCase(Locale.ROOT);
+        if (!code.matches("[A-Z]{2}")) return null;
+        return countries.known(code) || code.equalsIgnoreCase(own) ? code : null;
+    }
+
+    /** Every country code countries.yml lists, A–Z. */
+    public Set<String> countryCodes() {
+        return countries.codes();
     }
 
     public CompletableFuture<List<LeaderboardDao.Row>> get(String category, @Nullable String region, @Nullable String country) {

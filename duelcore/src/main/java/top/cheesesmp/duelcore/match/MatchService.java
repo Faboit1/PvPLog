@@ -327,7 +327,8 @@ public final class MatchService implements Runnable {
                 applyBorder(player, arena);
                 plugin.sidebar().refresh(player);
             };
-            if (m.round > 1 && plugin.settings().animRespawnThrow && player.getWorld() == arena.world()) {
+            boolean respawn = m.round > 1 && plugin.settings().animRespawnThrow && player.getWorld() == arena.world();
+            if (respawn && profileWants(player, Setting.RESPAWN_ANIMATIONS)) {
                 // later rounds: a respawn animation (throw, float, orbit, ...) instead of a plain teleport (see
                 // RespawnPull); no walking or jumping from its first tick on
                 player.setFireTicks(0);
@@ -340,7 +341,7 @@ public final class MatchService implements Runnable {
                         m.pulling--;
                         arrive.run();
                     });
-            } else if (plugin.settings().animSpawnRise) {
+            } else if (!respawn && plugin.settings().animSpawnRise) {
                 // round 1 (or no throw): rise out of the ground at the spawn (see SpawnRise); waits for the round reset
                 player.setFireTicks(0);
                 player.getInventory().clear();
@@ -351,7 +352,8 @@ public final class MatchService implements Runnable {
                         arrive.run();
                     });
             } else {
-                // leaving the hub (where everyone may fly) or a death cam: no flying in the arena
+                // leaving the hub (where everyone may fly) or a death cam: no flying in the arena. Also later rounds
+                // of a player who turned respawn animations off (Settings → Respawn animations)
                 player.setFlying(false);
                 player.setAllowFlight(false);
                 player.teleportAsync(spawn).thenRun(arrive);
@@ -515,6 +517,7 @@ public final class MatchService implements Runnable {
         }
         plugin.animations().death(victim.getLocation(), audience(m));
         for (Player p : online(m)) {
+            if (!profileWants(p, Setting.DEATH_MESSAGES)) continue;
             plugin.messages().send(p, credited == null ? "match.death" : "match.death-by", Messages.text("victim", dead.name()),
                 Messages.text("killer", credited == null ? "" : credited.name()),
                 Messages.comp("hearts", killerHealth(credited)));

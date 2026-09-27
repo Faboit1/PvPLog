@@ -152,9 +152,11 @@ settings-menu:
     section-queue: "items:item/clock_00"
     # Gameplay
     allow-spectators: "items:item/ender_eye"
+    spectator-alerts: "items:item/writable_book"
     tab-spectators: "items:item/spyglass"
     combo-bar: "items:item/blaze_powder"
     heartbeat: "gui:hud/heart/full"
+    death-messages: "items:item/bone"
     results-screen: "items:item/map"
     # Visuals
     sidebar: "items:item/paper"
@@ -162,11 +164,14 @@ settings-menu:
     hide-hub-players: "items:item/phantom_membrane"
     hotbar-hints: "items:item/oak_sign"
     match-particles: "items:item/firework_rocket"
+    round-banners: "items:item/firework_star"
+    respawn-animations: "items:item/ender_pearl"
     progress-reveal: "items:item/experience_bottle"
     match-found-pop: "items:item/totem_of_undying"
     # Sounds
     sounds: "items:item/bell"
     match-sounds: "items:item/goat_horn"
+    menu-sounds: "items:item/comparator"
     queue-music: "items:item/music_disc_cat"
     # Social
     duel-requests: "items:item/iron_sword"
@@ -179,6 +184,7 @@ settings-menu:
     region: "items:item/filled_map"
     max-ping: "items:item/redstone"
     country: "items:item/book"
+    prefer-country: "items:item/recovery_compass_00"
 
 # The kit editor (Kit Editor hotbar item, /kit edit [kit], /kiteditor [kit]). A 6-row chest laid out like the
 # inventory: rows 1-3 the inventory, row 4 the hotbar, row 5 the armour (locked), the offhand slot and an info item,
@@ -198,7 +204,7 @@ kit-editor:
   picker-columns: 3
   picker-width: 310
   # Sounds: "<sound> [pitch] [volume] [@delay]", several played together joined with "+" ("" = none). Players' own
-  # sound setting applies. pick / place / swap: moving an item; deny: a click that does nothing.
+  # settings apply (All sounds, Menu sounds). pick / place / swap: moving an item; deny: a click that does nothing.
   sounds:
     open: "item.armor.equip_generic 1.1 0.6"
     pick: "ui.button.click 1.7 0.25"
@@ -211,9 +217,9 @@ kit-editor:
     cancel: "ui.button.click 0.8 0.3"
 
 # Sounds of menu presses: every menu button (dialogs), clickable chat button (duel / party requests, draw offers)
-# and hub hotbar item plays one, to the presser only. Players' own sound setting applies. Same format as above
-# ("<sound> [pitch] [volume] [@delay]", several joined with "+", "" = none); at most one plays per press. The kit
-# editor uses its own sounds (kit-editor.sounds). Preview them all: /animtest play menu-sounds.
+# and hub hotbar item plays one, to the presser only. Players' own settings apply (All sounds, Menu sounds). Same
+# format as above ("<sound> [pitch] [volume] [@delay]", several joined with "+", "" = none); at most one plays per
+# press. The kit editor uses its own sounds (kit-editor.sounds). Preview them all: /animtest play menu-sounds.
 menu-sounds:
   enabled: true
   # A plain button: opens a menu, a player, a kit.

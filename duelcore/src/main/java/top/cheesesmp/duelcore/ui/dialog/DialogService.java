@@ -243,22 +243,33 @@ public final class DialogService {
     // ------------------------------------------------------------------ leaderboards
 
     public void leaderboard(Player viewer, String category, @Nullable String region) {
+        leaderboard(viewer, category, region, null);
+    }
+
+    /**
+     * A leaderboard: {@code category} is "overall" or a kit, filtered by a configured region or by a country code
+     * (already checked with {@link LeaderboardService#countryFilter}); with both, the country. Ranks count within the
+     * filter, and so does the viewer's own "You · #rank" line.
+     */
+    public void leaderboard(Player viewer, String category, @Nullable String region, @Nullable String country) {
         String cat = category.toLowerCase(Locale.ROOT);
         if (!cat.equals(LeaderboardService.OVERALL) && plugin.kits().get(cat) == null) cat = LeaderboardService.OVERALL;
         String finalCat = cat;
+        String reg = country != null ? null : region;
         long ticket = open().awaitNext(viewer);
-        plugin.leaderboards().get(cat, region, null).whenComplete((rows, error) ->
+        plugin.leaderboards().get(cat, reg, country).whenComplete((rows, error) ->
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (error != null) {
                     // shown empty rather than not at all (the menu used to just never open)
                     plugin.getLogger().log(java.util.logging.Level.WARNING, "Loading the " + finalCat + " leaderboard failed", error);
                 }
                 List<LeaderboardDao.Row> shown = rows != null ? rows : List.of();
-                open().continueAwait(viewer, ticket, () -> showLeaderboard(viewer, finalCat, region, shown));
+                open().continueAwait(viewer, ticket, () -> showLeaderboard(viewer, finalCat, reg, country, shown));
             }));
     }
 
-    private void showLeaderboard(Player viewer, String category, @Nullable String region, List<LeaderboardDao.Row> rows) {
+    private void showLeaderboard(Player viewer, String category, @Nullable String region, @Nullable String country,
+                                 List<LeaderboardDao.Row> rows) {
         boolean overall = category.equals(LeaderboardService.OVERALL);
         Kit kit = overall ? null : plugin.kits().get(category);
         Component catName = overall ? msg().get("dialog.leaderboard.overall") : kit.displayName();
@@ -289,25 +300,45 @@ public final class DialogService {
         }
         List<ActionButton> buttons = new ArrayList<>();
         int small = 34;
-        String reg = region == null ? "" : region;
+        // the category buttons keep the board's region or country
         buttons.add(button(msg().get(overall ? "dialog.leaderboard.overall-button-selected" : "dialog.leaderboard.overall-button"),
-            msg().get("dialog.leaderboard.overall"), small, "leaderboard/view", payload("cat", "overall", "region", reg)));
+            msg().get("dialog.leaderboard.overall"), small, "leaderboard/view", boardPayload("overall", region, country)));
         for (Kit k : plugin.kits().enabled()) {
             boolean selected = k.id().equals(category);
             buttons.add(button(msg().get(selected ? "dialog.leaderboard.kit-button-selected" : "dialog.leaderboard.kit-button",
                     Messages.comp("kit_icon", k.sprite()), Messages.comp("kit", k.displayName())),
-                k.displayName(), small, "leaderboard/view", payload("cat", k.id(), "region", reg)));
+                k.displayName(), small, "leaderboard/view", boardPayload(k.id(), region, country)));
         }
-        buttons.add(button(msg().get(region == null ? "dialog.leaderboard.all-regions-selected" : "dialog.leaderboard.all-regions"),
+        boolean global = region == null && country == null;
+        buttons.add(button(msg().get(global ? "dialog.leaderboard.all-regions-selected" : "dialog.leaderboard.all-regions"),
             msg().get("dialog.leaderboard.global"), small, "leaderboard/view", payload("cat", category, "region", "")));
         for (String r : plugin.settings().regions) {
             buttons.add(button(msg().get(r.equals(region) ? "dialog.leaderboard.region-selected" : "dialog.leaderboard.region",
                 Messages.text("region", r)), null, small, "leaderboard/view", payload("cat", category, "region", r)));
         }
-        Dialog d = dialog(msg().get("dialog.leaderboard.title", Messages.comp("category", catName),
-                Messages.text("region", region == null ? msg().raw("dialog.leaderboard.global") : region)),
-            List.of(text(lines(body))), List.of(), DialogType.multiAction(buttons).columns(8).exitAction(close()).build());
+        // "My country": the same board for the viewer's own country
+        String mine = own == null ? null : plugin.leaderboards().countryFilter(own.country(), own.country());
+        if (mine != null) {
+            TagResolver[] named = {Messages.text("code", mine),
+                Messages.text("country", plugin.leaderboards().countryName(mine))};
+            String key = mine.equals(country) ? "dialog.leaderboard.my-country-selected" : "dialog.leaderboard.my-country";
+            buttons.add(button(msg().get(key, named), msg().get("dialog.leaderboard.my-country-tooltip", named), small,
+                "leaderboard/view", payload("cat", category, "country", mine)));
+        }
+        Component title = country != null
+            ? msg().get("dialog.leaderboard.title-country", Messages.comp("category", catName),
+                Messages.text("country", plugin.leaderboards().countryName(country)), Messages.text("code", country))
+            : msg().get("dialog.leaderboard.title", Messages.comp("category", catName),
+                Messages.text("region", region == null ? msg().raw("dialog.leaderboard.global") : region));
+        Dialog d = dialog(title, List.of(text(lines(body))), List.of(),
+            DialogType.multiAction(buttons).columns(8).exitAction(close()).build());
         open().show(viewer, OpenDialogs.Kind.LEADERBOARD, d);
+    }
+
+    /** A {@code leaderboard/view} payload: {@code category} with the region or country filter of the open board. */
+    private static Map<String, String> boardPayload(String category, @Nullable String region, @Nullable String country) {
+        return country != null ? payload("cat", category, "country", country)
+            : payload("cat", category, "region", region == null ? "" : region);
     }
 
     // ------------------------------------------------------------------ settings

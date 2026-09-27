@@ -749,9 +749,13 @@ public final class KitEditor implements Listener {
 
     // ------------------------------------------------------------------ sounds
 
-    /** An editor sound (gui.yml kit-editor.sounds); it is the press's menu sound, so ClickRouter's is skipped. */
+    /**
+     * An editor sound (gui.yml kit-editor.sounds); it is the press's menu sound, so ClickRouter's is skipped, and like
+     * every menu sound it follows the player's Menu sounds setting.
+     */
     void sound(Player player, String name) {
         plugin.menuSounds().claim(player);
+        if (!plugin.menuSounds().wanted(player)) return;
         MatchSounds.play(plugin, player, plugin.gui().kitEditor.sound(name).pick(ThreadLocalRandom.current()), 0);
     }
 }

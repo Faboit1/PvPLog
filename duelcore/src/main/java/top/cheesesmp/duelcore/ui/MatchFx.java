@@ -34,7 +34,8 @@ import top.cheesesmp.duelcore.ui.anim.TextFx;
  * here checks its own config.yml {@code animations} switch and returns false when it is off, so the caller can fall
  * back to the plain title. Titles are sent part by part ({@link TitlePart}): the times once with no fade-in, then only
  * the part that changes, so a re-sent frame doesn't fade in again. Players' own settings: {@link Setting#COMBO_BAR}
- * (combo and kill bars), {@link Setting#HEARTBEAT}, and {@link Setting#MATCH_SOUNDS} for every sound but the heartbeat's.
+ * (combo and kill bars), {@link Setting#HEARTBEAT}, {@link Setting#ROUND_BANNERS} (off: the caller's action bar line),
+ * and {@link Setting#MATCH_SOUNDS} for every sound but the heartbeat's.
  * Texts: messages.yml {@code match.fx}; colours:
  * gui.yml {@code match-fx}.
  */
@@ -155,7 +156,7 @@ public final class MatchFx {
      * the number that changed pops.
      */
     public boolean roundBanner(Player viewer, Banner kind, int[] before, int[] after, int round, String winner) {
-        if (!cfg().animRoundBanner) return false;
+        if (!cfg().animRoundBanner || !wants(viewer, Setting.ROUND_BANNERS)) return false;
         String key = switch (kind) {
             case WON -> "match.fx.round-won";
             case LOST -> "match.fx.round-lost";

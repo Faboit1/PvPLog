@@ -11,11 +11,13 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.debug.TesterMode;
+import top.cheesesmp.duelcore.profile.PlayerProfile;
+import top.cheesesmp.duelcore.profile.Setting;
 
 /**
  * The sound of a menu press ({@code plugin.menuSounds()}): every {@code duelcore:*} click (dialog buttons, chat
  * buttons, Escape) and hub hotbar item plays one to the presser only, respecting gui.yml {@code menu-sounds.enabled}
- * and the player's sounds setting.
+ * and the player's {@link Setting#MENU_SOUNDS} and {@link Setting#SOUNDS} settings.
  *
  * <p>At most one menu sound per player per tick ({@link Gate}): a handler that knows better (a toggle's new state, a
  * refusal) plays its kind first, then ClickRouter / HubListener play the press's default kind ({@link MenuSound#forClick})
@@ -45,8 +47,17 @@ public final class MenuSounds implements Listener {
     /** Plays {@code kind} to the player, unless a menu sound already played to them this tick. */
     public void play(Player player, MenuSound kind) {
         MenuSoundStyle style = plugin.gui().menuSounds;
-        if (!style.enabled() || !gate.claim(player.getUniqueId(), Bukkit.getCurrentTick())) return;
+        if (!style.enabled() || !wanted(player) || !gate.claim(player.getUniqueId(), Bukkit.getCurrentTick())) return;
         MatchSounds.play(plugin, player, style.sound(kind).pick(ThreadLocalRandom.current()), 0);
+    }
+
+    /**
+     * The player's {@link Setting#MENU_SOUNDS} (true without a loaded profile). Playing also checks
+     * {@link Setting#SOUNDS}, the master switch it belongs to.
+     */
+    public boolean wanted(Player player) {
+        PlayerProfile profile = plugin.profiles().get(player);
+        return profile == null || profile.setting(Setting.MENU_SOUNDS);
     }
 
     /** Marks that the player's press already has its own sound this tick, so the fallback {@link #play} is skipped. */

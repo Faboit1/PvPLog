@@ -56,6 +56,8 @@ public final class Match {
     private final List<Participant> participants;
     private final Map<UUID, Participant> byUuid = new HashMap<>();
     private final Set<UUID> spectators = new LinkedHashSet<>();
+    /** Which spectators the fighters were told about (Settings → Spectator alerts). */
+    final SpectatorAlerts spectatorAlerts = new SpectatorAlerts();
     private final List<Integer> roundWinners = new ArrayList<>();
     private final List<Consumer<Match>> endListeners = new ArrayList<>();
     private final long createdAt = System.currentTimeMillis();

@@ -202,6 +202,10 @@ spectate:
   started-ffa: "<muted>Spectating a <text>Party FFA</text> · <players> players · <alive> alive · <kit>. Use /leave to stop · left-click a fighter to watch through their eyes.</muted>"
   ended: "<muted>That match already ended.</muted>"
   not-spectating: "<muted>You're not spectating.</muted>"
+  # Settings → Spectator alerts: told to the fighters when <player> starts / stops watching their match (at most one
+  # "now watching" per spectator and match every 30 seconds).
+  alert-started: "<muted><text><player></text> is now watching your match.</muted>"
+  alert-stopped: "<muted><text><player></text> stopped watching your match.</muted>"
   result:
     ok: ""
     not_in_match: "<muted><text><player></text> isn't in a match.</muted>"
@@ -741,6 +745,8 @@ dialog:
     recent-refresh: "<muted>Refresh</muted>"
   leaderboard:
     title: "<category> <muted>· <region></muted>"
+    # A country's board: <country> = its name (countries.yml), <code> = its two letters.
+    title-country: "<category> <muted>· <country></muted>"
     global: "global"
     overall: "Overall"
     empty: "<muted>Nobody is ranked here yet.</muted>"
@@ -755,6 +761,10 @@ dialog:
     all-regions-selected: "<accent>All</accent>"
     region: "<muted><region></muted>"
     region-selected: "<accent><region></accent>"
+    # "My country", after the regions (only for players with a country set): <code>, <country> = its name.
+    my-country: "<muted>⚑<code></muted>"
+    my-country-selected: "<accent>⚑<code></accent>"
+    my-country-tooltip: "<muted>Your country:</muted> <text><country></text>"
   # The settings menu (Settings item, /settings). Every click changes and saves a setting at once. Rows:
   # <icon> <name> <state>, the description in the hover. Icons and width are in gui.yml (settings-menu).
   settings:
@@ -770,7 +780,7 @@ dialog:
       social: "Social"
       queue: "Queue"
     section-hover:
-      gameplay: "<text>In your matches: spectators, the action bar and the results screen.</text>"
+      gameplay: "<text>In your matches: spectators, chat lines, the action bar and the results screen.</text>"
       visuals: "<text>The sidebar, tags, the hub and the animations you see.</text>"
       sounds: "<text>Sound effects and the music while searching.</text>"
       social: "<text>Who can challenge and invite you, and what you tell others.</text>"
@@ -781,7 +791,7 @@ dialog:
       visuals: "<muted>What you see around the hub and in matches.</muted>"
       sounds: "<muted>What you hear. <text>All sounds</text> turns every sound effect off at once.</muted>"
       social: "<muted>Challenges, invites and friends.</muted>"
-      queue: "<muted>Region and max ping help the matchmaker find opponents with a similar connection.</muted>"
+      queue: "<muted>Region, country and max ping help the matchmaker find opponents with a similar connection.</muted>"
     footer: "<dark_gray>Hover a setting to see what it does. Changes are saved right away.</dark_gray>"
     row: "<icon> <text><name></text>  <state>"
     state-on: "<good>☑ On</good>"
@@ -825,6 +835,9 @@ dialog:
       allow-spectators:
         name: "Allow spectators"
         hover: "Other players can watch your matches (Spectate menu, /spectate). Off: nobody can."
+      spectator-alerts:
+        name: "Spectator alerts"
+        hover: "A chat line when someone starts or stops watching your match."
       tab-spectators:
         name: "Spectators in tab"
         hover: "While you fight, the players watching your match are listed in your tab list."
@@ -834,6 +847,9 @@ dialog:
       heartbeat:
         name: "Low-health heartbeat"
         hover: "A heartbeat and a red health pulse on the action bar when you're low on health."
+      death-messages:
+        name: "Death messages"
+        hover: "The \"was killed by\" and \"died\" chat lines of the matches you play or watch."
       results-screen:
         name: "Results screen"
         hover: "The match results open back in the hub after a match. Off: only the title and the chat summary."
@@ -853,6 +869,12 @@ dialog:
       match-particles:
         name: "Match particles"
         hover: "Fight-start rings, round-win spirals, death bursts, fireworks and confetti in matches."
+      round-banners:
+        name: "Round banners"
+        hover: "\"ROUND WON\" or \"ROUND LOST\" types in when a round ends. Off: the round result shows on the action bar."
+      respawn-animations:
+        name: "Respawn animations"
+        hover: "From round 2 on you're thrown, floated or turned back to your spawn. Off: a plain teleport."
       progress-reveal:
         name: "Rank-up animations"
         hover: "After a ranked match: the Elo count on the action bar, tier-up titles and the XP bar filling in the hub."
@@ -862,10 +884,13 @@ dialog:
       # Sounds
       sounds:
         name: "All sounds"
-        hover: "Every DuelCore sound effect, match sounds included. The music while searching has its own switch."
+        hover: "Every DuelCore sound effect, match and menu sounds included. The music while searching has its own switch."
       match-sounds:
         name: "Match sounds"
         hover: "Match found, the countdown, FIGHT!, kills and the victory or defeat jingle."
+      menu-sounds:
+        name: "Menu sounds"
+        hover: "The clicks of menu buttons, chat buttons, hub items and the kit editor."
       queue-music:
         name: "Music while searching"
         hover: "A random music disc plays (only for you) while you search for a match."
@@ -897,7 +922,10 @@ dialog:
         hover: "The matchmaker prefers opponents below this ping (Any: no preference)."
       country:
         name: "Country"
-        hover: "Shown on your profile."
+        hover: "Shown on your profile. Your country's leaderboard and Prefer my country use it."
+      prefer-country:
+        name: "Prefer my country"
+        hover: "The matchmaker slightly favours opponents from your country, if they have this on too. It fades after a short wait."
   spectate:
     title: "Live <muted>· <live></muted>"
     body: "<muted>Pick a match to watch. You stay in your queue. Showing <shown> of <live>.</muted>"

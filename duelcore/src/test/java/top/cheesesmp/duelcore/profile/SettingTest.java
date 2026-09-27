@@ -44,6 +44,24 @@ class SettingTest {
     }
 
     @Test
+    void countryAndMatchSettingsUseBits25To30() {
+        // bits 22-24 belong to the country flag settings; 31 (the sign bit) stays unused
+        List<Setting> added = List.of(Setting.PREFER_COUNTRY, Setting.DEATH_MESSAGES, Setting.MENU_SOUNDS,
+            Setting.RESPAWN_ANIMATIONS, Setting.ROUND_BANNERS, Setting.SPECTATOR_ALERTS);
+        for (int i = 0; i < added.size(); i++) {
+            Setting s = added.get(i);
+            assertEquals(25 + i, s.bit(), s.name());
+            assertTrue(s.relative(), s + " needs no migration");
+            assertTrue(s.defaultValue(), s + " is on by default (what players had before it existed)");
+        }
+        // every setting away from its default still fits a positive int (the INT column)
+        int changed = 0;
+        for (Setting s : Setting.values()) changed = s.write(changed, !s.defaultValue());
+        assertTrue(changed > 0, "sign bit untouched: " + Integer.toBinaryString(changed));
+        for (Setting s : Setting.values()) assertEquals(!s.defaultValue(), s.read(changed), s.name());
+    }
+
+    @Test
     void writeThenReadRoundTrips() {
         for (Setting s : Setting.values()) {
             for (boolean v : new boolean[] {true, false}) {
