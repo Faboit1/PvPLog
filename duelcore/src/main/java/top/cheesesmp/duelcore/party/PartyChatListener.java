@@ -24,7 +24,7 @@ public final class PartyChatListener implements Listener {
         this.parties = parties;
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true) // (chat shortcodes run after, HIGHEST)
     public void onChat(AsyncChatEvent event) {
         PartyService.ChatRoute route = parties.route(event.getPlayer().getUniqueId());
         if (route == null) return;

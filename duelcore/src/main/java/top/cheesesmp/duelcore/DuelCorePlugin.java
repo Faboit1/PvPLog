@@ -163,6 +163,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         tabListing = new top.cheesesmp.duelcore.ui.TabListing(this);
         pm.registerEvents(tabListing, this);
         pm.registerEvents(new top.cheesesmp.duelcore.chat.ChatFilterListener(this), this);
+        pm.registerEvents(new top.cheesesmp.duelcore.chat.ChatShortcodes(this), this);
         clicks = new ClickRouter(this);
         pm.registerEvents(clicks, this);
         pm.registerEvents(menuSounds, this);

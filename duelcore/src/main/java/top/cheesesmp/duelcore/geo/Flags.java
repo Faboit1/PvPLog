@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
@@ -16,7 +17,8 @@ import top.cheesesmp.duelcore.ui.Icons;
 /**
  * Country flags next to player names, and the names and regions of countries.yml ({@code plugin.flags()}). A flag is
  * the country's flag head from countries.yml drawn inline, like the queue menu's progress bar
- * ({@link Icons#textureHead}): white, without shadow, as big as a letter.
+ * ({@link Icons#textureHead}): white, without shadow, as big as a letter. Hovering it shows the country's name and
+ * shortcode (messages.yml {@code flags.hover}; typing the shortcode in chat draws the flag, see ChatShortcodes).
  *
  * <p>Who sees a flag: gui.yml {@code flags} switches flags off everywhere or per {@link Place}; a player's own
  * {@link Setting#SHOW_MY_FLAG} (off: their flag is never drawn, for anyone) and the viewer's
@@ -126,7 +128,10 @@ public final class Flags {
         return c.heads().computeIfAbsent(cc, code -> {
             Countries.Country listed = c.countries().get(code);
             if (listed == null || listed.flag() == null) return Component.empty();
-            return Icons.textureHead(listed.flag(), Component.text(code, NamedTextColor.GRAY), c.style().hat());
+            Component head = Icons.textureHead(listed.flag(), Component.text(code, NamedTextColor.GRAY), c.style().hat());
+            Component hover = messages.get().get("flags.hover", Messages.comp("flag", head),
+                Messages.text("country", listed.name()), Messages.text("code", code));
+            return head.hoverEvent(HoverEvent.showText(hover));
         });
     }
 

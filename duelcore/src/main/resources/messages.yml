@@ -218,7 +218,19 @@ spectate:
     disallowed: "<muted><text><player></text> doesn't allow spectators.</muted>"
     no_arena: "<muted>That match is still starting, try again in a second.</muted>"
 
+# Hovering a country flag anywhere. <flag> = the flag, <country> = its name, <code> = its code (typing :<code>: in chat
+# draws it).
+flags:
+  hover: "<flag> <text><country></text><newline><muted>Shortcode: </muted><text>:<code>:</text>"
+
 chat:
+  # :Name: in chat (gui.yml chat-shortcodes). <head> = their head, <name> = their name. The hover: <tier_line> =
+  # player-tier when they have a tier tag, <country_line> = player-country when they show a flag.
+  shortcode:
+    player: "<head> <text><name></text>"
+    player-hover: "<head> <text><name></text><tier_line><country_line>"
+    player-tier: "<newline><tier>"
+    player-country: "<newline><flag> <muted><country></muted>"
   blocked: "<bad>Your message was blocked: it contains a slur or harassment.</bad>"
   blocked-staff: "<muted>[filter]</muted> <text><player></text> <muted>tried to say</muted> <text><message></text> <muted>(<term>)</muted>"
 

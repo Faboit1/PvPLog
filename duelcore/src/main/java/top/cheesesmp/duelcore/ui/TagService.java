@@ -318,7 +318,7 @@ public final class TagService implements Listener, Runnable {
      * {@link Setting#SHOW_FLAGS} decide what they see (the console gets no flag, it can't draw heads). Without chat
      * tags ({@code display.chat-tag}) and without a flag the line stays vanilla.
      */
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true) // (party chat, HIGH, replaces the renderer)
     public void onChat(AsyncChatEvent event) {
         Component tag = plugin.settings().chatTag ? tags.getOrDefault(event.getPlayer().getUniqueId(), Component.empty())
             : Component.empty();

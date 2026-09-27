@@ -37,6 +37,10 @@ public final class HealthTags implements Runnable {
     private static final TextColor MID = TextColor.color(0xFFCC33);
     private static final TextColor HIGH = TextColor.color(0x55FF55);
 
+    /** The HUD's own heart sprites (gui atlas), drawn as big as a letter. */
+    private static final Component HEART = Icons.gui("hud/heart/full");
+    private static final Component ABSORPTION_HEART = Icons.gui("hud/heart/absorbing_full");
+
     private final DuelCorePlugin plugin;
     /** Per viewer: the line shown under each name right now (only changes are sent). */
     private final Map<UUID, Map<String, Component>> shown = new HashMap<>();
@@ -81,9 +85,10 @@ public final class HealthTags implements Runnable {
         double hp = Math.max(0, target.getHealth());
         double absorption = target.getAbsorptionAmount();
         Component extra = absorption <= 0 ? Component.empty()
-            : plugin.messages().parse(gui.matchHealthAbsorption, Messages.text("hearts", hearts(absorption)));
+            : plugin.messages().parse(gui.matchHealthAbsorption, Messages.text("hearts", hearts(absorption)),
+                Messages.comp("heart", ABSORPTION_HEART));
         return plugin.messages().parse(gui.matchHealthFormat,
-            Messages.text("hearts", hearts(hp)),
+            Messages.text("hearts", hearts(hp)), Messages.comp("heart", HEART),
             net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.styling("hp_color", color(hp / maxHp)),
             Messages.comp("absorption", extra));
     }

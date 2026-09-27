@@ -44,6 +44,9 @@ public final class GuiConfig {
     public final String tabStatusQueue;
     public final String tabAdmin;
     public final boolean matchHealthEnabled;
+    /** Chat shortcodes (:SE:, :Name:): on, and how many per message at most. */
+    public final boolean chatShortcodesEnabled;
+    public final int chatShortcodesMax;
     public final String matchHealthFormat;
     public final String matchHealthAbsorption;
     public final String nametagPrefix;
@@ -142,8 +145,10 @@ public final class GuiConfig {
         tabStatusQueue = y.getString("tags.tab-status-queue", "items:item/clock_00");
         tabAdmin = y.getString("tags.tab-admin", " <#ffd24a>★</#ffd24a>");
         matchHealthEnabled = y.getBoolean("match-health.enabled", true);
-        matchHealthFormat = y.getString("match-health.format", "<#ff5555>❤</#ff5555> <hp_color><hearts></hp_color><absorption>");
-        matchHealthAbsorption = y.getString("match-health.absorption", " <#ffcc33>+<hearts></#ffcc33>");
+        chatShortcodesEnabled = y.getBoolean("chat-shortcodes.enabled", true);
+        chatShortcodesMax = Math.clamp(y.getInt("chat-shortcodes.max", 8), 0, 32);
+        matchHealthFormat = y.getString("match-health.format", "<heart> <white><hearts></white><absorption>");
+        matchHealthAbsorption = y.getString("match-health.absorption", "  <heart> <white><hearts></white>");
         nametagPrefix = y.getString("tags.nametag-prefix", "<tier> ");
         hideUnrankedTag = y.getBoolean("tags.hide-unranked", false);
         tagIconFormat = y.getString("tags.icon-tier", "<icon><tier>");

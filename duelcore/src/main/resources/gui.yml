@@ -385,12 +385,20 @@ tags:
   hide-unranked: false
 
 # Under the names of your opponents during a match (and of every fighter while spectating): their health.
-# <hearts> = health in hearts with one decimal, <hp_color> = red → yellow → green by health left,
+# <heart> = the HUD's heart sprite (in absorption: the golden one), <hearts> = health in hearts with one decimal,
+# <hp_color> = red → yellow → green by health left (e.g. <hp_color><hearts></hp_color>),
 # <absorption> = the absorption format below when they have absorption hearts (else nothing).
 match-health:
   enabled: true
-  format: "<#ff5555>❤</#ff5555> <hp_color><hearts></hp_color><absorption>"
-  absorption: " <#ffcc33>+<hearts></#ffcc33>"
+  format: "<heart> <white><hearts></white><absorption>"
+  absorption: "  <heart> <white><hearts></white>"
+
+# Shortcodes in chat: :SE: (a country code) becomes that country's flag, :Name: an online player's head and name, both
+# with a hover saying what they are. Anything that isn't a listed country or an online player stays as typed; at
+# most <max> are replaced per message. Texts: messages.yml chat.shortcode and flags.hover.
+chat-shortcodes:
+  enabled: true
+  max: 8
 
 # Country flags next to names: the flag head of the player's country (countries.yml), before the name and after the
 # tier tag. Players set their country in Settings (or have it detected, config.yml geo) and choose whether they see
