@@ -177,7 +177,7 @@ Player commands (all players by default):
 | `/profile [player]` | `/stats` | Profile: overall tier and Elo, per-kit tier/rating/record, recent matches. `/profile <p> legacy` shows last season |
 | `/leaderboard [kit\|overall] [region\|country]` | `/lb`, `/top` | Leaderboards, global, per region (`EU`) or per country (two letters, `DE`; see *Leaderboards* below). Test bots (names starting with `dcbot`) are never listed or counted in ranks |
 | `/spectate [player]` | `/spec` | Watch a match. Without a name it opens the live list (search; highest Elo first, then by name). `/spectate stop` |
-| `/party` | `/p` | Party menu (see *Parties*). `create`, `invite <player>`, `accept\|deny [player]`, `join <leader>`, `leave`, `kick <player>`, `promote <player>`, `disband`, `chat`, `open`, `private`, `password`, `list`, `ffa [kit]`, `split [kit]`, `duel [leader] [kit]`, `duel accept\|deny [leader]` |
+| `/party` | `/p` | Party menu (see *Parties*). `create`, `invite <player>`, `accept\|deny [player]`, `join <leader>`, `leave`, `kick <player>`, `promote <player>`, `disband`, `chat`, `open`, `private`, `password`, `list`, `teams [random\|auto]`, `team <player> <1\|2>`, `ffa [kit]`, `split [kit]`, `duel [leader] [kit]`, `duel accept\|deny [leader]` |
 | `/pc <message>` | | Party chat. Starting a chat message with `@` does the same |
 | `/duel [player] [kit]` | | Unranked challenge. Without arguments it opens a player picker. `/duel accept\|deny <player>` |
 | `/settings` | | Player settings in five tabs: Gameplay, Visuals, Sounds, Social, Queue (see *Player settings*) |
@@ -543,16 +543,22 @@ invitations with Accept/Deny, and the open parties to join with one click.
   Players who turned off *party invites from anyone* (setting `PARTY_INVITES`) can only be invited by their friends
   (mutual follows); friends are listed first in the menu's invite list.
 - **The menu** shows the members (leader ★, head, online / offline / in match, pages of 8) and the buttons *Invite
-  Player*, *Party Chat*, *Party FFA*, *Party Duel*, *Party vs Party*, *Privacy* and *Disband* / *Leave*. Buttons that
+  Player*, *Party Chat*, *Party FFA*, *Party Duel*, *Party vs Party*, *Teams*, *Privacy* and *Disband* / *Leave*. Buttons that
   can't be used right now are struck through and their tooltip says why. The leader clicks a member to kick them or
   make them leader.
 - **Party chat.** `/pc <message>`, a chat message starting with `@`, or every message while *Party Chat* is on (saved
   per member) goes to the online party members only, with a `[Party]` prefix. It passes the chat filter like normal
   chat: blocked stays blocked, masked stays masked.
-- **Party matches** (leader only, unranked, the leader picks the kit). Everyone online must be free of matches;
-  queues and spectating are left automatically. *Party FFA*: everyone for themselves, one round, last one standing
-  wins (spawns on a ring between the arena spawns). *Party Duel*: the online members in two random teams of equal
-  size (±1). *Party vs Party*: the other leader gets a request (dialog and chat; the same leader can ask again after
+- **Party matches** (leader only, unranked, the leader picks the kit). Members who are in a match (or still loading)
+  sit it out instead of blocking it, and the others are told who sat out; at least 2 members must be able to play.
+  Queues and spectating are left automatically. *Party FFA*: everyone for themselves, one round, last one standing
+  wins (spawns on a ring between the arena spawns). *Party Duel*: by default the available members in two random
+  teams of equal size (±1), drawn again every match. The leader can pick the teams instead (*Teams* in the menu,
+  `/party teams`): move each member to Team 1 or 2 with a click (or `/party team <player> <1|2>`), *Randomize*
+  (`/party teams random`: balanced random teams kept until changed) or back to *Auto* (`/party teams auto`). Picked
+  teams stay until the leader changes them (memory only; a restart goes back to auto): new members join the smaller
+  team, members who leave drop out, members who sit a match out are only left out of that match. A picked team with
+  nobody who can play refuses to start. The teams are shown in the kit picker. *Party vs Party*: the other leader gets a request (dialog and chat; the same leader can ask again after
   15 seconds) and the match is party against party. Team mates can't hurt each other. The party is told the result afterwards and stays together.
 - **Notices.** The party hears about joins, leaves, kicks, leader changes, members coming online or going offline
   and disbanding. Someone removed or disbanded while offline is told on their next join.

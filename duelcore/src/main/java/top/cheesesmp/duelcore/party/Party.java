@@ -67,6 +67,7 @@ public final class Party {
     private final String id;
     private final long createdAt;
     private final Map<UUID, Member> members = new LinkedHashMap<>();
+    private final PartyTeams teams = new PartyTeams();
     private UUID leader;
     private boolean open;
     private @Nullable String passwordHash;
@@ -147,12 +148,26 @@ public final class Party {
         return members.size();
     }
 
+    /** The Party Duel teams (random every match unless the leader picked them). */
+    public PartyTeams teams() {
+        return teams;
+    }
+
     void add(Member member) {
         members.put(member.uuid(), member);
+        teams.join(member.uuid());
     }
 
     @Nullable Member remove(UUID uuid) {
+        teams.leave(uuid);
         return members.remove(uuid);
+    }
+
+    /** Member uuids, leader first (see {@link #leaderFirst}). */
+    List<UUID> leaderFirstIds() {
+        List<UUID> list = new ArrayList<>(members.size());
+        for (Member m : leaderFirst()) list.add(m.uuid());
+        return list;
     }
 
     /** Leader first, then the others in join order (for lists). */

@@ -1,6 +1,7 @@
 package top.cheesesmp.duelcore.party;
 
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
@@ -76,6 +77,15 @@ public final class PartyCommands {
             // passwords are typed in the dialog only: the server logs every command line in plain text
             .then(Commands.literal("password").executes(ctx -> run(ctx, p -> parties().dialogs().openPrivacy(p, null))))
             .then(Commands.literal("list").executes(ctx -> run(ctx, this::list)))
+            .then(Commands.literal("teams")
+                .executes(ctx -> run(ctx, p -> parties().dialogs().openTeams(p, null)))
+                .then(Commands.literal("random").executes(ctx -> run(ctx, p -> teams(p, parties().randomTeams(p)))))
+                .then(Commands.literal("auto").executes(ctx -> run(ctx, p -> teams(p, parties().autoTeams(p))))))
+            .then(Commands.literal("team")
+                .then(Commands.argument("player", StringArgumentType.word()).suggests(everyone())
+                    .then(Commands.argument("team", IntegerArgumentType.integer(1, 2))
+                        .executes(ctx -> run(ctx, p -> teams(p, parties().setTeam(p, StringArgumentType.getString(ctx, "player"),
+                            IntegerArgumentType.getInteger(ctx, "team") - 1)))))))
             .then(Commands.literal("ffa")
                 .executes(ctx -> run(ctx, p -> pickKit(p, Mode.FFA, null)))
                 .then(Commands.argument("kit", StringArgumentType.word()).suggests(plugin.commands().kitSuggestions())
@@ -189,6 +199,18 @@ public final class PartyCommands {
         }
     }
 
+    /** After a change of the Party Duel teams: the teams as they are now, or why it was refused. */
+    private void teams(Player player, Outcome outcome) {
+        Party party = parties().party(player.getUniqueId());
+        if (!outcome.ok() || party == null) {
+            feedback(player, outcome);
+            return;
+        }
+        Messages msg = plugin.messages();
+        msg.send(player, party.teams().picked() ? "party.teams-now" : "party.teams-random",
+            Messages.comp("teams", parties().dialogs().teamsText(party)));
+    }
+
     private @Nullable String partyId(String leader) {
         Party party = parties().byLeaderName(leader);
         return party == null ? null : party.id();
@@ -253,6 +275,21 @@ public final class PartyCommands {
                 String rem = builder.getRemainingLowerCase();
                 for (Party.Member m : party.members()) {
                     if (!m.uuid().equals(self.getUniqueId()) && m.name().toLowerCase(Locale.ROOT).startsWith(rem)) builder.suggest(m.name());
+                }
+            }
+            return builder.buildFuture();
+        };
+    }
+
+    /** Members of the sender's party, the sender too. */
+    private SuggestionProvider<CommandSourceStack> everyone() {
+        return (ctx, builder) -> {
+            Player self = sender(ctx);
+            Party party = self == null ? null : parties().party(self.getUniqueId());
+            if (party != null) {
+                String rem = builder.getRemainingLowerCase();
+                for (Party.Member m : party.members()) {
+                    if (m.name().toLowerCase(Locale.ROOT).startsWith(rem)) builder.suggest(m.name());
                 }
             }
             return builder.buildFuture();
