@@ -18,7 +18,7 @@ class SettingTest {
     void bitsAreUniqueAndFitAnInt() {
         Set<Integer> bits = new HashSet<>();
         for (Setting s : Setting.values()) {
-            assertTrue(s.bit() >= 0 && s.bit() < 31, s + " bit " + s.bit());
+            assertTrue(s.bit() >= 0 && s.bit() < 32, s + " bit " + s.bit());
             assertTrue(bits.add(s.bit()), s + " reuses bit " + s.bit());
         }
     }
@@ -45,7 +45,7 @@ class SettingTest {
 
     @Test
     void countryAndMatchSettingsUseBits25To30() {
-        // bits 22-24 belong to the country flag settings; 31 (the sign bit) stays unused
+        // bits 22-24 belong to the country flag settings; 31 (the sign bit) is MATCH_MUSIC
         List<Setting> added = List.of(Setting.PREFER_COUNTRY, Setting.DEATH_MESSAGES, Setting.MENU_SOUNDS,
             Setting.RESPAWN_ANIMATIONS, Setting.ROUND_BANNERS, Setting.SPECTATOR_ALERTS);
         for (int i = 0; i < added.size(); i++) {
@@ -54,10 +54,10 @@ class SettingTest {
             assertTrue(s.relative(), s + " needs no migration");
             assertTrue(s.defaultValue(), s + " is on by default (what players had before it existed)");
         }
-        // every setting away from its default still fits a positive int (the INT column)
+        // every setting away from its default fits the (signed) INT column and reads back (bit 31 = MATCH_MUSIC)
         int changed = 0;
         for (Setting s : Setting.values()) changed = s.write(changed, !s.defaultValue());
-        assertTrue(changed > 0, "sign bit untouched: " + Integer.toBinaryString(changed));
+        for (Setting s : Setting.values()) assertEquals(!s.defaultValue(), s.read(changed), s.name());
         for (Setting s : Setting.values()) assertEquals(!s.defaultValue(), s.read(changed), s.name());
     }
 

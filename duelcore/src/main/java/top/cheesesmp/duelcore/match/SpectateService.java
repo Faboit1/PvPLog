@@ -20,10 +20,9 @@ import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.Setting;
 
 /**
- * Watching live matches. Spectators are in spectator mode: the fighters can't see them in the world (or hit, or
- * target them), but they stay in the tab list as spectators. They can fly through the arena, watch through a
- * fighter's eyes (left-click them), and can't touch anything. The spectator menu's teleports and flying off are
- * kept inside their match's arena. They keep their queue entries. Fighters with {@link Setting#SPECTATOR_ALERTS}
+ * Watching live matches. Spectators fly around the arena in adventure mode, invulnerable and hidden from everyone
+ * fighting (other spectators see them); they can't hit anyone, use blocks or pick anything up, and projectiles pass
+ * through them. Flying far off their match's arena brings them back. They keep their queue entries. Fighters with {@link Setting#SPECTATOR_ALERTS}
  * are told in chat when someone starts or stops watching (see {@link #alert}).
  */
 public final class SpectateService implements Listener, Runnable {
@@ -72,12 +71,14 @@ public final class SpectateService implements Listener, Runnable {
         plugin.tags().update(viewer); // grey, italic and last in the tab list
         Location to = focus != null && match.arena().contains(focus) ? focus.clone().add(0, 3, 0) : match.arena().center().add(0, 6, 0);
         KitManager.resetState(viewer, 20);
-        viewer.setGameMode(GameMode.SPECTATOR);
+        if (viewer.getGameMode() == GameMode.SPECTATOR) viewer.setGameMode(GameMode.ADVENTURE);
         viewer.setInvulnerable(true);
         viewer.setCollidable(false);
         boolean arriving = previous != match;
         viewer.teleportAsync(to).thenRun(() -> {
             if (!viewer.isOnline() || spectating.get(viewer.getUniqueId()) != match) return;
+            viewer.setAllowFlight(true);
+            viewer.setFlying(true);
             plugin.hub().giveSpectatorItems(viewer);
             plugin.visibility().refresh(viewer);
             plugin.sidebar().refresh(viewer);
@@ -140,6 +141,26 @@ public final class SpectateService implements Listener, Runnable {
         return true;
     }
 
+    /** Spectators can't hit anyone (the fighters can't see them) or use blocks (doors, buttons, chests, plates). */
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void onSpectatorAttack(org.bukkit.event.entity.EntityDamageByEntityEvent event) {
+        Player attacker = event.getDamager() instanceof Player p ? p
+            : event.getDamager() instanceof org.bukkit.entity.Projectile pr && pr.getShooter() instanceof Player s ? s : null;
+        if (attacker != null && spectating.containsKey(attacker.getUniqueId())) event.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.LOW)
+    public void onSpectatorInteract(org.bukkit.event.player.PlayerInteractEvent event) {
+        if (!spectating.containsKey(event.getPlayer().getUniqueId())) return;
+        event.setUseInteractedBlock(org.bukkit.event.Event.Result.DENY);
+        if (event.getAction() == org.bukkit.event.block.Action.PHYSICAL) event.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void onSpectatorInteractEntity(org.bukkit.event.player.PlayerInteractEntityEvent event) {
+        if (spectating.containsKey(event.getPlayer().getUniqueId())) event.setCancelled(true);
+    }
+
     /** The spectator menu (number keys) teleports to any player on the server: only within the watched arena. */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onSpectatorTeleport(PlayerTeleportEvent event) {
@@ -150,7 +171,7 @@ public final class SpectateService implements Listener, Runnable {
         if (arena == null || !arena.contains(event.getTo())) event.setCancelled(true);
     }
 
-    /** Every second: spectators who flew far off their arena (spectator mode passes through anything) go back. */
+    /** Every second: spectators who flew far off their arena go back (and keep flying after a mode change). */
     @Override
     public void run() {
         for (Map.Entry<UUID, Match> e : spectating.entrySet()) {
@@ -160,6 +181,7 @@ public final class SpectateService implements Listener, Runnable {
             Location loc = player.getLocation();
             boolean away = loc.getWorld() != arena.world() || !arena.containsXZ(loc.getX(), loc.getZ(), MARGIN)
                 || loc.getY() < arena.floorY() - MARGIN || loc.getY() > arena.floorY() + arena.template().sizeY() + MARGIN;
+            if (!player.getAllowFlight()) player.setAllowFlight(true);
             if (!away) continue;
             if (player.getSpectatorTarget() != null) player.setSpectatorTarget(null);
             player.teleportAsync(arena.center().add(0, 6, 0));

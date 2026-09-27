@@ -69,6 +69,10 @@ queue:
     party: "<bad>Use /party queue while you're in a party."
 
 match:
+  # /stopmusic and /playmusic (config.yml match.music)
+  music:
+    stopped: "<muted>Match music off. <text>/playmusic</text> turns it back on.</muted>"
+    playing: "<muted>Match music on. <text>/stopmusic</text> turns it off.</muted>"
   found-title: "<accent>Match found</accent>"
   # <flag> (here and in other messages) is the country flag of the player named after it (gui.yml flags), empty when
   # there's none to show.
@@ -932,6 +936,9 @@ dialog:
       queue-music:
         name: "Music while searching"
         hover: "A random music disc plays (only for you) while you search for a match."
+      match-music:
+        name: "Match music"
+        hover: "Music while you fight or watch a match, a new track every round. /stopmusic and /playmusic switch it too."
       # Social
       duel-requests:
         name: "Duel requests"

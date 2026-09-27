@@ -36,9 +36,8 @@ public final class VisibilityService {
     }
 
     private boolean canSee(Player viewer, Player target) {
-        // spectators are in spectator mode: the game already hides them from the fighters, and hiding them here
-        // would also take them out of the tab list
-        if (plugin.spectate().spectating(target.getUniqueId()) != null) return true;
+        // spectators fly around the arena in adventure mode: hidden from everyone fighting, seen by other spectators
+        if (plugin.spectate().spectating(target.getUniqueId()) != null) return plugin.matches().match(viewer.getUniqueId()) == null;
         boolean viewerInHub = plugin.matches().match(viewer.getUniqueId()) == null
             && plugin.spectate().spectating(viewer.getUniqueId()) == null;
         boolean targetInHub = plugin.matches().match(target.getUniqueId()) == null;

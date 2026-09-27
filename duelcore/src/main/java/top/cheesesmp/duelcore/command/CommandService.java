@@ -64,6 +64,22 @@ public final class CommandService {
                 if (p != null) plugin.dialogs().settings(p);
                 return Command.SINGLE_SUCCESS;
             }).build(), "Duel settings", List.of());
+        commands.register(Commands.literal("stopmusic").requires(perm("duelcore.music"))
+            .executes(ctx -> {
+                Player p = player(ctx);
+                if (p == null) return 0;
+                plugin.matchMusic().stopNow(p);
+                plugin.messages().send(p, "match.music.stopped");
+                return Command.SINGLE_SUCCESS;
+            }).build(), "Stop the match music (switches Settings > Match music off)", List.of());
+        commands.register(Commands.literal("playmusic").requires(perm("duelcore.music"))
+            .executes(ctx -> {
+                Player p = player(ctx);
+                if (p == null) return 0;
+                plugin.matchMusic().playNow(p);
+                plugin.messages().send(p, "match.music.playing");
+                return Command.SINGLE_SUCCESS;
+            }).build(), "Play the match music (switches Settings > Match music on)", List.of());
         commands.register(tier(), "Tier management", List.of());
         commands.register(plugin.tester().command(), "Animation test mode: preview animations, simulated progress", List.of());
         new top.cheesesmp.duelcore.friends.FriendCommands(plugin, plugin.friends()).register(commands);

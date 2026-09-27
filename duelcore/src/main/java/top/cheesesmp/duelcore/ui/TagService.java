@@ -50,7 +50,7 @@ import top.cheesesmp.duelcore.rating.Tier;
  * name sorts after every tier team). Their chat tag stays their normal one.
  *
  * <p>{@code <logo>} in the tab header is gui.yml {@code tab.logo} in a colour wave that moves on with every header
- * refresh ({@code animations.tab-logo}); the header is re-sent every 2 seconds anyway, so it costs no packets.
+ * refresh ({@code animations.tab-logo}); the header is re-sent every 13 ticks.
  */
 public final class TagService implements Listener, Runnable {
 
@@ -260,7 +260,7 @@ public final class TagService implements Listener, Runnable {
         return tags.getOrDefault(player, Component.empty());
     }
 
-    /** Tab header and footer for everyone; runs every 2 seconds. */
+    /** Tab header and footer for everyone; runs 3 times every 2 seconds (13 ticks). */
     @Override
     public void run() {
         if (plugin.settings().animTabLogo) logoPhase = (logoPhase + plugin.gui().tabLogoStep) % 1.0;

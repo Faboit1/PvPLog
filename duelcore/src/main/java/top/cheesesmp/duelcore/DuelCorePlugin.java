@@ -58,6 +58,7 @@ public final class DuelCorePlugin extends JavaPlugin {
     private top.cheesesmp.duelcore.ui.TabListing tabListing;
     private QueueService queue;
     private top.cheesesmp.duelcore.queue.QueueMusic queueMusic;
+    private top.cheesesmp.duelcore.match.MatchMusic matchMusic;
     private MatchService matches;
     private top.cheesesmp.duelcore.match.DisconnectSaves disconnectSaves;
     private SpectateService spectate;
@@ -118,6 +119,8 @@ public final class DuelCorePlugin extends JavaPlugin {
         queue = new QueueService(this);
         queueMusic = new top.cheesesmp.duelcore.queue.QueueMusic(this);
         for (String problem : queueMusic.reload()) getLogger().warning("config.yml " + problem);
+        matchMusic = new top.cheesesmp.duelcore.match.MatchMusic(this);
+        for (String problem : matchMusic.reload()) getLogger().warning("config.yml " + problem);
         matches = new MatchService(this);
         disconnectSaves = new top.cheesesmp.duelcore.match.DisconnectSaves(this);
         spectate = new SpectateService(this);
@@ -154,6 +157,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         pm.registerEvents(new HubListener(this), this);
         pm.registerEvents(queue, this);
         pm.registerEvents(queueMusic, this);
+        pm.registerEvents(matchMusic, this);
         pm.registerEvents(new MatchListener(this), this);
         pm.registerEvents(disconnectSaves, this);
         pm.registerEvents(spectate, this);
@@ -193,12 +197,13 @@ public final class DuelCorePlugin extends JavaPlugin {
         scheduler.runTaskTimer(this, arenas.queue(), 1L, 1L);
         scheduler.runTaskTimer(this, queue, 20L, cfg.mmIntervalTicks);
         scheduler.runTaskTimer(this, queueMusic, 20L, 10L);
+        scheduler.runTaskTimer(this, matchMusic, 20L, 10L);
         scheduler.runTaskTimer(this, sidebar, 20L, 20L);
         scheduler.runTaskTimer(this, sidebar::animateTitle, 24L, SidebarService.TITLE_PERIOD);
         scheduler.runTaskTimer(this, hubProgress, 20L, top.cheesesmp.duelcore.hub.HubProgress.PERIOD);
         scheduler.runTaskTimer(this, hints, 20L, 20L);
         scheduler.runTaskTimer(this, spectate, 20L, 20L); // spectators who flew off their arena go back
-        scheduler.runTaskTimer(this, tags, 40L, 40L);
+        scheduler.runTaskTimer(this, tags, 40L, 13L); // (the tab logo's wave moves on at every refresh)
         scheduler.runTaskTimer(this, tabListing, 20L, 10L);
         scheduler.runTaskTimer(this, new top.cheesesmp.duelcore.ui.HealthTags(this), 20L, 2L); // opponents' health under names
         scheduler.runTaskTimer(this, duels, 20L, 20L);
@@ -243,6 +248,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         try {
             if (anim != null) anim.cancelAll();
             if (queueMusic != null) queueMusic.stopAll();
+            if (matchMusic != null) matchMusic.stopAll();
             if (respawnPull != null) respawnPull.cancelAll();
             if (spawnRise != null) spawnRise.cancelAll();
             if (matches != null) matches.cancelAll();
@@ -281,6 +287,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         arenas.queue().budget(settings().blockBudgetMs, settings().blockBudgetUrgentMs);
         queue.reload();
         problems.addAll(queueMusic.reload());
+        problems.addAll(matchMusic.reload());
         problems.addAll(kitEditor.reload()); // layouts made for a kit that changed are reset (players are told)
         problems.addAll(gui().menuSounds.problems());
         ratingSystem = buildRatingSystem();
@@ -401,6 +408,10 @@ public final class DuelCorePlugin extends JavaPlugin {
 
     public top.cheesesmp.duelcore.queue.QueueMusic queueMusic() {
         return queueMusic;
+    }
+
+    public top.cheesesmp.duelcore.match.MatchMusic matchMusic() {
+        return matchMusic;
     }
 
     public top.cheesesmp.duelcore.ui.RespawnPull respawnPull() {

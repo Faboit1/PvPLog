@@ -49,6 +49,7 @@ public final class QueueService implements Listener, Runnable {
     private final Map<UUID, List<Bucket>> chosen = new HashMap<>();
     private final QueuePrefs prefs;
     private final RematchLimiter rematches;
+    private final LastOpponents lastOpponents;
     private final SearchingFeedback searching;
     private Matchmaker matchmaker;
     private MatchPolicy customPolicy;
@@ -58,6 +59,7 @@ public final class QueueService implements Listener, Runnable {
     public QueueService(DuelCorePlugin plugin) {
         this.plugin = plugin;
         this.rematches = new RematchLimiter(plugin.settings().mmMaxRankedRematchesPerDay);
+        this.lastOpponents = new LastOpponents(false, 0, new Matchmaker.Window(0, 0, 0)); // (set up by reload)
         this.prefs = new QueuePrefs(plugin);
         this.searching = new SearchingFeedback(plugin);
         reload();
@@ -72,8 +74,9 @@ public final class QueueService implements Listener, Runnable {
         MatchPolicy base = new RegionPingPolicy(c.mmRegionEnabled, c.mmRegionPenalty, c.mmCountryEnabled,
             c.mmCountryPenalty, c.mmPingEnabled, c.mmPingPenaltyPerMs, c.mmOverMaxPingPenalty, c.mmRelaxAfterSeconds);
         MatchPolicy policy = customPolicy != null ? customPolicy : base;
-        this.matchmaker = new Matchmaker(new Matchmaker.Window(c.mmWindowInitial, c.mmWindowGrowth, c.mmWindowMax),
-            policy.and(rematches));
+        Matchmaker.Window window = new Matchmaker.Window(c.mmWindowInitial, c.mmWindowGrowth, c.mmWindowMax);
+        lastOpponents.configure(c.mmAvoidRematch, c.mmAvoidRematchAllowAt, window);
+        this.matchmaker = new Matchmaker(window, policy.and(rematches).and(lastOpponents));
     }
 
     /** Replaces the latency policy (API hook). Anti-boosting always stays active. */
@@ -447,6 +450,7 @@ public final class QueueService implements Listener, Runnable {
         if (teamA.isEmpty() || teamB.isEmpty()) return;
         boolean ranked = mode == QueueMode.RANKED;
         if (ranked) rematches.record(a.player(), b.player(), now);
+        lastOpponents.record(a.player(), b.player());
         plugin.matches().create(List.of(teamA, teamB), kit, ranked,
             mode == QueueMode.PARTY ? Match.Origin.PARTY : Match.Origin.QUEUE);
     }

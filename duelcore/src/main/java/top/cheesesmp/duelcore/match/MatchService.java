@@ -288,6 +288,7 @@ public final class MatchService implements Runnable {
                     timeout(m);
                 } else if (m.roundTicks % 5 == 0) {
                     boundsCheck(m);
+                    if (m.roundTicks % 20 == 0 && m.state == Match.State.FIGHTING) borderDamage(m);
                     if (cfg.animHeartbeat && m.state == Match.State.FIGHTING) heartbeats(m);
                 }
             }
@@ -387,6 +388,7 @@ public final class MatchService implements Runnable {
             if (player == null || !p.alive) continue;
             unfreeze(player);
             player.setInvulnerable(false);
+            shrinkBorder(player, m);
             plugin.animations().fightStart(player, audience(m));
             if (!plugin.animations().fx().fight(player)) {
                 player.showTitle(Title.title(plugin.messages().get("match.fight"), Component.empty(),
@@ -459,10 +461,50 @@ public final class MatchService implements Runnable {
     private void applyBorder(Player player, ArenaInstance arena) {
         WorldBorder border = Bukkit.createWorldBorder();
         border.setCenter(arena.originX() + arena.template().sizeX() / 2.0, arena.originZ() + arena.template().sizeZ() / 2.0);
-        border.setSize(Math.max(arena.template().sizeX(), arena.template().sizeZ()) + 2);
+        border.setSize(fullBorder(arena));
         border.setWarningDistance(0);
         border.setDamageAmount(0);
         player.setWorldBorder(border);
+    }
+
+    /** The border's width at the start of a round: the arena and a block on each side. */
+    private static double fullBorder(ArenaInstance arena) {
+        return Math.max(arena.template().sizeX(), arena.template().sizeZ()) + 2;
+    }
+
+    /** Starts closing the border in (config.yml match.border) for a fighter or a spectator of {@code m}. */
+    private void shrinkBorder(Player player, Match m) {
+        MainConfig cfg = plugin.settings();
+        WorldBorder border = player.getWorldBorder();
+        if (cfg.borderShrinkSeconds <= 0 || border == null || m.arena == null) return;
+        border.changeSize(Math.min(cfg.borderShrinkTo, fullBorder(m.arena)), cfg.borderShrinkSeconds * 20L);
+    }
+
+    /** The border's width {@code roundTicks} into a fight (the same closing-in the players see). */
+    static double borderSize(double full, double to, int seconds, int roundTicks) {
+        if (seconds <= 0 || to >= full) return full;
+        double f = Math.min(1, roundTicks / (seconds * 20.0));
+        return full + (to - full) * f;
+    }
+
+    /** Once a second while fighting: everyone past the closing border takes damage, more the farther out. */
+    private void borderDamage(Match m) {
+        MainConfig cfg = plugin.settings();
+        ArenaInstance arena = m.arena;
+        if (arena == null || cfg.borderShrinkSeconds <= 0 || cfg.borderDamagePerSecond <= 0) return;
+        double half = borderSize(fullBorder(arena), cfg.borderShrinkTo, cfg.borderShrinkSeconds, m.roundTicks) / 2;
+        double cx = arena.originX() + arena.template().sizeX() / 2.0;
+        double cz = arena.originZ() + arena.template().sizeZ() / 2.0;
+        for (Participant p : m.participants()) {
+            if (!p.alive || p.left()) continue;
+            Player player = Bukkit.getPlayer(p.uuid());
+            if (player == null || player.getWorld() != arena.world()) continue;
+            Location loc = player.getLocation();
+            double out = Math.max(Math.abs(loc.getX() - cx), Math.abs(loc.getZ() - cz)) - half;
+            if (out <= 0) continue;
+            player.damage(cfg.borderDamagePerSecond + cfg.borderDamagePerBlock * out,
+                org.bukkit.damage.DamageSource.builder(org.bukkit.damage.DamageType.OUTSIDE_BORDER).build());
+        }
     }
 
     // ------------------------------------------------------------------ freeze

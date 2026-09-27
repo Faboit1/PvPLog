@@ -44,7 +44,7 @@ public final class SettingsLayout {
             toggle(Setting.MATCH_FOUND_POP)),
         /** What you hear. */
         SOUNDS(toggle(Setting.SOUNDS), toggle(Setting.MATCH_SOUNDS), toggle(Setting.MENU_SOUNDS),
-            toggle(Setting.QUEUE_MUSIC)),
+            toggle(Setting.QUEUE_MUSIC), toggle(Setting.MATCH_MUSIC)),
         /** Other players: challenges, invites, alerts, GG, your flag. */
         SOCIAL(new Entry("duel-requests", Kind.DUEL_REQUESTS, null), toggle(Setting.PARTY_INVITES),
             toggle(Setting.FRIEND_ALERTS), toggle(Setting.AUTO_GG), toggle(Setting.SHOW_MY_FLAG)),

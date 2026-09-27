@@ -100,6 +100,12 @@ matchmaking:
     penalty-per-ms: 0.75
     over-max-ping-penalty: 300
   relax-after-seconds: 30
+  # Not the same opponent twice in a row: the player you just played is skipped while anyone else fits, and only
+  # paired again once both of you have searched long enough for your rating windows to reach allow-at-window
+  # (the same growth as window above, in every mode: 450 = 40 s with the defaults).
+  avoid-rematch:
+    enabled: true
+    allow-at-window: 450
   # Anti-boosting: at most this many ranked games between the same two players per 24 h (0 = off).
   max-ranked-rematches-per-day: 10
   # Log every pairing decision (gap, windows, wait) to the console.
@@ -143,12 +149,34 @@ match:
   trade:
     window-max-ms: 250
     draws-max: 2
-  # Commands usable during a match (everything else is blocked). Admins with duelcore.bypass.commands ignore this.
+  # Commands usable during a match besides /leave, /draw, /spectate, /stopmusic and /playmusic (everything else is
+  # blocked). Admins with duelcore.bypass.commands ignore this.
   allowed-commands: [leave, forfeit, draw, msg, tell, w, r, reply, profile, ping]
   # Play the totem animation with the kit's item when a match is found (silent: animations.match-found-sounds play).
   totem-pop: true
   # Out of bounds: a player this many blocks below the arena floor counts as dead.
   void-depth: 6
+  # The world border closes in while a round is fought: from the arena's size down to shrink-to blocks wide over
+  # shrink-seconds (it restarts every round). Outside it you take damage-per-second health points (2 = one heart),
+  # plus damage-per-block for every block you are past it. shrink-seconds: 0 = the border stays put.
+  # Music in matches: a random track when the first countdown starts and a different one every round, heard by the
+  # fighters and spectators who have Settings > Match music on (/stopmusic and /playmusic switch it too). Tracks
+  # are "<sound id> <length in seconds or m:ss> [speed]" like queue.music.tracks. Only real sound ids work:
+  # Minecraft's background songs (Aria Math, Key, ...) have none of their own, only the music discs do.
+  # medium-chance: how often (0-1) a round gets a medium track instead of a high-energy one.
+  music:
+    enabled: true
+    volume: 0.5
+    medium-chance: 0.25
+    high:
+      - "music_disc.pigstep 148"
+      - "music_disc.cat 185"
+    medium: []
+  border:
+    shrink-to: 10
+    shrink-seconds: 270
+    damage-per-second: 2.0
+    damage-per-block: 0.5
 
 animations:
   # From round 2 on, both fighters are brought back to their spawn with a respawn animation (respawn-styles) instead
