@@ -1,5 +1,5 @@
 # Countries: display name, matchmaking region (one of config.yml regions) and the texture of their flag head
-# (a textures.minecraft.net id; the national flag heads of minecraft-heads.com). Edit or add entries to taste:
+# (a textures.minecraft.net id; mostly minecraft-heads.com's "Flags" collection 6317, older flag heads for the rest). Edit or add entries to taste:
 # players whose country has no flag here simply show none. Keys are quoted: YAML reads a bare NO as "false".
 countries:
   "AD": { name: "Andorra", region: EU, flag: "aa59822fef52c4a9ba960efe1d2f6f5fb7d70e5e82792fc668a16e296f2c3af4" }
@@ -14,11 +14,11 @@ countries:
   "AR": { name: "Argentina", region: SA, flag: "f6d033dc5f675ad51bc06c7a1949c35a1d37e48a2e1c2789c2cf7d30ec58f32c" }
   "AS": { name: "American Samoa", region: OC, flag: "fa213e83869efea52b486703922995bb2d4fea11bcab5f20019388e30b516946" }
   "AT": { name: "Austria", region: EU, flag: "3d5ee67127feec48346daba884adc93d6fa3a8d3d0f0e84facaabbdca97aa7ff" }
-  "AU": { name: "Australia", region: OC, flag: "3ba586a6f07a099a58838a9fbed845ecf780fc2a390f7a4620a7dcf0a85e75a4" }
+  "AU": { name: "Australia", region: OC, flag: "cf4aa2a244784d48b155ff044b8cf96df5bd4e87e01924a75d62a9242a16cf" }
   "AW": { name: "Aruba", region: NA, flag: "2e93bf42d6444851fb14fe21c4eef3d130cb35137dee9965a48a497636521a3f" }
   "AX": { name: "Åland Islands", region: EU, flag: "dfebb0d3f43522cdf3e8640c55db20bf4adf393914ea77e7dfe2938fef7d18b3" }
   "AZ": { name: "Azerbaijan", region: EU, flag: "30ef3282e829382d267e4e6ecc9b2d10a567abe7cacef05d468b6416b57383e0" }
-  "BA": { name: "Bosnia & Herzegovina", region: EU, flag: "5119527d670f9c60ac1c2e12731eb120580820889f9ebe41ebdd051926e36c7b" }
+  "BA": { name: "Bosnia & Herzegovina", region: EU, flag: "7ca9eb297e476d0c962282e92637344ea8c1bbfa20baf665cea6d68b30595e20" }
   "BB": { name: "Barbados", region: NA, flag: "1d6b10787a3e1f63713ec0551d238962180ed00f71e66a8f149cdb83dcc0d130" }
   "BD": { name: "Bangladesh", region: AS, flag: "4595587d745a174cd20f1af5233e46a4249437f39d16e466fd3e3f822867d189" }
   "BE": { name: "Belgium", region: EU, flag: "c8e0e0de705d366ba59506b3fb1a04fd3d51aff90e5cfb4ebbea66ea5976c0ff" }
@@ -32,7 +32,7 @@ countries:
   "BN": { name: "Brunei", region: AS, flag: "c4b070a6ceeed91205844fbb598631b25e6cc6ff02dc082cf051a873f12f3172" }
   "BO": { name: "Bolivia", region: SA, flag: "fd2c9f98618cd5f7dbf0c1a54ee09474662b713b5aa265c85efbfc46418e915" }
   "BQ": { name: "Caribbean Netherlands", region: SA }
-  "BR": { name: "Brazil", region: SA, flag: "9668a1fb6af81b231bbcc4de5f7f95803bbd194f5827da027fa70321cf47c" }
+  "BR": { name: "Brazil", region: SA, flag: "9a46475d5dcc815f6c5f2859edbb10611f3e861c0eb14f088161b3c0ccb2b0d9" }
   "BS": { name: "Bahamas", region: NA, flag: "1e630ef3456ed85bc136fdad65a1484234beb457d5e359ae3cb8c726b72b5f6a" }
   "BT": { name: "Bhutan", region: AS, flag: "29ac2a87a3ac79def9b8a785eb298fecaf53d1c5362248e8903ec81ec43b4bf3" }
   "BV": { name: "Bouvet Island" }
@@ -47,13 +47,13 @@ countries:
   "CH": { name: "Switzerland", region: EU, flag: "572ffabc40a3a82a9dbb081038f9834707b8a7a595e47d63e4c7a7e24a6c8829" }
   "CI": { name: "Côte d'Ivoire", region: AF, flag: "b6966c9bf42c51be09afe15fcc6c3feadb00cac72d962f6fd0ebffa733eb2408" }
   "CK": { name: "Cook Islands", region: OC, flag: "297e3d870231ec45176eca51fad0ac4f0311a2aa64805589d312742fdc51fb0d" }
-  "CL": { name: "Chile", region: SA, flag: "ed1dddc665614c9f6487ba9c666da7579561589a494ef744aaf8f4f88a16" }
+  "CL": { name: "Chile", region: SA, flag: "b4a85a255100040961727919d139e735de6f6a796d4eae992ed414edbc5dbb8a" }
   "CM": { name: "Cameroon", region: AF, flag: "8dece352b1745dfe469cf65e062aeb0493c1d4158bac0c8ad06a3d2f5f272915" }
   "CN": { name: "China", region: AS, flag: "7f9bc035cdc80f1ab5e1198f29f3ad3fdd2b42d9a69aeb64de990681800b98dc" }
   "CO": { name: "Colombia", region: SA, flag: "c72120b9fe77d770b254b39c7be9b1ceccef6adfe7a5cc689ab1fd23e3c" }
   "CR": { name: "Costa Rica", region: NA, flag: "7914ef5242dd34bebaf9de5cf199eb8854fcff4f7c5869d2382331d40b5eea74" }
   "CU": { name: "Cuba", region: NA, flag: "d39382ddd4845b46196f5434de9e8287f929471dad573dcb04fb0f858720307b" }
-  "CV": { name: "Cape Verde", region: AF, flag: "b82c4bd5143446b15241768a898bdb22d7284df91b58d8e7697793da530e9308" }
+  "CV": { name: "Cape Verde", region: AF, flag: "82079ba85ab02c7ca38bc61b013307df93f52bc5be58c9befb6eb52c53360baa" }
   "CW": { name: "Curaçao", region: SA, flag: "52a4664f812d10ec408870ef02e493b7f57492c4961b488e88a31c80d40eb050" }
   "CX": { name: "Christmas Island", region: AS, flag: "f8cbd74cea8120322e72f55c39d0b5a8f3af31d5b883c30afdcacd1f592f801e" }
   "CY": { name: "Cyprus", region: EU, flag: "4e8f73c951e9ce68456ca2e411b11a54fdb2e559293f33305a42b437f906bec0" }
@@ -69,7 +69,7 @@ countries:
   "EG": { name: "Egypt", region: AF, flag: "826e742b32f0f8db59c07b1bcdde6f8a93f85c929e598c7e9273b9211f2ce78" }
   "EH": { name: "Western Sahara", region: AF }
   "ER": { name: "Eritrea", region: AF, flag: "2f03ff024b5a4b23ce252427cdf351c87dbb75bea25ede151a6ea2b34b10b5c1" }
-  "ES": { name: "Spain", region: EU, flag: "32bd4521983309e0ad76c1ee29874287957ec3d96f8d889324da8c887e485ea8" }
+  "ES": { name: "Spain", region: EU, flag: "91beec74e31a2c03dccc8083d056bf8fc1b376505fc29584cc1fefb3387b2245" }
   "ET": { name: "Ethiopia", region: AF, flag: "75bb862a7bba033ca8072cf0bb96f361dbc41c6252186ef81b320e159e06d810" }
   "FI": { name: "Finland", region: EU, flag: "59f2349729a7ec8d4b1478adfe5ca8af96479e983fbad238ccbd81409b4ed" }
   "FJ": { name: "Fiji", region: OC, flag: "c7203f952d0ee78e9cb81cb568884152586e2e9c95ce11e96d9e6df4b724bef4" }
@@ -78,7 +78,7 @@ countries:
   "FO": { name: "Faroe Islands", region: EU, flag: "a3a1644da0f271fae05fa075468befaaa427bc7ce86943888c4ece61bebf6508" }
   "FR": { name: "France", region: EU, flag: "6903349fa45bdd87126d9cd3c6c0abba7dbd6f56fb8d78701873a1e7c8ee33cf" }
   "GA": { name: "Gabon", region: AF, flag: "1226bf964b3a86340ad00bd53800519fd9e5440469f2a9520fdc3d70e1f4dbb8" }
-  "GB": { name: "United Kingdom", region: EU, flag: "9623cb6757541550da1c11f36b75ec60fd73b06c933909ff96aeffac43c6a364" }
+  "GB": { name: "United Kingdom", region: EU, flag: "87afef45e90cbdbb3848bda97750a0a9c66634f7ccc4665ec268b90f500eb2ee" }
   "GD": { name: "Grenada", region: NA, flag: "905a21faf7147de71ca18b33489cddbc363a77dd7439766e32ee17e8686c586d" }
   "GE": { name: "Georgia", region: EU, flag: "4f05f99e343303c35a8b0b68e4bcc6c38c94e99319b9adfbae2a138591584c80" }
   "GF": { name: "French Guiana", region: SA, flag: "994a7dfbad60295192b9fbbccc013dcd5c7f738501b0a029896ccd141e16954b" }
@@ -92,19 +92,19 @@ countries:
   "GQ": { name: "Equatorial Guinea", region: AF, flag: "241d7ebed628a1135406b5cd822038b4e3fbb01f4c52852a04c39b1848876d2" }
   "GR": { name: "Greece", region: EU, flag: "1514de6dd2b7682b1d3ebcd10291ae1f021e3012b5c8beffeb75b1819eb4259d" }
   "GS": { name: "South Georgia", region: SA }
-  "GT": { name: "Guatemala", region: NA, flag: "608a691767cff645359861340cb860cba7c498042204579f96d065bcebdfce94" }
+  "GT": { name: "Guatemala", region: NA, flag: "8c5592328a1e8d389ccfafd27c4b99d8b0333f577a743b95b27eca6d7959ad9d" }
   "GU": { name: "Guam", region: OC, flag: "d72c181dd0214b9c4ba7e34c85b4a7b601dcade70a7c00a5eeea0fb0c1480cc6" }
   "GW": { name: "Guinea-Bissau", region: AF, flag: "4e90cf3e11e236b4872c6ef41ec93c69a7d721f7670836c1af4510ec826d76b" }
   "GY": { name: "Guyana", region: SA, flag: "5c375daba17c15f374fca55a5ecb44d70ec7f4223f106f799b467033344bffae" }
   "HK": { name: "Hong Kong", region: AS, flag: "2db05613fe0ae0f896e1c99105a5d92a286266b91eeb0316d7ce3423e5f0d559" }
   "HM": { name: "Heard & McDonald Islands" }
-  "HN": { name: "Honduras", region: NA, flag: "9a7f5ccec757881dcc66ffa775571404c6e5852ba90dc7672f2f5a893e768eac" }
+  "HN": { name: "Honduras", region: NA, flag: "eacae12ebbba10f74c3344e0ebd9a619ae8a5eab7fe3291a701c3055417312f7" }
   "HR": { name: "Croatia", region: EU, flag: "b050c04ec8cabce71d7103f3e9ef4bb8819f9f365eb335a9139912bc07ed445" }
   "HT": { name: "Haiti", region: NA, flag: "d2cf7a537cbe2fb581536f1113c12b7318f3da1423b74f4e51e3ad8eb3a910c7" }
   "HU": { name: "Hungary", region: EU, flag: "4a9c3c4b6c5031332dd2bfece5e31e999f8deff55474065cc86993d7bdcdbd0" }
   "ID": { name: "Indonesia", region: AS, flag: "cbe63fcaa0203f8046fb96375d079a5c09b4161d0119d7194566e689cab18f68" }
-  "IE": { name: "Ireland", region: EU, flag: "5ca7d8d73e9d4a8c021ff91845d61e0419876919e0d7a1338d8c7de0ef95d2" }
-  "IL": { name: "Israel", region: AS, flag: "1ba086a2cc7272cf5ba49c80248546c22e5ef1bab54120e8a8e5d9e75b6a" }
+  "IE": { name: "Ireland", region: EU, flag: "903980521970d4f609226f8b90844fc2648c5e3a4c46160585eee4147e089c2f" }
+  "IL": { name: "Israel", region: AS, flag: "5a1b4fa09b3a63273cb2a7cde2f5cd62c3218faca7525d9d4a44c2eee3a2963c" }
   "IM": { name: "Isle of Man", region: EU }
   "IN": { name: "India", region: AS, flag: "2f89e46f1d5454c967676efb4977a84a18d0084326c76c7bfc4e7843bb1a901" }
   "IO": { name: "British Indian Ocean Territory", region: AS, flag: "a20d31d38a6439b05db9c12ed80d4741f6d2c92225096bf408aa58e3249c9f08" }
@@ -123,10 +123,10 @@ countries:
   "KM": { name: "Comoros", region: AF, flag: "6aa454273628c6e00f9b5530ac8de2c4f0a3131b3b6c81dbdb45528e7794964c" }
   "KN": { name: "Saint Kitts & Nevis", region: NA, flag: "53b98ad9c73de6f51a8a04c9dda6dc8f9294c521a40c4bc03eb3b32a29591e74" }
   "KP": { name: "North Korea", region: AS, flag: "1969d12662faebfaca6f4b0442fcb251fd60b61a9fcdceea2bdc21e025eb21" }
-  "KR": { name: "South Korea", region: AS, flag: "fc1be5f12f45e413eda56f3de94e08d90ede8e339c7b1e8f32797390e9a5f" }
+  "KR": { name: "South Korea", region: AS, flag: "ca12913d7df640d18bcc7a45a8172c68ffa04756e84c6f0a2eda3da45e00dadd" }
   "KW": { name: "Kuwait", region: AS, flag: "5359b9052f2d9c9d28a15b619da1e288e73ce4ad73ab9ea5c7371e2fe7ab525f" }
   "KY": { name: "Cayman Islands", region: NA }
-  "KZ": { name: "Kazakhstan", region: AS, flag: "328448f8d9d4e9fb2c6582c496fa1803d01862b2547e249a06a6f448d6cc66e0" }
+  "KZ": { name: "Kazakhstan", region: AS, flag: "acf5e20c4b2f47154aa9b6fff4038329a8a11f259e0db6718074ed33fcd06507" }
   "LA": { name: "Laos", region: AS, flag: "61b8812433aa401799e4ac424584a9bc6e04186563c6558bbea6824f8f374" }
   "LB": { name: "Lebanon", region: AS, flag: "720419ef2c66e29a142ef341c0eccf697aca86ec09c6d18f6043a53ca30cf2d1" }
   "LC": { name: "Saint Lucia", region: NA, flag: "5f1a8cf797ed2ba05fb2b7325c988a90adfe2782617a845689bead77be4038a3" }
@@ -152,13 +152,13 @@ countries:
   "MO": { name: "Macau", region: AS, flag: "855343068d92c7d0f8bc403b4c022e8dd82350e1bb4db52a552db23d4ed777d5" }
   "MP": { name: "Northern Mariana Islands", region: OC, flag: "91011693038fd874d030b1988a4ca601661869a13bf004e4a79f54e78b19c6f3" }
   "MQ": { name: "Martinique", region: NA, flag: "3ed59064d6fe45935885ac9244dccd654cd6bc6b9fe9785fcc8f817affe6a90f" }
-  "MR": { name: "Mauritania", region: AF, flag: "506e6ffc5dc268601575c2280ff2b69527bfc212ad1b2f7dfc6f9e7f51f7d8" }
+  "MR": { name: "Mauritania", region: AF, flag: "8bf4f9963a1477c7e1dad4fab64522f53995fb69f565d00c3eed60d155ddddfa" }
   "MS": { name: "Montserrat", region: NA }
   "MT": { name: "Malta", region: EU, flag: "ccec5e22fd9013d6cb4fb09fb7f34b5e64a5310ad39bc400c4bf23d2ab16c9ef" }
   "MU": { name: "Mauritius", region: AF, flag: "45b285e29ddcfca595c9eb7979f4cdad518ab62f16ae522315bfb98751dceef" }
   "MV": { name: "Maldives", region: AS, flag: "2147dac4e79804315bdce30319fc605faa864ed7fd6fef809ead67a693e757f2" }
   "MW": { name: "Malawi", region: AF, flag: "c62c631812a321008cc258f790f29332706b8fbfb5184e40c7e967ed478e82ae" }
-  "MX": { name: "Mexico", region: NA, flag: "ca971bfcf33b439821b4e5f0c86cd61435cd3e0c819e35dd9774ef0399f132b" }
+  "MX": { name: "Mexico", region: NA, flag: "13c79a78de5cbedbd221036a64f4c6ec3911960de176bdbe49b4d501f41df3" }
   "MY": { name: "Malaysia", region: AS, flag: "754b9041dea6db6db44750f1385a743adf653767b4b8802cad4c585dd3f5be46" }
   "MZ": { name: "Mozambique", region: AF, flag: "578f15492b97c73d3b81ee3c87e4e7a4a3beb53193c117624a1d3613debea8e1" }
   "NA": { name: "Namibia", region: AF, flag: "3974a460248cb408abdfca561ef7e91baf64ba65dde50ba86f6dd0c381f65667" }
@@ -168,7 +168,7 @@ countries:
   "NG": { name: "Nigeria", region: AF, flag: "b5e0ceb0461fc951354f6d4777802d5e4268c1f81719e46667832b183df9510" }
   "NI": { name: "Nicaragua", region: NA, flag: "8ff9b90bf3df91a47c78215aae1d07d58999aa229a2563ec3e28753c47df1309" }
   "NL": { name: "Netherlands", region: EU, flag: "c23cf210edea396f2f5dfbced69848434f93404eefeabf54b23c073b090adf" }
-  "NO": { name: "Norway", region: EU, flag: "e0596e165ec3f389b59cfdda93dd6e363e97d9c6456e7c2e123973fa6c5fda" }
+  "NO": { name: "Norway", region: EU, flag: "fda048bc153b38467e76a3347f38396860a8bc68603931e91f7af58bec57383d" }
   "NP": { name: "Nepal", region: AS, flag: "3f268ee4706880fb6043cec23bd9175c5617053bfc180696faf7d743b174002a" }
   "NR": { name: "Nauru", region: OC, flag: "aad8439a26621002726f7b41d7506690dcf67a2647ae3c1e3eb55a6b773ae5b9" }
   "NU": { name: "Niue", region: OC, flag: "48cb1c6aa89274d13871085113f47f8cc18ce5f386fce296478d76a3cc359419" }
@@ -176,11 +176,11 @@ countries:
   "OM": { name: "Oman", region: AS, flag: "9dd8bb1f09726e4091e51603d4c4d930e7abeb92166805c1244b0d4b937809ff" }
   "PA": { name: "Panama", region: NA, flag: "24b8da83a85f11eb74e76084a6d64084a3dd5dacaa3a9721e3af2cad88eef7" }
   "PE": { name: "Peru", region: SA, flag: "24d03bd4410babdc682493b3c2bba26e730e6bc658d3888e79bf712f853" }
-  "PF": { name: "French Polynesia", region: OC }
+  "PF": { name: "French Polynesia", region: OC, flag: "e245fb84a6b17c7ca2d89f4086d5ccafccfba67525c06aec4bcca821ecd1b715" }
   "PG": { name: "Papua New Guinea", region: OC, flag: "457f0bdcc9b7ef570e824261819f1dd083c34a1bf48b94e55e2a1db693f47c9e" }
-  "PH": { name: "Philippines", region: AS, flag: "9306c0c1ce6a9c61bb42a572c49e6d0ed20e0e6b3d122cc64c339cbf78e9e937" }
+  "PH": { name: "Philippines", region: AS, flag: "dabcdb3554ff31759823a12b9c8b9186cd29544d18419dce551cf783ad006cdf" }
   "PK": { name: "Pakistan", region: AS, flag: "70cfbf96606237fa67e2ab87ee44427c2a63836d6f3adbe34b546b8f7f43e240" }
-  "PL": { name: "Poland", region: EU, flag: "921b2af8d2322282fce4a1aa4f257a52b68e27eb334f4a181fd976bae6d8eb" }
+  "PL": { name: "Poland", region: EU, flag: "322d60d5d919792019cf99e4e565034bae02e5484c7171b1c6cb794cfbc870d1" }
   "PM": { name: "Saint Pierre & Miquelon", region: NA }
   "PN": { name: "Pitcairn", region: OC }
   "PR": { name: "Puerto Rico", region: NA, flag: "923c6fbfd56f0c87c6f2cafeaf59e6ebb27b4cd26d6f7c1575d7709bf4523f19" }
@@ -191,17 +191,17 @@ countries:
   "QA": { name: "Qatar", region: AS, flag: "ba1ceea0fcac920145e69bd910012282d4bed44ec30a4641a1c6596ee556d24d" }
   "RE": { name: "Réunion", region: AF, flag: "7d6d983b92804cb5d43313745e92d9226478f5bbd6e79b21add18c3d27d52f70" }
   "RO": { name: "Romania", region: EU, flag: "dceb1708d5404ef326103e7b60559c9178f3dce729007ac9a0b498bdebe46107" }
-  "RS": { name: "Serbia", region: EU, flag: "5b0483a4f0ddf4fbbc977b127b3d294d7a869f995366e3f50f6b05a70f522510" }
+  "RS": { name: "Serbia", region: EU, flag: "76461165e48b86c56bb98f48b201aef05a30c914e90f4515f05219c6827e7e1d" }
   "RU": { name: "Russia", region: EU, flag: "16eafef980d6117dabe8982ac4b4509887e2c4621f6a8fe5c9b735a83d775ad" }
   "RW": { name: "Rwanda", region: AF, flag: "49d58751bfa7718b195ead95978c290f3384216585d82539e14b3d6483" }
-  "SA": { name: "Saudi Arabia", region: AS, flag: "a4be759a9cf7f0a19a7e8e62f23789ad1d21cebae38af9d9541676a3db001572" }
+  "SA": { name: "Saudi Arabia", region: AS, flag: "4bd403b953ba6e6c8e538d8d68c34ed5e329c6f9eed4a6bc3434b66d3198d044" }
   "SB": { name: "Solomon Islands", region: OC, flag: "d3cc6c44c740ea19b7f6c47b6e89f99ef13025b4c0da1ebbd5a18a4591f8da13" }
   "SC": { name: "Seychelles", region: AF, flag: "75df27ca973373392cf05ea41a67103cce799d4f1e748af0a27b1de6639564da" }
   "SD": { name: "Sudan", region: AF, flag: "c5c115acd2068084779b2855338effa997bfecaf0214ddea1261c9a6b923124b" }
-  "SE": { name: "Sweden", region: EU, flag: "e910904bff9c86f6ed47688e9429c26e8d9c5d5743bd3ebb8e6f5040be192998" }
+  "SE": { name: "Sweden", region: EU, flag: "7d86242b0d97ece9994660f3974d72df7b887f630a4530dadc5b1ab7c2134aec" }
   "SG": { name: "Singapore", region: AS, flag: "8b5ed11f797f3fc61eaf8dafb6bf3234d31b96ab7596bd2df722d2ef3473c27" }
   "SH": { name: "Saint Helena", region: AF }
-  "SI": { name: "Slovenia", region: EU, flag: "1a2888551f9515c4eb2f8f29eaff8e7d08e9c9721d478fdcba506b1c13a00c55" }
+  "SI": { name: "Slovenia", region: EU, flag: "dc0e2088a56cdc2c5fb71f7500a3ad61f1051be7d4a438f33e6d04ae96a086aa" }
   "SJ": { name: "Svalbard & Jan Mayen", region: EU }
   "SK": { name: "Slovakia", region: EU, flag: "6c72a8c115a1fb669a25715c4d15f22136ac4c2452784e4894b3d56bc5b0b9" }
   "SL": { name: "Sierra Leone", region: AF, flag: "13af5d942f92552bea804a23bfdc8a6cda8b4e4e87d955e8b226de31aaa5b4" }
@@ -219,7 +219,7 @@ countries:
   "TD": { name: "Chad", region: AF, flag: "fb925b7999f5a831bfacf0838879e9e57abdc9fedf295d67755506cb7be5df3" }
   "TF": { name: "French Southern Territories" }
   "TG": { name: "Togo", region: AF, flag: "9dbf2c2c5f4d6567a4527c55f1faa86a846cdbc55d33c5d13b6f90738d4dc74e" }
-  "TH": { name: "Thailand", region: AS, flag: "2a7916e4a852f7e6f3f3de19c7fb57686a37bce834bd54684a7dbef8d53fb" }
+  "TH": { name: "Thailand", region: AS, flag: "b15be3cdc1af14ca15155517110ba326d9945007a889e6681999c37d07bd65f5" }
   "TJ": { name: "Tajikistan", region: AS, flag: "489ef7c766c82d41a0f717e3d783e01248ac05500a3579ea96b9ee9a8f5eea81" }
   "TK": { name: "Tokelau", region: OC }
   "TL": { name: "Timor-Leste", region: AS, flag: "d1fe2b06ad0119ddd1b5a55cd6fae70b6d4065881c0435586351f941952c23" }
@@ -238,11 +238,11 @@ countries:
   "UY": { name: "Uruguay", region: SA, flag: "73f69f67a65fb2e6e80f708b559d23c5f769a1f5a56c3ad619bcca844fc2bfd5" }
   "UZ": { name: "Uzbekistan", region: AS, flag: "3c6cd33d1f7bd8d186dc086f146c9302503a519a955c0fa8db58a7f5cfd78509" }
   "VA": { name: "Vatican City", region: EU, flag: "62cdeea94c61c0a96af8fa59fb33689839cf07ee7d4bb2c7002392402c76454a" }
-  "VC": { name: "Saint Vincent & the Grenadines", region: NA }
+  "VC": { name: "Saint Vincent & the Grenadines", region: NA, flag: "4d2b14a6dc5b982d633e8d1f09fbf5ddbc89bd6d5f41541d32e9ac06d9359d3e" }
   "VE": { name: "Venezuela", region: SA, flag: "e3033049baae11877406da40bd0517cbfb2b37a2398be3bda4995b61ffeaa243" }
   "VG": { name: "British Virgin Islands", region: NA }
   "VI": { name: "US Virgin Islands", region: NA, flag: "a5bd09228657ac3991c790cdc5d622374a01203db4209521d4b3139904c486ef" }
-  "VN": { name: "Vietnam", region: AS, flag: "8a57b9d7dd04169478cfdb8d0b6fd0b8c82b6566bb28371ee9a7c7c1671ad0bb" }
+  "VN": { name: "Vietnam", region: AS, flag: "1c8b7c7fb08ab8947812bb9d14da049ed2d51ad8cb932b392c2266b257adc2ac" }
   "VU": { name: "Vanuatu", region: OC, flag: "2190282c63353fe54490718c60959eee2f1db47de7b9fe08957853f083e7905" }
   "WF": { name: "Wallis & Futuna", region: OC }
   "WS": { name: "Samoa", region: OC, flag: "cd5d85ccf93b5da379686cd430b2460bd17f3301674f761757a8266bf3f257d1" }

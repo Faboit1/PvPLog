@@ -33,7 +33,7 @@ class CountriesTest {
         Countries c = bundled();
         assertTrue(c.problems().isEmpty(), "problems: " + c.problems());
         assertEquals(250, c.size());
-        assertEquals(227, c.flags());
+        assertEquals(229, c.flags());
         Countries.Country norway = c.get("NO");
         assertNotNull(norway, "NO is Norway, not false");
         assertEquals("Norway", norway.name());
