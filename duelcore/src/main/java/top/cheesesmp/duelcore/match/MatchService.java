@@ -1149,6 +1149,12 @@ public final class MatchService implements Runnable {
         MatchDao.MatchRecord record = new MatchDao.MatchRecord(plugin.profiles().season().id(), kitId, m.ranked(),
             m.arenaName == null ? "?" : m.arenaName, m.createdAt(), (int) Math.min(Integer.MAX_VALUE, duration),
             m.endReason().id(), m.winnerTeam(), m.firstTo(), m.roundString(), records);
+        // PvP time (%duelcore_pvp_time%): the duration this row stores, for everyone in it (party/FFA and players who
+        // left included), matching the load-time sum over dc_match_players
+        for (Participant p : m.participants()) {
+            PlayerProfile profile = plugin.profiles().get(p.uuid());
+            if (profile != null) profile.addPvpTime(record.durationMs());
+        }
         plugin.profiles().persistMatch(record, writes, uuids(m)).whenComplete((id, error) -> {
             if (error != null) {
                 plugin.getLogger().log(Level.SEVERE, "Could not save match #" + m.id(), error);

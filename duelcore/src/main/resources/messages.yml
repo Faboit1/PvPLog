@@ -826,6 +826,9 @@ dialog:
     # overall board ranks by them), <elo> = overall Elo (their average, which sets the overall tier).
     header: "<head> <flag><text><player></text>  <tier> <muted>· <points> pts · <region> · <country_name></muted>"
     record: "<muted><text><wins></text> wins · <text><losses></text> losses · <text><winrate>%</text></muted>"
+    # All-time time spent fighting in matches (every season, 1v1 and party). <time> "12h 34m" / "34m 5s" / "0m",
+    # <hours> "12.6", <seconds> raw. Empty = line hidden.
+    pvp-time: "<muted>PvP time <text><time></text></muted>"
     legacy: "<muted>Legacy season</muted>"
     kit-line: "<kit_icon> <text><kit></text>  <tier> <muted>· <rating> · <wins>W <losses>L · best streak <best_streak></muted>"
     kit-line-placement: "<kit_icon> <text><kit></text>  <tier> <muted>· placement <games>/<placement></muted>"

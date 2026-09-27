@@ -104,6 +104,21 @@ public final class MatchDao {
         return out;
     }
 
+    /**
+     * Total PvP time of a player in ms: the summed {@code duration_ms} of every match they took part in (all seasons,
+     * 1v1 and party/FFA alike). Uses the dc_match_players_history index (player_id, match_id) and the matches' PK.
+     */
+    public static long pvpTimeMs(Connection c, int playerId) throws SQLException {
+        try (PreparedStatement ps = c.prepareStatement(
+            "SELECT COALESCE(SUM(m.duration_ms), 0) FROM dc_match_players mp "
+                + "JOIN dc_matches m ON m.id = mp.match_id WHERE mp.player_id = ?")) {
+            ps.setInt(1, playerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? Math.max(0, rs.getLong(1)) : 0;
+            }
+        }
+    }
+
     public static long count(Connection c) throws SQLException {
         try (PreparedStatement ps = c.prepareStatement("SELECT COUNT(*) FROM dc_matches");
              ResultSet rs = ps.executeQuery()) {
