@@ -54,7 +54,10 @@ instance when it's pasted):
 | Savanna | savanna | grass and coarse dirt, acacias |
 | Pinewood | taiga | podzol, ferns, leaf litter, spruce |
 
-Every map is 180×180 with about 30 blocks of ground over a bedrock floor, and 44 blocks of air above. A 3-block-thick
+Every map is 180×180 with about 60 blocks of ground over a bedrock floor, and 44 blocks of air above (108 blocks
+tall in all). The lower half of the ground is deepslate with tuff pockets, mixed into the stone above over a few
+layers, and the bedrock floor is bumpy like vanilla's: the bottom layer is solid, the four above it hold bedrock
+ever more rarely (the same on every reset). A 3-block-thick
 ring of invisible barrier runs around the edge from the bedrock up to a 3-block-thick barrier ceiling, so nobody
 can dig or tower out (the top surface block of the ring's inner two columns is kept, so the edge looks natural;
 the outermost column is solid barrier). The spawns are 61 blocks
