@@ -466,8 +466,10 @@ chat:
       similarity: 0.85
       similar-allowed: 1
       min-similar-length: 6
-      # These (and anything of 1-2 letters) may be repeated after lenient-seconds; they're still rate-limited.
+      # These (and anything of 1-2 letters) may be repeated after lenient-seconds, up to lenient-max times in the
+      # window; they're still rate-limited.
       lenient-seconds: 3
+      lenient-max: 4
       lenient-phrases: [gg, gg wp, ggwp, gf, wp, ez, lol, lmao, xd, ty, thx, np, gl, glhf, rematch, 1v1, 2v2, again,
         nice, rip, ok, "yes", "no", yeah, nah, hi, hey, hello, bye, gn, o7, bruh, same, what, why, lag, wow, omg]
     # Clean-up (never blocks on its own): invisible and formatting characters (zero-width, right-to-left overrides,

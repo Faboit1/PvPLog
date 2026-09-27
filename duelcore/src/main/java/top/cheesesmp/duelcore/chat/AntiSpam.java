@@ -78,7 +78,7 @@ public final class AntiSpam {
     public record Settings(boolean enabled,
                            boolean rateEnabled, int maxMessages, long windowMs, long minDelayMs,
                            boolean dupEnabled, long dupWindowMs, int history, double similarity, int similarAllowed,
-                           int minSimilarLength, long lenientMs, Set<String> lenient,
+                           int minSimilarLength, long lenientMs, int lenientMax, Set<String> lenient,
                            boolean floodEnabled, boolean stripUnicode, int maxRepeat, double capsRatio, int capsMinLetters,
                            int maxMarks, int junkMinLength, double junkMaxAlnum,
                            boolean adsEnabled, List<String> whitelist,
@@ -139,6 +139,7 @@ public final class AntiSpam {
                 Math.clamp(c.getInt("duplicates.similar-allowed", 1), 0, 10),
                 Math.clamp(c.getInt("duplicates.min-similar-length", 6), 2, 100),
                 secs(c.getDouble("duplicates.lenient-seconds", 3), 0, 600),
+                Math.clamp(c.getInt("duplicates.lenient-max", 4), 1, 20),
                 Set.copyOf(lenient),
                 c.getBoolean("flood.enabled", true),
                 c.getBoolean("flood.strip-unicode", true),
@@ -385,10 +386,14 @@ public final class AntiSpam {
     private static @Nullable Reason duplicate(State st, Settings s, Normalized norm, String channel, long now) {
         boolean lenient = lenient(norm, s);
         int similar = 0;
+        int copies = 0;
         for (Entry e : st.history) {
             if (e.at() < now - s.dupWindowMs() || !e.channel().equals(channel)) continue;
             if (e.norm().key().equals(norm.key()) || (!norm.sorted().isEmpty() && e.norm().sorted().equals(norm.sorted()))) {
-                if (lenient && now - e.at() >= s.lenientMs()) continue;
+                if (lenient && now - e.at() >= s.lenientMs()) {
+                    copies++;
+                    continue;
+                }
                 return Reason.DUPLICATE;
             }
             if (!lenient && norm.key().length() >= s.minSimilarLength() && e.norm().key().length() >= s.minSimilarLength()
@@ -396,6 +401,7 @@ public final class AntiSpam {
                 similar++;
             }
         }
+        if (copies >= s.lenientMax()) return Reason.DUPLICATE; // "gg" every 3 s forever is still spam
         return similar > s.similarAllowed() ? Reason.SIMILAR : null;
     }
 
@@ -756,9 +762,8 @@ public final class AntiSpam {
     /** TLDs servers and link spammers use. Short English words that are TLDs (it, is, to, in, so, my, no, ...) aren't here. */
     private static final String TLDS = "com|net|org|gg|io|co|me|xyz|club|top|pro|fun|eu|tk|ml|ga|cf|gq|online|site|store"
         + "|shop|tv|cc|biz|info|host|space|live|world|ru|de|uk|fr|nl|pl|br|ca|au|cz|sk|dev|app|games|network|ly|ws"
-        + "|link|icu|vip|one|click|land|fyi|su|es|lt|lv|ro|hu|se|fi|dk|gs|vg|nu|pw|mx|ar|tr|ua|by|kz|jp|kr|cn|tw|asia"
-        + "|rip|lol|wtf|win|today|plus|zone|studio|cloud|gold|run|red|blue|pink|best|codes|mc|craft|minecraft|party"
-        + "|world|city|team|tech|page|ovh|nz|in";
+        + "|link|icu|vip|click|land|fyi|su|es|lt|lv|ro|hu|se|fi|dk|gs|vg|nu|pw|mx|ar|tr|ua|by|kz|jp|kr|cn|tw|asia"
+        + "|wtf|cloud|tech|ovh|nz|mc|gl";
     private static final Pattern DOMAIN = Pattern.compile(
         "(?<![a-z0-9])((?:[a-z0-9]{1,63}\\.){1,8}(" + TLDS + "))(?![a-z0-9])");
     private static final Pattern INVITE = Pattern.compile(

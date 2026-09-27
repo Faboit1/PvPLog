@@ -241,6 +241,17 @@ class AntiSpamTest {
     }
 
     @Test
+    void lenientPhrasesCantBeRepeatedForever() {
+        for (int i = 0; i < 4; i++) {
+            assertTrue(say(alice, "gg").allowed(), "gg #" + (i + 1));
+            tick(3500);
+        }
+        assertEquals(Reason.DUPLICATE, say(alice, "gg").reason(), "5th gg in 30 s");
+        tick(30_000);
+        assertTrue(say(alice, "gg").allowed());
+    }
+
+    @Test
     void lenientPhrasesAreStillRateLimited() {
         String[] phrases = {"gg", "ez", "lol", "gf", "wp", "np"};
         int rate = 0;
