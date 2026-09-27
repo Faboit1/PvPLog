@@ -238,6 +238,25 @@ chat:
     player-country: "<newline><flag> <muted><country></muted>"
   blocked: "<bad>Your message was blocked: it contains a slur or harassment.</bad>"
   blocked-staff: "<muted>[filter]</muted> <text><player></text> <muted>tried to say</muted> <text><message></text> <muted>(<term>)</muted>"
+  # Anti-spam (config.yml chat.anti-spam). Each note is shown at most once a second; <time> = "30s", "1m 20s".
+  anti-spam:
+    too-fast: "<bad>Slow down a little, you're typing faster than anyone can read.</bad>"
+    rate: "<bad>You're sending messages too quickly. Wait a moment.</bad>"
+    duplicate: "<bad>You already said that.</bad>"
+    similar: "<bad>That's almost the same as what you just said.</bad>"
+    junk: "<bad>That message is mostly symbols.</bad>"
+    empty: "<bad>That message has nothing visible in it.</bad>"
+    advertising: "<bad>Links and server addresses aren't allowed in chat.</bad>"
+    wave: "<bad>Several players just said that. Say something else!</bad>"
+    commands: "<muted>Easy there, you're running commands too fast.</muted>"
+    # Action bar, from warn-heat on.
+    warning: "<bad>Keep spamming and you'll be muted.</bad>"
+    muted-now: "<bad>You're muted for <time> for spamming.</bad>"
+    muted: "<bad>You're muted for spamming.</bad> <muted>(<time> left)</muted>"
+    unmuted: "<good>A staff member unmuted you. You can chat again.</good>"
+    # Staff with duelcore.antispam.notify. <term> = the address found, <reason> = the last check that was broken.
+    staff-advertising: "<muted>[anti-spam]</muted> <text><player></text> <muted>advertised:</muted> <text><message></text> <muted>(<term>)</muted>"
+    staff-muted: "<muted>[anti-spam]</muted> <text><player></text> <muted>was muted for <time> (<reason>).</muted>"
 
 friends:
   # Chat. <player> is the other player's name.
@@ -617,8 +636,15 @@ admin:
     <muted>/duelcore arena world|create|pos1|pos2|setspawn1|setspawn2|tags|buildheight|displayname|save|cancel|edit|import|list|delete</muted>
     <muted>/duelcore kit list|give|save · season info|reset|recalc</muted>
     <muted>/duelcore player <name> setrating|setgames|setregion|setcountry</muted>
+    <muted>/duelcore antispam status|unmute <player></muted>
   reloaded: "<muted>Reloaded · <text><kits></text> kits · <text><arenas></text> arenas · <text><problems></text> problems</muted>"
   hub-set: "<muted>Hub spawn set here.</muted>"
+  # /duelcore antispam. <mute> = time left or antispam-not-muted.
+  antispam-status: "<muted>Anti-spam · <text><player></text> · heat <text><heat></text>/<text><max></text> · strikes <text><strikes></text> · messages in the rate window <text><recent></text> · muted: <text><mute></text></muted>"
+  antispam-not-muted: "no"
+  antispam-unmuted: "<muted>Unmuted <text><player></text> and cleared their spam heat and strikes.</muted>"
+  antispam-not-muted-now: "<muted><text><player></text> wasn't muted; their spam heat and strikes are cleared.</muted>"
+  antispam-unknown: "<muted>No player called <text><player></text> has been seen on this server.</muted>"
   not-in-match: "<muted>That player isn't in a match.</muted>"
   match-ended: "<muted>Match #<id> ended without a result.</muted>"
   rating-set: "<muted>Set <text><player></text>'s <kit> rating to <text><rating></text>.</muted>"

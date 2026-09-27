@@ -18,8 +18,10 @@ import top.cheesesmp.duelcore.config.Messages;
 public final class ChatFilterListener implements Listener {
 
     /** Commands whose arguments are someone's words (private messages, /me, …). */
-    private static final Set<String> MESSAGE_COMMANDS = Set.of("msg", "tell", "w", "whisper", "r", "reply", "me",
-        "say", "m", "pm", "dm", "message", "teammsg", "tm", "mail", "pc");
+    static final Set<String> MESSAGE_COMMANDS = Set.of("msg", "tell", "w", "whisper", "r", "reply", "me",
+        "say", "m", "pm", "dm", "message", "teammsg", "tm", "mail", "pc",
+        // EssentialsX-style aliases
+        "t", "emsg", "etell", "ew", "ewhisper", "epm", "er", "ereply", "eme", "email");
 
     private final DuelCorePlugin plugin;
 

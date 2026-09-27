@@ -200,6 +200,7 @@ Staff:
 | `/duelcore season info\|reset <name> confirm\|recalc` | `duelcore.admin.season` | New season: ratings reset, the old season stays viewable as "legacy". `recalc` rebuilds the overall tiers and points after changing tiers.yml |
 | `/duelcore player <name> setrating <kit> <r>\|setgames <kit> <n>\|setregion <r>\|setcountry <cc\|auto\|none>` | `duelcore.admin.rating` | Edit a player. `setcountry` takes a countries.yml code (turns the player's auto-detect off), `auto` (detect it again) or `none` |
 | `/duelcore forceend <player>` | `duelcore.admin.match` | End a match without rating changes |
+| `/duelcore antispam status\|unmute <player>` | `duelcore.admin.antispam` | Chat anti-spam: a player's heat, strikes and mute; `unmute` lifts the mute and forgives heat and strikes (see *Configuration*, anti-spam) |
 | `/animtest [on\|off\|play <preview>]` | `duelcore.animtest` | Animation test mode (see *Animations*): preview animations on yourself, simulated progress after unranked matches |
 | `/duelcore debug [gc\|trace\|matches\|player <name>]` | `duelcore.admin.debug` | Health numbers (instances, chunks, entities, tasks, caches, heap, DB threads, the GeoIP database), live matches, one player's client version, brand, ping and state |
 
@@ -311,7 +312,9 @@ switches and both players' settings applied; use the second for rows without a l
 | `duelcore.hub.build` | op | Build in the hub (in creative) |
 | `duelcore.chatfilter.notify` | op | See messages the chat filter blocked |
 | `duelcore.chatfilter.bypass` | false | Messages skip the chat filter (not even ops have it unless given) |
-| `duelcore.admin` | op | All admin permissions: `.reload`, `.sethub`, `.arena`, `.kit`, `.season`, `.rating`, `.debug`, `.match`, `.tournament` |
+| `duelcore.antispam.bypass` | op | Chat, private messages and commands skip the anti-spam |
+| `duelcore.antispam.notify` | op | See ads and spam mutes caught by the anti-spam |
+| `duelcore.admin` | op | All admin permissions: `.reload`, `.sethub`, `.arena`, `.kit`, `.season`, `.rating`, `.debug`, `.match`, `.tournament`, `.antispam` |
 
 ---
 
@@ -432,6 +435,27 @@ other alphabets, accents, zero-width characters, stretched letters, up to three 
 `Scunthorpe`). `on-block-commands` can mute or warn. Staff with `duelcore.chatfilter.notify` see blocked messages.
 Note: masked words are sent as the server-side edit of a player message; clients with "Only Show Secure Chat" on
 still see the original of a *masked* message (blocked messages never reach anyone).
+
+**Anti-spam** (`config.yml` → `chat.anti-spam`): checks public chat, party chat (`@…`, `/pc`) and private messages
+(`/msg`, `/tell`, `/w`, `/r`, `/me`, …) before the slur filter, so blocked spam is never shown and everything after it
+(filter, party chat, chat tags, shortcodes) sees the cleaned text. Every check can be turned off on its own:
+
+| Check | Default | |
+| --- | --- | --- |
+| Rate limit | 4 messages / 5 s, 600 ms apart | Shared by chat and private messages; blocked messages don't count |
+| Duplicates | last 5 messages, 30 s | Compared after folding caps, accents, look-alike letters (Cyrillic, fullwidth, small caps), leetspeak, punctuation, spaces (`h e l l o`), stretched letters and word order. A near-duplicate (85 % alike) passes once, so fixing a typo is fine; the next one is blocked. Private messages have a history per recipient |
+| Short phrases | `gg`, `gg wp`, `ez`, `lol`, `ty`, `1v1`, `rematch`, … | `lenient-phrases` (and anything of 1-2 letters) may be repeated after 3 s, up to 4 times per 30 s, and never count as a wave |
+| Clean-up | on | Zero-width and formatting characters, right-to-left overrides, private-use glyphs and invisible fillers are removed; zalgo is cut to 2 accents per letter; runs like `noooooooo`/`hahahahaha` are cut to 4 (numbers are kept); a message of 8+ letters that is over 70 % caps is lowercased. Nothing is blocked for this |
+| Junk | 16+ characters, under 25 % letters/digits | Symbol walls and messages that are empty once cleaned are blocked |
+| Advertising | on | IPs and web addresses (common TLDs) and Discord invites, also written `1 2 3 . 4 5 . 6 7 . 8 9`, `name dot net`, `name(.)net`, `n a m e . n e t`, with leetspeak or look-alike letters. `whitelist` (default `cheesesmp.top`, `pvp.cheesesmp.top`, `discord.gg/cheesesmp`) allows those addresses and their subdomains, spelled normally; invites only exactly. Staff with `duelcore.antispam.notify` are told |
+| Waves | 3 players / 10 s | Once three players sent the same (or nearly the same) message of 12+ letters, the next ones are blocked (raids, copy-paste trains) |
+| Commands | 8 / 3 s | Extra commands are refused with a gentle note |
+
+Every blocked message adds *heat* (ads 4, most others 1), which drops by 6 a minute. From 3 heat the player is warned
+on the action bar; at 6 they're muted from chat and private messages for 30 s, then 2 min, then 10 min for repeat
+offences within 30 minutes. Muted players see the time left. Mutes are kept by UUID, so leaving and rejoining doesn't
+reset them (a restart does). `/duelcore antispam status <player>` and `/duelcore antispam unmute <player>` for staff;
+`duelcore.antispam.bypass` (ops) skips all of it. Texts are in `messages.yml` → `chat.anti-spam`.
 
 **messages.yml**: every player-facing text. The theme tags `<accent> <text> <muted> <good> <bad>` are defined at the
 top, so recolouring means editing five lines.

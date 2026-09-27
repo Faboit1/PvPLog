@@ -76,6 +76,7 @@ public final class DuelCorePlugin extends JavaPlugin {
     private CommandService commands;
     private Diagnostics diagnostics;
     private top.cheesesmp.duelcore.party.PartyService parties;
+    private top.cheesesmp.duelcore.chat.AntiSpam antiSpam;
     private top.cheesesmp.duelcore.ui.anim.AnimationService anim;
     private top.cheesesmp.duelcore.profile.ProgressTracker progress;
     private top.cheesesmp.duelcore.ui.anim.ProgressReveal progressReveal;
@@ -166,6 +167,10 @@ public final class DuelCorePlugin extends JavaPlugin {
         pm.registerEvents(tags, this);
         tabListing = new top.cheesesmp.duelcore.ui.TabListing(this);
         pm.registerEvents(tabListing, this);
+        // anti-spam first: both run at LOWEST and same-priority listeners run in registration order, so blocked spam
+        // never reaches the slur filter and the filter (and party chat, tags, shortcodes) sees the cleaned text
+        antiSpam = new top.cheesesmp.duelcore.chat.AntiSpam(() -> settings().antiSpam, System::currentTimeMillis);
+        pm.registerEvents(new top.cheesesmp.duelcore.chat.AntiSpamListener(this), this);
         pm.registerEvents(new top.cheesesmp.duelcore.chat.ChatFilterListener(this), this);
         pm.registerEvents(new top.cheesesmp.duelcore.chat.ChatShortcodes(this), this);
         clicks = new ClickRouter(this);
@@ -198,6 +203,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         scheduler.runTaskTimer(this, queue, 20L, cfg.mmIntervalTicks);
         scheduler.runTaskTimer(this, queueMusic, 20L, 10L);
         scheduler.runTaskTimer(this, matchMusic, 20L, 10L);
+        scheduler.runTaskTimerAsynchronously(this, () -> antiSpam.cleanup(), 1200L, 1200L); // forget idle players
         scheduler.runTaskTimer(this, sidebar, 20L, 20L);
         scheduler.runTaskTimer(this, sidebar::animateTitle, 24L, SidebarService.TITLE_PERIOD);
         scheduler.runTaskTimer(this, hubProgress, 20L, top.cheesesmp.duelcore.hub.HubProgress.PERIOD);
@@ -508,6 +514,11 @@ public final class DuelCorePlugin extends JavaPlugin {
     }
 
     /** Persistent parties: /party, party chat, party matches. */
+    /** Chat anti-spam state (mutes, heat); settings come from config.yml chat.anti-spam. */
+    public top.cheesesmp.duelcore.chat.AntiSpam antiSpam() {
+        return antiSpam;
+    }
+
     public top.cheesesmp.duelcore.party.PartyService parties() {
         return parties;
     }
