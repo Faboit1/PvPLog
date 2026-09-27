@@ -152,33 +152,42 @@ settings-menu:
     section-queue: "items:item/clock_00"
     # Gameplay
     allow-spectators: "items:item/ender_eye"
+    spectator-alerts: "items:item/writable_book"
     tab-spectators: "items:item/spyglass"
     combo-bar: "items:item/blaze_powder"
     heartbeat: "gui:hud/heart/full"
+    death-messages: "items:item/bone"
     results-screen: "items:item/map"
     # Visuals
     sidebar: "items:item/paper"
     chat-tags: "items:item/name_tag"
+    show-flags: "items:item/globe_banner_pattern"
     hide-hub-players: "items:item/phantom_membrane"
     hotbar-hints: "items:item/oak_sign"
     match-particles: "items:item/firework_rocket"
+    round-banners: "items:item/firework_star"
+    respawn-animations: "items:item/ender_pearl"
     progress-reveal: "items:item/experience_bottle"
     match-found-pop: "items:item/totem_of_undying"
     # Sounds
     sounds: "items:item/bell"
     match-sounds: "items:item/goat_horn"
+    menu-sounds: "items:item/comparator"
     queue-music: "items:item/music_disc_cat"
     # Social
     duel-requests: "items:item/iron_sword"
     party-invites: "items:item/cake"
     friend-alerts: "items:item/emerald"
     auto-gg: "items:item/feather"
+    show-my-flag: "items:item/painting"
     # Queue
     keep-queuing: "items:item/repeater"
     searching-bar: "items:item/compass_00"
     region: "items:item/filled_map"
     max-ping: "items:item/redstone"
+    auto-country: "items:item/map"
     country: "items:item/book"
+    prefer-country: "items:item/recovery_compass_00"
 
 # The kit editor (Kit Editor hotbar item, /kit edit [kit], /kiteditor [kit]). A 6-row chest laid out like the
 # inventory: rows 1-3 the inventory, row 4 the hotbar, row 5 the armour (locked), the offhand slot and an info item,
@@ -198,7 +207,7 @@ kit-editor:
   picker-columns: 3
   picker-width: 310
   # Sounds: "<sound> [pitch] [volume] [@delay]", several played together joined with "+" ("" = none). Players' own
-  # sound setting applies. pick / place / swap: moving an item; deny: a click that does nothing.
+  # settings apply (All sounds, Menu sounds). pick / place / swap: moving an item; deny: a click that does nothing.
   sounds:
     open: "item.armor.equip_generic 1.1 0.6"
     pick: "ui.button.click 1.7 0.25"
@@ -211,9 +220,9 @@ kit-editor:
     cancel: "ui.button.click 0.8 0.3"
 
 # Sounds of menu presses: every menu button (dialogs), clickable chat button (duel / party requests, draw offers)
-# and hub hotbar item plays one, to the presser only. Players' own sound setting applies. Same format as above
-# ("<sound> [pitch] [volume] [@delay]", several joined with "+", "" = none); at most one plays per press. The kit
-# editor uses its own sounds (kit-editor.sounds). Preview them all: /animtest play menu-sounds.
+# and hub hotbar item plays one, to the presser only. Players' own settings apply (All sounds, Menu sounds). Same
+# format as above ("<sound> [pitch] [volume] [@delay]", several joined with "+", "" = none); at most one plays per
+# press. The kit editor uses its own sounds (kit-editor.sounds). Preview them all: /animtest play menu-sounds.
 menu-sounds:
   enabled: true
   # A plain button: opens a menu, a player, a kit.
@@ -306,13 +315,14 @@ sidebar:
     - "<muted>Range</muted>  <text>±<range></text>"
     - ""
     - "<muted>pvp.cheesesmp.top</muted>"
-  # Extra: <kit> <kit_icon> <mode> <opponent> <you_score> <opp_score> <round> <first_to> <time> <ping> <opp_ping>
+  # Extra: <kit> <kit_icon> <mode> <opponent> <opp_flag> (the opponent's flag, see flags below) <you_score>
+  # <opp_score> <round> <first_to> <time> <ping> <opp_ping>
   match:
     - ""
     - "<kit_icon> <text><kit></text> <muted><mode></muted>"
     - ""
     - "<text>You</text>  <accent><you_score></accent>"
-    - "<text><opponent></text>  <accent><opp_score></accent>"
+    - "<opp_flag><text><opponent></text>  <accent><opp_score></accent>"
     - "<muted>First to <first_to> · round <round></muted>"
     - ""
     - "<muted>Time</muted>  <text><time></text>"
@@ -320,13 +330,13 @@ sidebar:
     - "<muted><opponent></muted>  <text><opp_ping>ms</text>"
     - ""
     - "<muted>pvp.cheesesmp.top</muted>"
-  # Extra: <kit> <kit_icon> <red_name> <blue_name> <red_score> <blue_score> <round> <time>
+  # Extra: <kit> <kit_icon> <red_name> <blue_name> <red_flag> <blue_flag> <red_score> <blue_score> <round> <time>
   spectate:
     - ""
     - "<kit_icon> <text><kit></text> <muted>spectating</muted>"
     - ""
-    - "<text><red_name></text>  <accent><red_score></accent>"
-    - "<text><blue_name></text>  <accent><blue_score></accent>"
+    - "<red_flag><text><red_name></text>  <accent><red_score></accent>"
+    - "<blue_flag><text><blue_name></text>  <accent><blue_score></accent>"
     - "<muted>Round <round></muted>"
     - ""
     - "<muted>Time</muted>  <text><time></text>"
@@ -358,10 +368,11 @@ sidebar:
 # Tier tags: the icon of a kit followed by the tier in it. In the hub the player's best kit (best tier, then highest
 # rating), during a match the match's kit with the tier they had when it started. The tab list is sorted by tier.
 # <tier> in chat/tab/nametag-prefix = the whole tag; in icon-tier: <icon> = kit sprite, <tier> = tiers.yml format.
+# <flag> in chat/tab/nametag-prefix = the player's country flag (see flags below), empty when there is none.
 tags:
   icon-tier: "<icon><tier>"
-  chat: "<tier> <text><name></text><muted>:</muted> <message>"
-  tab: "<tier> <text><name></text>"
+  chat: "<tier> <flag><text><name></text><muted>:</muted> <message>"
+  tab: "<tier> <flag><text><name></text>"
   # Tab name of players spectating a match (like vanilla spectators: grey, italic, listed last). <tier> works too.
   tab-spectator: "<gray><i><name></i></gray>"
   # After a name in the tab list: an icon while in a match or queueing ("atlas:path[#rrggbb]" sprite; "" = none;
@@ -369,9 +380,43 @@ tags:
   tab-status-match: "items:item/iron_sword"
   tab-status-queue: "items:item/clock_00"
   tab-admin: " <#ffd24a>★</#ffd24a>"
-  nametag-prefix: "<tier> "
+  nametag-prefix: "<tier> <flag>"
   # Hide the tag for players who have no ranked kit yet (instead of showing "???").
   hide-unranked: false
+
+# Under the names of your opponents during a match (and of every fighter while spectating): their health.
+# <hearts> = health in hearts with one decimal, <hp_color> = red → yellow → green by health left,
+# <absorption> = the absorption format below when they have absorption hearts (else nothing).
+match-health:
+  enabled: true
+  format: "<#ff5555>❤</#ff5555> <hp_color><hearts></hp_color><absorption>"
+  absorption: " <#ffcc33>+<hearts></#ffcc33>"
+
+# Country flags next to names: the flag head of the player's country (countries.yml), before the name and after the
+# tier tag. Players set their country in Settings (or have it detected, config.yml geo) and choose whether they see
+# flags (Settings → Visuals → Flags) and whether theirs is shown (Settings → Social → Show my flag). Put <flag> right
+# before a name: tags above, the sidebar lines (<opp_flag>, <red_flag>, <blue_flag>) and messages.yml
+# (match.found-subtitle, results.subtitle, duel.received, duel.sent, dialog.profile.header); it is empty when there's
+# no flag to show.
+flags:
+  enabled: true
+  # What <flag> becomes: <flag> is the head (as big as a letter); the space keeps it apart from the name.
+  format: "<flag> "
+  # Draw the head's hat (outer) layer too. Keep it on: some flags have their details only there (Japan's red disc,
+  # Brazil's globe).
+  hat: true
+  # Where flags are shown. The tab list looks the same to everyone, so there a viewer's own Flags setting doesn't
+  # apply (a player's Show my flag does); nametags above heads and everything else follow both.
+  show:
+    tab: true
+    nametag: true
+    chat: true
+    profile: true
+    # The match found title, the match and spectator sidebars and the results title.
+    match: true
+    # Duel requests in chat.
+    duel: true
+    leaderboard: true
 
 # Tab list header and footer, refreshed every 2 s. Empty lists = none.
 # Placeholders: <online> <live> <fighting> <queued> <ping> <tps> <spectators> (spectating any match)

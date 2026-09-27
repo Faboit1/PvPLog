@@ -43,6 +43,9 @@ public final class GuiConfig {
     public final String tabStatusMatch;
     public final String tabStatusQueue;
     public final String tabAdmin;
+    public final boolean matchHealthEnabled;
+    public final String matchHealthFormat;
+    public final String matchHealthAbsorption;
     public final String nametagPrefix;
     public final boolean hideUnrankedTag;
     public final String tagIconFormat;
@@ -102,6 +105,8 @@ public final class GuiConfig {
     public final top.cheesesmp.duelcore.kit.editor.KitEditorStyle kitEditor;
     /** The sounds of menu presses: dialog and chat buttons, hub items (menu-sounds). */
     public final top.cheesesmp.duelcore.ui.MenuSoundStyle menuSounds;
+    /** Country flags next to names: on/off, where, and how {@code <flag>} looks (flags). */
+    public final top.cheesesmp.duelcore.geo.FlagStyle flags;
 
     public GuiConfig(YamlConfiguration y) {
         ConfigurationSection hb = y.getConfigurationSection("hotbar");
@@ -136,6 +141,9 @@ public final class GuiConfig {
         tabStatusMatch = y.getString("tags.tab-status-match", "items:item/iron_sword");
         tabStatusQueue = y.getString("tags.tab-status-queue", "items:item/clock_00");
         tabAdmin = y.getString("tags.tab-admin", " <#ffd24a>★</#ffd24a>");
+        matchHealthEnabled = y.getBoolean("match-health.enabled", true);
+        matchHealthFormat = y.getString("match-health.format", "<#ff5555>❤</#ff5555> <hp_color><hearts></hp_color><absorption>");
+        matchHealthAbsorption = y.getString("match-health.absorption", " <#ffcc33>+<hearts></#ffcc33>");
         nametagPrefix = y.getString("tags.nametag-prefix", "<tier> ");
         hideUnrankedTag = y.getBoolean("tags.hide-unranked", false);
         tagIconFormat = y.getString("tags.icon-tier", "<icon><tier>");
@@ -194,6 +202,7 @@ public final class GuiConfig {
         matchFx = top.cheesesmp.duelcore.ui.MatchFxStyle.parse(y);
         kitEditor = top.cheesesmp.duelcore.kit.editor.KitEditorStyle.parse(y);
         menuSounds = top.cheesesmp.duelcore.ui.MenuSoundStyle.parse(y);
+        flags = top.cheesesmp.duelcore.geo.FlagStyle.parse(y);
     }
 
     public @Nullable HotbarItem item(String key) {

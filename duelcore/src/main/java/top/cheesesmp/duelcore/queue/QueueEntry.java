@@ -5,7 +5,8 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * One player (or party leader) waiting in a (kit, mode) queue. Immutable except for {@link #ping},
- * which is refreshed each matchmaking pass.
+ * which is refreshed each matchmaking pass. Region, country and the latency preferences are the player's settings
+ * when they joined.
  *
  * @param partyMembers other members queued together (empty for solo)
  */
@@ -18,12 +19,21 @@ public final class QueueEntry {
     private final double rating;
     private final long joinedAt;
     private final @Nullable String region;
+    private final @Nullable String country;
+    private final boolean preferCountry;
     private final int maxPing;
     private final java.util.List<UUID> partyMembers;
     private volatile int ping;
 
+    /** An entry without a country preference. */
     public QueueEntry(UUID player, String name, String kit, QueueMode mode, double rating, long joinedAt,
                       @Nullable String region, int ping, int maxPing, java.util.List<UUID> partyMembers) {
+        this(player, name, kit, mode, rating, joinedAt, region, null, false, ping, maxPing, partyMembers);
+    }
+
+    public QueueEntry(UUID player, String name, String kit, QueueMode mode, double rating, long joinedAt,
+                      @Nullable String region, @Nullable String country, boolean preferCountry, int ping, int maxPing,
+                      java.util.List<UUID> partyMembers) {
         this.player = player;
         this.name = name;
         this.kit = kit;
@@ -31,6 +41,8 @@ public final class QueueEntry {
         this.rating = rating;
         this.joinedAt = joinedAt;
         this.region = region;
+        this.country = country;
+        this.preferCountry = preferCountry;
         this.ping = ping;
         this.maxPing = maxPing;
         this.partyMembers = java.util.List.copyOf(partyMembers);
@@ -62,6 +74,16 @@ public final class QueueEntry {
 
     public @Nullable String region() {
         return region;
+    }
+
+    /** The player's two-letter country, null when unknown. */
+    public @Nullable String country() {
+        return country;
+    }
+
+    /** The player wants opponents from their own country (Settings → Prefer my country). */
+    public boolean preferCountry() {
+        return preferCountry;
     }
 
     public int ping() {

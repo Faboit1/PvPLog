@@ -26,6 +26,7 @@ import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.config.Messages;
 import top.cheesesmp.duelcore.db.dao.LeaderboardDao;
 import top.cheesesmp.duelcore.db.dao.MatchDao;
+import top.cheesesmp.duelcore.geo.Flags;
 import top.cheesesmp.duelcore.kit.Kit;
 import top.cheesesmp.duelcore.kit.editor.KitEditor;
 import top.cheesesmp.duelcore.leaderboard.LeaderboardService;
@@ -177,13 +178,18 @@ public final class DialogService {
         int wins = target.totalWins();
         int losses = target.totalLosses();
         int games = wins + losses;
+        PlayerProfile viewerProfile = plugin.profiles().get(viewer);
+        // a player who hides their flag hides their country from everyone else too
+        String country = viewer.getUniqueId().equals(target.uuid()) || target.setting(Setting.SHOW_MY_FLAG) ? target.country() : null;
         body.add(msg().get("dialog.profile.header",
             Messages.comp("head", Icons.head(target.uuid(), target.name())),
+            Messages.comp("flag", plugin.flags().flag(Flags.Place.PROFILE, viewerProfile, target)),
             Messages.text("player", target.name()),
             Messages.comp("tier", plugin.tiers().format(target.overall())),
             Messages.text("elo", TierService.eloText(target)),
             Messages.text("region", target.region() == null ? "—" : target.region()),
-            Messages.text("country", target.country() == null ? "—" : target.country())));
+            Messages.text("country", country == null ? "—" : country),
+            Messages.text("country_name", country == null ? "—" : plugin.flags().name(country))));
         body.add(msg().get("dialog.profile.record", Messages.num("wins", wins), Messages.num("losses", losses),
             Messages.text("winrate", games == 0 ? "0" : String.valueOf(Math.round(100.0 * wins / games)))));
         if (legacy) body.add(msg().get("dialog.profile.legacy"));
@@ -243,26 +249,38 @@ public final class DialogService {
     // ------------------------------------------------------------------ leaderboards
 
     public void leaderboard(Player viewer, String category, @Nullable String region) {
+        leaderboard(viewer, category, region, null);
+    }
+
+    /**
+     * A leaderboard: {@code category} is "overall" or a kit, filtered by a configured region or by a country code
+     * (already checked with {@link LeaderboardService#countryFilter}); with both, the country. Ranks count within the
+     * filter, and so does the viewer's own "You · #rank" line.
+     */
+    public void leaderboard(Player viewer, String category, @Nullable String region, @Nullable String country) {
         String cat = category.toLowerCase(Locale.ROOT);
         if (!cat.equals(LeaderboardService.OVERALL) && plugin.kits().get(cat) == null) cat = LeaderboardService.OVERALL;
         String finalCat = cat;
+        String reg = country != null ? null : region;
         long ticket = open().awaitNext(viewer);
-        plugin.leaderboards().get(cat, region, null).whenComplete((rows, error) ->
+        plugin.leaderboards().get(cat, reg, country).whenComplete((rows, error) ->
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (error != null) {
                     // shown empty rather than not at all (the menu used to just never open)
                     plugin.getLogger().log(java.util.logging.Level.WARNING, "Loading the " + finalCat + " leaderboard failed", error);
                 }
                 List<LeaderboardDao.Row> shown = rows != null ? rows : List.of();
-                open().continueAwait(viewer, ticket, () -> showLeaderboard(viewer, finalCat, region, shown));
+                open().continueAwait(viewer, ticket, () -> showLeaderboard(viewer, finalCat, reg, country, shown));
             }));
     }
 
-    private void showLeaderboard(Player viewer, String category, @Nullable String region, List<LeaderboardDao.Row> rows) {
+    private void showLeaderboard(Player viewer, String category, @Nullable String region, @Nullable String country,
+                                 List<LeaderboardDao.Row> rows) {
         boolean overall = category.equals(LeaderboardService.OVERALL);
         Kit kit = overall ? null : plugin.kits().get(category);
         Component catName = overall ? msg().get("dialog.leaderboard.overall") : kit.displayName();
         List<Component> body = new ArrayList<>();
+        PlayerProfile own = plugin.profiles().get(viewer);
         int shown = Math.min(rows.size(), plugin.gui().leaderboardLines);
         if (shown == 0) body.add(msg().get("dialog.leaderboard.empty"));
         for (int i = 0; i < shown; i++) {
@@ -271,6 +289,7 @@ public final class DialogService {
             body.add(msg().get(overall ? "dialog.leaderboard.line-overall" : "dialog.leaderboard.line-kit",
                 Messages.num("rank", r.rank()),
                 Messages.comp("head", Icons.head(r.uuid(), r.name())),
+                Messages.comp("flag", plugin.flags().flag(Flags.Place.LEADERBOARD, own, r.country(), r.settings())),
                 Messages.text("player", r.name()),
                 Messages.comp("tier", plugin.tiers().format(tier)),
                 Messages.num("value", (int) Math.round(r.value())),
@@ -278,7 +297,6 @@ public final class DialogService {
                 Messages.num("wins", r.wins()), Messages.num("losses", r.losses()),
                 Messages.text("region", r.region() == null ? "" : r.region())));
         }
-        PlayerProfile own = plugin.profiles().get(viewer);
         for (LeaderboardDao.Row r : rows) {
             if (own != null && r.uuid().equals(own.uuid()) && r.rank() > shown) {
                 body.add(Component.empty());
@@ -289,25 +307,46 @@ public final class DialogService {
         }
         List<ActionButton> buttons = new ArrayList<>();
         int small = 34;
-        String reg = region == null ? "" : region;
+        // the category buttons keep the board's region or country
         buttons.add(button(msg().get(overall ? "dialog.leaderboard.overall-button-selected" : "dialog.leaderboard.overall-button"),
-            msg().get("dialog.leaderboard.overall"), small, "leaderboard/view", payload("cat", "overall", "region", reg)));
+            msg().get("dialog.leaderboard.overall"), small, "leaderboard/view", boardPayload("overall", region, country)));
         for (Kit k : plugin.kits().enabled()) {
             boolean selected = k.id().equals(category);
             buttons.add(button(msg().get(selected ? "dialog.leaderboard.kit-button-selected" : "dialog.leaderboard.kit-button",
                     Messages.comp("kit_icon", k.sprite()), Messages.comp("kit", k.displayName())),
-                k.displayName(), small, "leaderboard/view", payload("cat", k.id(), "region", reg)));
+                k.displayName(), small, "leaderboard/view", boardPayload(k.id(), region, country)));
         }
-        buttons.add(button(msg().get(region == null ? "dialog.leaderboard.all-regions-selected" : "dialog.leaderboard.all-regions"),
+        boolean global = region == null && country == null;
+        buttons.add(button(msg().get(global ? "dialog.leaderboard.all-regions-selected" : "dialog.leaderboard.all-regions"),
             msg().get("dialog.leaderboard.global"), small, "leaderboard/view", payload("cat", category, "region", "")));
         for (String r : plugin.settings().regions) {
             buttons.add(button(msg().get(r.equals(region) ? "dialog.leaderboard.region-selected" : "dialog.leaderboard.region",
                 Messages.text("region", r)), null, small, "leaderboard/view", payload("cat", category, "region", r)));
         }
-        Dialog d = dialog(msg().get("dialog.leaderboard.title", Messages.comp("category", catName),
-                Messages.text("region", region == null ? msg().raw("dialog.leaderboard.global") : region)),
-            List.of(text(lines(body))), List.of(), DialogType.multiAction(buttons).columns(8).exitAction(close()).build());
+        // "My country": the same board for the viewer's own country
+        String mine = own == null ? null : plugin.leaderboards().countryFilter(own.country(), own.country());
+        if (mine != null) {
+            Component flag = plugin.flags().hasFlag(mine) ? plugin.flags().flag(mine) : msg().get("dialog.leaderboard.no-flag");
+            TagResolver[] named = {Messages.text("code", mine), Messages.comp("flag", flag),
+                Messages.text("country", plugin.leaderboards().countryName(mine))};
+            String key = mine.equals(country) ? "dialog.leaderboard.my-country-selected" : "dialog.leaderboard.my-country";
+            buttons.add(button(msg().get(key, named), msg().get("dialog.leaderboard.my-country-tooltip", named), small,
+                "leaderboard/view", payload("cat", category, "country", mine)));
+        }
+        Component title = country != null
+            ? msg().get("dialog.leaderboard.title-country", Messages.comp("category", catName),
+                Messages.text("country", plugin.leaderboards().countryName(country)), Messages.text("code", country))
+            : msg().get("dialog.leaderboard.title", Messages.comp("category", catName),
+                Messages.text("region", region == null ? msg().raw("dialog.leaderboard.global") : region));
+        Dialog d = dialog(title, List.of(text(lines(body))), List.of(),
+            DialogType.multiAction(buttons).columns(8).exitAction(close()).build());
         open().show(viewer, OpenDialogs.Kind.LEADERBOARD, d);
+    }
+
+    /** A {@code leaderboard/view} payload: {@code category} with the region or country filter of the open board. */
+    private static Map<String, String> boardPayload(String category, @Nullable String region, @Nullable String country) {
+        return country != null ? payload("cat", category, "country", country)
+            : payload("cat", category, "region", region == null ? "" : region);
     }
 
     // ------------------------------------------------------------------ settings

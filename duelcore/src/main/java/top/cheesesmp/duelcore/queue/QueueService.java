@@ -69,8 +69,8 @@ public final class QueueService implements Listener, Runnable {
     public void reload() {
         MainConfig c = plugin.settings();
         rematches.limit(c.mmMaxRankedRematchesPerDay);
-        MatchPolicy base = new RegionPingPolicy(c.mmRegionEnabled, c.mmRegionPenalty, c.mmPingEnabled,
-            c.mmPingPenaltyPerMs, c.mmOverMaxPingPenalty, c.mmRelaxAfterSeconds);
+        MatchPolicy base = new RegionPingPolicy(c.mmRegionEnabled, c.mmRegionPenalty, c.mmCountryEnabled,
+            c.mmCountryPenalty, c.mmPingEnabled, c.mmPingPenaltyPerMs, c.mmOverMaxPingPenalty, c.mmRelaxAfterSeconds);
         MatchPolicy policy = customPolicy != null ? customPolicy : base;
         this.matchmaker = new Matchmaker(new Matchmaker.Window(c.mmWindowInitial, c.mmWindowGrowth, c.mmWindowMax),
             policy.and(rematches));
@@ -136,7 +136,8 @@ public final class QueueService implements Listener, Runnable {
         if (plugin.spectate().spectating(uuid) != null) plugin.spectate().leave(player, false);
         KitStats stats = plugin.profiles().stats(profile, kit.id());
         QueueEntry entry = new QueueEntry(uuid, player.getName(), kit.id(), mode, stats.rating, System.currentTimeMillis(),
-            profile.region(), player.getPing(), profile.maxPing(), List.of());
+            profile.region(), profile.country(), profile.setting(Setting.PREFER_COUNTRY), player.getPing(),
+            profile.maxPing(), List.of());
         add(entry);
         List<Bucket> kits = chosen.computeIfAbsent(uuid, k -> new ArrayList<>());
         Bucket bucket = new Bucket(kit.id(), mode);

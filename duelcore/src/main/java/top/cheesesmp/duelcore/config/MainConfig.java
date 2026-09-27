@@ -50,6 +50,9 @@ public final class MainConfig {
     public final double mmWindowMax;
     public final boolean mmRegionEnabled;
     public final double mmRegionPenalty;
+    /** A pair from two different countries costs this, when both have a country and Prefer my country on. */
+    public final boolean mmCountryEnabled;
+    public final double mmCountryPenalty;
     public final boolean mmPingEnabled;
     public final double mmPingPenaltyPerMs;
     public final double mmOverMaxPingPenalty;
@@ -207,6 +210,12 @@ public final class MainConfig {
     public final boolean dialogRefresh;
     public final int dialogRefreshTicks;
 
+    // geo
+    /** Countries from IP addresses (geo/GeoIpService): on/off, the monthly database URL, how old the file may get. */
+    public final boolean geoEnabled;
+    public final String geoDatabaseUrl;
+    public final int geoMaxAgeDays;
+
     public final boolean verbose;
 
     public MainConfig(FileConfiguration c) {
@@ -244,8 +253,10 @@ public final class MainConfig {
         mmWindowMax = c.getDouble("matchmaking.window.max", 500);
         mmRegionEnabled = c.getBoolean("matchmaking.region.enabled", true);
         mmRegionPenalty = c.getDouble("matchmaking.region.cross-region-penalty", 250);
+        mmCountryEnabled = c.getBoolean("matchmaking.country.enabled", true);
+        mmCountryPenalty = c.getDouble("matchmaking.country.cross-country-penalty", 60);
         mmPingEnabled = c.getBoolean("matchmaking.ping.enabled", true);
-        mmPingPenaltyPerMs = c.getDouble("matchmaking.ping.penalty-per-ms", 0.5);
+        mmPingPenaltyPerMs = c.getDouble("matchmaking.ping.penalty-per-ms", 0.75);
         mmOverMaxPingPenalty = c.getDouble("matchmaking.ping.over-max-ping-penalty", 300);
         mmRelaxAfterSeconds = c.getDouble("matchmaking.relax-after-seconds", 30);
         mmMaxRankedRematchesPerDay = c.getInt("matchmaking.max-ranked-rematches-per-day", 10);
@@ -374,6 +385,12 @@ public final class MainConfig {
 
         dialogRefresh = c.getBoolean("dialogs.refresh.enabled", true);
         dialogRefreshTicks = top.cheesesmp.duelcore.ui.dialog.DialogRefresh.interval(c.getInt("dialogs.refresh.interval-ticks", 20));
+
+        geoEnabled = c.getBoolean("geo.enabled", true);
+        String geoUrl = c.getString("geo.database-url", "").strip();
+        geoDatabaseUrl = geoUrl.startsWith("https://") || geoUrl.startsWith("http://") ? geoUrl
+            : top.cheesesmp.duelcore.geo.GeoIpService.DEFAULT_URL;
+        geoMaxAgeDays = Math.clamp(c.getInt("geo.max-age-days", 35), 1, 365);
 
         verbose = c.getBoolean("debug.verbose", false);
     }

@@ -87,6 +87,21 @@ public final class PlayerDao {
         }
     }
 
+    /**
+     * Sets {@code bits} in the settings of every player who has a country; returns how many rows changed. Used once
+     * when country auto-detection came: countries typed in before it were picked by hand, so detection is switched
+     * off for them ({@code bits} = the "auto-detect off" bit).
+     */
+    public static int markCountriesManual(Connection c, int bits) throws SQLException {
+        try (PreparedStatement ps = c.prepareStatement(
+            "UPDATE dc_players SET settings = settings | ? WHERE country IS NOT NULL AND (settings & ?) <> ?")) {
+            ps.setInt(1, bits);
+            ps.setInt(2, bits);
+            ps.setInt(3, bits);
+            return ps.executeUpdate();
+        }
+    }
+
     public static void touch(Connection c, int id, long now) throws SQLException {
         try (PreparedStatement ps = c.prepareStatement("UPDATE dc_players SET last_seen = ? WHERE id = ?")) {
             ps.setLong(1, now);

@@ -35,6 +35,7 @@ import top.cheesesmp.duelcore.arena.ArenaInstance;
 import top.cheesesmp.duelcore.config.MainConfig;
 import top.cheesesmp.duelcore.config.Messages;
 import top.cheesesmp.duelcore.db.dao.MatchDao;
+import top.cheesesmp.duelcore.geo.Flags;
 import top.cheesesmp.duelcore.kit.Kit;
 import top.cheesesmp.duelcore.kit.KitManager;
 import top.cheesesmp.duelcore.profile.KitStats;
@@ -179,8 +180,12 @@ public final class MatchService implements Runnable {
             MatchSounds.playMatch(plugin, player, foundSounds, 1);
             Participant opp = match.opponentOf(p);
             PlayerProfile oppProfile = opp == null ? null : plugin.profiles().get(opp.uuid());
+            // a flag only for a lone opponent (a team is shown by its names)
+            boolean single = !match.ffa() && match.team(1 - p.team()).size() == 1;
             Component subtitle = plugin.messages().get(match.ffa() ? "party.match.found-ffa" : "match.found-subtitle",
                 Messages.text("opponent", match.teamName(1 - p.team())),
+                Messages.comp("flag", single ? plugin.flags().flag(Flags.Place.MATCH, plugin.profiles().get(player), oppProfile)
+                    : Component.empty()),
                 Messages.comp("tier", plugin.tiers().format(opp == null ? null : opp.tierBefore())),
                 Messages.comp("kit", kit.displayName()),
                 Messages.comp("kit_icon", kit.sprite()),
@@ -327,7 +332,8 @@ public final class MatchService implements Runnable {
                 applyBorder(player, arena);
                 plugin.sidebar().refresh(player);
             };
-            if (m.round > 1 && plugin.settings().animRespawnThrow && player.getWorld() == arena.world()) {
+            boolean respawn = m.round > 1 && plugin.settings().animRespawnThrow && player.getWorld() == arena.world();
+            if (respawn && profileWants(player, Setting.RESPAWN_ANIMATIONS)) {
                 // later rounds: a respawn animation (throw, float, orbit, ...) instead of a plain teleport (see
                 // RespawnPull); no walking or jumping from its first tick on
                 player.setFireTicks(0);
@@ -340,7 +346,7 @@ public final class MatchService implements Runnable {
                         m.pulling--;
                         arrive.run();
                     });
-            } else if (plugin.settings().animSpawnRise) {
+            } else if (!respawn && plugin.settings().animSpawnRise) {
                 // round 1 (or no throw): rise out of the ground at the spawn (see SpawnRise); waits for the round reset
                 player.setFireTicks(0);
                 player.getInventory().clear();
@@ -351,7 +357,8 @@ public final class MatchService implements Runnable {
                         arrive.run();
                     });
             } else {
-                // leaving the hub (where everyone may fly) or a death cam: no flying in the arena
+                // leaving the hub (where everyone may fly) or a death cam: no flying in the arena. Also later rounds
+                // of a player who turned respawn animations off (Settings → Respawn animations)
                 player.setFlying(false);
                 player.setAllowFlight(false);
                 player.teleportAsync(spawn).thenRun(arrive);
@@ -515,6 +522,7 @@ public final class MatchService implements Runnable {
         }
         plugin.animations().death(victim.getLocation(), audience(m));
         for (Player p : online(m)) {
+            if (!profileWants(p, Setting.DEATH_MESSAGES)) continue;
             plugin.messages().send(p, credited == null ? "match.death" : "match.death-by", Messages.text("victim", dead.name()),
                 Messages.text("killer", credited == null ? "" : credited.name()),
                 Messages.comp("hearts", killerHealth(credited)));

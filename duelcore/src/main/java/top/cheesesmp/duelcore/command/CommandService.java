@@ -302,26 +302,48 @@ public final class CommandService {
                     return kitSuggestions().getSuggestions(ctx, b);
                 })
                 .executes(ctx -> lb(ctx, StringArgumentType.getString(ctx, "category"), null))
-                .then(Commands.argument("region", StringArgumentType.word())
+                .then(Commands.argument("region_or_country", StringArgumentType.word())
                     .suggests((ctx, b) -> {
                         plugin.settings().regions.forEach(b::suggest);
+                        // the player's own country, and the country codes once a letter is typed
+                        String rem = b.getRemaining().toUpperCase(Locale.ROOT);
+                        PlayerProfile own = ctx.getSource().getSender() instanceof Player p ? plugin.profiles().get(p) : null;
+                        if (own != null && own.country() != null && !plugin.settings().regions.contains(own.country())) {
+                            b.suggest(own.country());
+                        }
+                        if (!rem.isEmpty()) {
+                            for (String cc : plugin.leaderboards().countryCodes()) {
+                                if (cc.startsWith(rem) && !plugin.settings().regions.contains(cc)) b.suggest(cc);
+                            }
+                        }
                         return b.buildFuture();
                     })
                     .executes(ctx -> lb(ctx, StringArgumentType.getString(ctx, "category"),
-                        StringArgumentType.getString(ctx, "region")))))
+                        StringArgumentType.getString(ctx, "region_or_country")))))
             .build();
     }
 
-    private int lb(CommandContext<CommandSourceStack> ctx, String category, @Nullable String region) {
+    /**
+     * A leaderboard, optionally filtered: {@code filter} is a configured region, else a country code (countries.yml,
+     * or the player's own country); anything else shows the global board. Region codes win over the same letters as
+     * a country (NA, SA, AS, AF): those countries' boards are the "My country" button's.
+     */
+    private int lb(CommandContext<CommandSourceStack> ctx, String category, @Nullable String filter) {
         CommandSender sender = ctx.getSource().getSender();
-        String reg = region == null ? null : region.toUpperCase(Locale.ROOT);
-        if (reg != null && !plugin.settings().regions.contains(reg)) reg = null;
+        String reg = filter == null ? null : filter.toUpperCase(Locale.ROOT);
+        String country = null;
+        if (reg != null && !plugin.settings().regions.contains(reg)) {
+            PlayerProfile own = sender instanceof Player p ? plugin.profiles().get(p) : null;
+            country = plugin.leaderboards().countryFilter(reg, own == null ? null : own.country());
+            reg = null;
+        }
         if (sender instanceof Player p) {
-            plugin.dialogs().leaderboard(p, category, reg);
+            plugin.dialogs().leaderboard(p, category, reg, country);
         } else {
             String cat = category.toLowerCase(Locale.ROOT);
-            plugin.leaderboards().get(cat, reg, null).thenAccept(rows -> Bukkit.getScheduler().runTask(plugin, () -> {
-                sender.sendMessage("Leaderboard " + cat + (rows.isEmpty() ? ": empty" : ":"));
+            String where = country != null ? " " + country : reg != null ? " " + reg : "";
+            plugin.leaderboards().get(cat, reg, country).thenAccept(rows -> Bukkit.getScheduler().runTask(plugin, () -> {
+                sender.sendMessage("Leaderboard " + cat + where + (rows.isEmpty() ? ": empty" : ":"));
                 rows.stream().limit(10).forEach(r -> sender.sendMessage(" #" + r.rank() + " " + r.name() + " "
                     + Math.round(r.value()) + " " + (r.tier() == null ? "" : r.tier().name()) + " " + r.wins() + "W/" + r.losses() + "L"));
             }));

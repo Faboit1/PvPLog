@@ -110,7 +110,11 @@ public final class ClickRouter implements Listener {
             case "leaderboard/view" -> {
                 String region = data.getOrDefault("region", "");
                 if (!region.isEmpty() && !plugin.settings().regions.contains(region)) region = "";
-                plugin.dialogs().leaderboard(player, data.getOrDefault("cat", "overall"), region.isEmpty() ? null : region);
+                // a country board: a listed country or the player's own
+                var own = plugin.profiles().get(player);
+                String country = plugin.leaderboards().countryFilter(data.get("country"), own == null ? null : own.country());
+                plugin.dialogs().leaderboard(player, data.getOrDefault("cat", "overall"), region.isEmpty() ? null : region,
+                    country);
             }
             case "spectate/find" -> plugin.dialogs().spectateSearch(player);
             case "spectate/search" -> {

@@ -48,6 +48,22 @@ class SettingsLayoutTest {
     }
 
     @Test
+    void newerRowsSitInTheirTabs() {
+        Map<Setting, Section> tab = new EnumMap<>(Setting.class);
+        for (Section s : Section.values()) {
+            for (Entry e : s.entries()) if (e.setting() != null) tab.put(e.setting(), s);
+        }
+        assertEquals(Section.QUEUE, tab.get(Setting.PREFER_COUNTRY));
+        assertEquals(Section.GAMEPLAY, tab.get(Setting.DEATH_MESSAGES));
+        assertEquals(Section.GAMEPLAY, tab.get(Setting.SPECTATOR_ALERTS));
+        assertEquals(Section.VISUALS, tab.get(Setting.RESPAWN_ANIMATIONS));
+        assertEquals(Section.VISUALS, tab.get(Setting.ROUND_BANNERS));
+        // menu sounds: its own switch in the Sounds tab, under the All sounds master switch (the tab's first row)
+        assertEquals(Section.SOUNDS, tab.get(Setting.MENU_SOUNDS));
+        assertEquals(Setting.SOUNDS, Section.SOUNDS.entries().getFirst().setting());
+    }
+
+    @Test
     void lookupsTolerateBadPayloads() {
         assertEquals(Section.GAMEPLAY, Section.parse(null));
         assertEquals(Section.GAMEPLAY, Section.parse("nope"));

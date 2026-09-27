@@ -53,7 +53,32 @@ public enum Setting {
     /** The queue's "searching" action bar while in a queue. */
     SEARCHING_BAR(20, true),
     /** The totem-pop animation with the kit's icon when a match is found. */
-    MATCH_FOUND_POP(21, true);
+    MATCH_FOUND_POP(21, true),
+    /**
+     * The country is detected from the player's IP address when they join ({@code geo/GeoIpService}). Picking a
+     * country by hand turns it off.
+     */
+    AUTO_COUNTRY(22, true),
+    /** This player sees country flags next to names (chat, nametags, menus; the tab list is the same for everyone). */
+    SHOW_FLAGS(23, true),
+    /** This player's own flag is shown next to their name, and their country on their profile (off: to nobody). */
+    SHOW_MY_FLAG(24, true),
+
+    /**
+     * The matchmaker slightly favours opponents from this player's country ({@link PlayerProfile#country}); only
+     * between two players who both have a country and this on (a soft penalty, see {@code queue/RegionPingPolicy}).
+     */
+    PREFER_COUNTRY(25, true),
+    /** The "X was killed by Y" / "X died" chat lines of the matches this player is in or watches. */
+    DEATH_MESSAGES(26, true),
+    /** The sound of menu presses: dialog and chat buttons, hub items, the kit editor (only with {@link #SOUNDS} on). */
+    MENU_SOUNDS(27, true),
+    /** The between-round respawn animation (throw, float, orbit, …) back to the spawn; off: a plain teleport. */
+    RESPAWN_ANIMATIONS(28, true),
+    /** The animated round banner title ("ROUND WON") when a round ends; off: the round result on the action bar. */
+    ROUND_BANNERS(29, true),
+    /** A chat line when someone starts or stops watching this player's match. */
+    SPECTATOR_ALERTS(30, true);
 
     /** The first bit that is stored relative to the default. */
     public static final int RELATIVE_FROM = 10;

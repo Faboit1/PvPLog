@@ -44,6 +44,9 @@ top.cheesesmp.duelcore
 │                             ClientInfo (client version via optional ViaVersion + brand, logged on join)
 ├── party/                    Party, PartyService (persistent parties, invites, chat routing, party matches),
 │                             PartyDialogs, PartyCommands (/party, /pc), PartyChatListener
+├── geo/                      IpTable (pure IP → country ranges, binary search), GeoIpService (db-ip.com database:
+│                             background download/load, lookup on join), Countries (countries.yml), Flags
+│                             (plugin.flags(): flag heads next to names, per place and player settings), FlagStyle
 └── (phase 2) feed/, tournament/, web/ (REST)
 ```
 

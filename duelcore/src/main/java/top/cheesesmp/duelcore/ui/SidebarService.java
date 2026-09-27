@@ -27,6 +27,7 @@ import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.config.GuiConfig;
 import top.cheesesmp.duelcore.config.Messages;
+import top.cheesesmp.duelcore.geo.Flags;
 import top.cheesesmp.duelcore.kit.Kit;
 import top.cheesesmp.duelcore.match.Match;
 import top.cheesesmp.duelcore.match.Participant;
@@ -66,7 +67,7 @@ public final class SidebarService implements Listener, Runnable {
         return boards.computeIfAbsent(player.getUniqueId(), id -> {
             Scoreboard sb = Bukkit.getScoreboardManager().getNewScoreboard();
             player.setScoreboard(sb);
-            plugin.tags().setupTeams(sb);
+            plugin.tags().setupTeams(player, sb);
             return sb;
         });
     }
@@ -195,6 +196,7 @@ public final class SidebarService implements Listener, Runnable {
             Player oppPlayer = opp == null ? null : Bukkit.getPlayer(opp.uuid());
             addKit(tags, match.kit(), match.ranked() ? "ranked" : "unranked");
             tags.add(Messages.text("opponent", match.teamName(1 - team)));
+            tags.add(Messages.comp("opp_flag", teamFlag(profile, match, 1 - team)));
             tags.add(Messages.num("you_score", match.score(team)));
             tags.add(Messages.num("opp_score", match.score(1 - team)));
             tags.add(Messages.num("round", Math.max(1, match.round())));
@@ -211,6 +213,8 @@ public final class SidebarService implements Listener, Runnable {
             addKit(tags, spectating.kit(), spectating.ranked() ? "ranked" : "unranked");
             tags.add(Messages.text("red_name", spectating.teamName(0)));
             tags.add(Messages.text("blue_name", spectating.teamName(1)));
+            tags.add(Messages.comp("red_flag", teamFlag(profile, spectating, 0)));
+            tags.add(Messages.comp("blue_flag", teamFlag(profile, spectating, 1)));
             tags.add(Messages.num("red_score", spectating.score(0)));
             tags.add(Messages.num("blue_score", spectating.score(1)));
             tags.add(Messages.num("round", Math.max(1, spectating.round())));
@@ -226,6 +230,13 @@ public final class SidebarService implements Listener, Runnable {
         List<Component> out = new ArrayList<>(template.size());
         for (String line : template) out.add(msg.parse(line, resolvers));
         return out;
+    }
+
+    /** The flag of a team of one fighter as {@code viewer} sees it (see {@link Flags}); empty for bigger teams. */
+    private Component teamFlag(@Nullable PlayerProfile viewer, Match m, int team) {
+        List<Participant> members = m.team(team);
+        if (members.size() != 1) return Component.empty();
+        return plugin.flags().flag(Flags.Place.MATCH, viewer, plugin.profiles().get(members.getFirst().uuid()));
     }
 
     private void addKit(List<TagResolver> tags, Kit kit, String mode) {
