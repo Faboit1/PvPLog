@@ -1,6 +1,6 @@
 # Creeper: spawn creepers on your opponent. Diamond Protection III armor, a Sharpness V / Knockback / Fire Aspect II
 # sword, 256 creeper eggs, 32 TNT, crossbow, bow and 20 arrows, 15 splash Wind Charged, cobwebs, cobblestone,
-# a water bucket, 32 pearls, 2 totems and gapples.
+# a water bucket, 32 pearls, flint and steel, 2 totems and gapples.
 display-name: "Creeper"
 description: "Creeper eggs and flint and steel. Blast your opponent."
 icon: creeper_spawn_egg
@@ -68,7 +68,7 @@ loadout:
     31: { item: cobweb, amount: 32 }
     32: { item: ender_pearl, amount: 16 }
     33: { item: diamond_axe, enchants: { sharpness: 5, efficiency: 5, unbreaking: 3, mending: 1 } }
-    34: { item: splash_potion, potion: wind_charged }
+    34: { item: flint_and_steel, enchants: { unbreaking: 3 } }
     35: { item: cobblestone, amount: 64 }
   offhand: totem_of_undying
 effects: []
