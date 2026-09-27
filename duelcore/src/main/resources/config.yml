@@ -441,6 +441,89 @@ party:
   # New parties start open (listed in the party menu for anyone to join) instead of private (invite or password).
   open-by-default: false
 
+chat:
+  # Anti-spam for chat, party chat (@ and /pc) and private messages (/msg, /tell, /w, /r, /me, ...). Players with
+  # duelcore.antispam.bypass (ops by default) skip it; duelcore.antispam.notify sees ads and mutes. Runs before the
+  # slur filter (chat-filter.yml), so blocked messages never show and the filter sees the cleaned text.
+  # Staff: /duelcore antispam status <player>, /duelcore antispam unmute <player>. Texts: messages.yml chat.anti-spam.
+  anti-spam:
+    enabled: true
+    # At most max-messages per window-seconds, and at least min-delay-ms between two messages (all channels
+    # together). Messages that get blocked don't count.
+    rate-limit:
+      enabled: true
+      max-messages: 4
+      window-seconds: 5
+      min-delay-ms: 600
+    # A message the player already sent in the last window-seconds (same chat or same /msg recipient) is blocked;
+    # the comparison ignores caps, accents, look-alike letters, leetspeak, punctuation, spaces, stretched letters and
+    # word order. Near-duplicates (at least `similarity` alike, 0.5-1, for messages of min-similar-length letters or
+    # more) get similar-allowed passes first, so fixing a typo is fine. history: messages remembered per player.
+    duplicates:
+      enabled: true
+      window-seconds: 30
+      history: 5
+      similarity: 0.85
+      similar-allowed: 1
+      min-similar-length: 6
+      # These (and anything of 1-2 letters) may be repeated after lenient-seconds; they're still rate-limited.
+      lenient-seconds: 3
+      lenient-phrases: [gg, gg wp, ggwp, gf, wp, ez, lol, lmao, xd, ty, thx, np, gl, glhf, rematch, 1v1, 2v2, again,
+        nice, rip, ok, "yes", "no", yeah, nah, hi, hey, hello, bye, gn, o7, bruh, same, what, why, lag, wow, omg]
+    # Clean-up (never blocks on its own): invisible and formatting characters (zero-width, right-to-left overrides,
+    # private-use glyphs, Hangul fillers) are removed with strip-unicode, zalgo is cut to max-marks accents per
+    # letter, runs of one character or a short unit ("hahaha") are cut to max-repeat (numbers are kept), and a
+    # message of at least caps-min-letters letters that is more than caps-percent capitals is lowercased
+    # (0 = off). Blocked: messages of junk-min-length or more characters of which under junk-max-alnum-percent are
+    # letters or digits (symbol walls), and messages that are empty once cleaned.
+    flood:
+      enabled: true
+      strip-unicode: true
+      max-marks: 2
+      max-repeat: 4
+      caps-percent: 70
+      caps-min-letters: 8
+      junk-min-length: 16
+      junk-max-alnum-percent: 25
+    # Blocks IP addresses, web addresses and Discord invites, also written as "1 2 3 . 4 5 . 6 7 . 8 9",
+    # "name dot net", "name(.)net", "n a m e . n e t", with leetspeak or look-alike letters. Addresses on the
+    # whitelist (and their subdomains) are allowed; an invite is allowed only when it's listed exactly.
+    advertising:
+      enabled: true
+      whitelist: [cheesesmp.top, pvp.cheesesmp.top, discord.gg/cheesesmp]
+    # Waves: once `players` different players sent the same (or nearly the same) message within window-seconds,
+    # the next ones are blocked. Only messages of min-length letters or more (never the lenient phrases).
+    waves:
+      enabled: true
+      players: 3
+      window-seconds: 10
+      min-length: 12
+    # Every blocked message adds heat (weights below); heat drops by decay-per-minute. From warn-heat on the player
+    # is warned; at mute-heat they're muted from chat and private messages. Each mute within strike-reset-minutes of
+    # the last one is longer (the last length repeats). Mutes are kept across rejoins (not across restarts).
+    escalation:
+      enabled: true
+      warn-heat: 3
+      mute-heat: 6
+      decay-per-minute: 6
+      mute-durations: [30s, 2m, 10m]
+      strike-reset-minutes: 30
+      heat:
+        too-fast: 1
+        rate: 1
+        duplicate: 1
+        similar: 1
+        junk: 1
+        empty: 1
+        advertising: 4
+        wave: 0.5
+        commands: 0
+    # Commands: at most max-commands per window-seconds (the extra ones are refused with a gentle note).
+    commands:
+      enabled: true
+      max-commands: 8
+      window-seconds: 3
+
 debug:
   # Extra console output for matches and arena resets.
   verbose: false

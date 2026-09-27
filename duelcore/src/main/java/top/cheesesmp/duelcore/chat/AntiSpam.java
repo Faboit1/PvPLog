@@ -387,7 +387,7 @@ public final class AntiSpam {
         int similar = 0;
         for (Entry e : st.history) {
             if (e.at() < now - s.dupWindowMs() || !e.channel().equals(channel)) continue;
-            if (e.norm().key().equals(norm.key())) {
+            if (e.norm().key().equals(norm.key()) || (!norm.sorted().isEmpty() && e.norm().sorted().equals(norm.sorted()))) {
                 if (lenient && now - e.at() >= s.lenientMs()) continue;
                 return Reason.DUPLICATE;
             }
@@ -591,6 +591,11 @@ public final class AntiSpam {
         };
     }
 
+    /** Symbols only stand for letters inside a word ("fr!ends", "$hop"), not as punctuation ("stuff!!!"). */
+    private static boolean leetSymbol(char c) {
+        return c == '!' || c == '|' || c == '@' || c == '$' || c == '+';
+    }
+
     /** Folds one code point to a lowercase latin-ish char: accents, fullwidth, look-alike letters from other scripts. */
     static char fold(int cp) {
         int lower = Character.toLowerCase(cp);
@@ -628,22 +633,36 @@ public final class AntiSpam {
     record Normalized(String key, String sorted) {
 
         static Normalized of(String text) {
-            StringBuilder b = new StringBuilder(Math.min(text.length(), MAX_INPUT));
-            char prev = 0;
+            StringBuilder folded = new StringBuilder(Math.min(text.length(), MAX_INPUT));
             int count = 0;
             for (int i = 0; i < text.length() && count < MAX_INPUT; ) {
                 int cp = text.codePointAt(i);
                 i += Character.charCount(cp);
                 count++;
                 if (invisible(cp) || Character.getType(cp) == Character.NON_SPACING_MARK) continue;
-                char c = leet(fold(cp));
+                folded.append(fold(cp));
+            }
+            StringBuilder b = new StringBuilder(folded.length());
+            char prev = 0;
+            for (int i = 0; i < folded.length(); i++) {
+                char f = folded.charAt(i);
+                char c;
+                if (leetSymbol(f)) {
+                    boolean before = i > 0 && Character.isLetterOrDigit(folded.charAt(i - 1));
+                    boolean after = i + 1 < folded.length() && Character.isLetterOrDigit(folded.charAt(i + 1));
+                    boolean inWord = after && (before || f == '$' || f == '@');
+                    c = inWord ? leet(f) : ' ';
+                } else {
+                    c = leet(f);
+                }
                 if (!Character.isLetterOrDigit(c)) c = ' ';
                 if (c == prev) continue; // "heyyyy" = "hey", and runs of separators
                 b.append(c);
                 prev = c;
             }
             String words = b.toString().strip();
-            String key = words.replace(" ", "");
+            String key = squeeze(words.replace(" ", "")); // "f r e e" = "free" = "fre"
+
             if (key.isEmpty()) {
                 // only symbols or emoji: compare what's there, without spaces or repeats
                 StringBuilder sym = new StringBuilder();
@@ -658,6 +677,7 @@ public final class AntiSpam {
                 return new Normalized(sym.isEmpty() ? "" : "#" + sym, "");
             }
             String[] parts = words.split(" ");
+            for (int i = 0; i < parts.length; i++) parts[i] = squeeze(parts[i]);
             String sorted = "";
             if (parts.length >= 3) {
                 Arrays.sort(parts);
@@ -665,6 +685,16 @@ public final class AntiSpam {
             }
             return new Normalized(key, sorted);
         }
+    }
+
+    /** Collapses runs of the same character: "freee" = "fre". */
+    private static String squeeze(String s) {
+        StringBuilder b = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (b.isEmpty() || b.charAt(b.length() - 1) != c) b.append(c);
+        }
+        return b.toString();
     }
 
     static boolean similar(Normalized a, Normalized b, double threshold) {
@@ -780,7 +810,7 @@ public final class AntiSpam {
     private static final Pattern GLUED_DOT = Pattern.compile("(?<=[a-z0-9]) ?dot(?=(?:" + TLDS + ")(?![a-z0-9]))");
     private static final Pattern SPACE_BEFORE_DOT = Pattern.compile(" \\. ?");
     private static final Pattern SPACE_AFTER_DOT = Pattern.compile(
-        "\\. (?=(?:com|net|org|xyz|club|online|site|store|shop|fun|pro)(?![a-z0-9]))");
+        "(?<=[a-z0-9])\\. (?=(?:com|net|org|xyz|club|online|site|store|shop|fun|pro)(?![a-z0-9]))");
     private static final Pattern COMMA_DOT = Pattern.compile(",(?=(?:com|net|org|xyz)(?![a-z0-9]))");
     private static final Pattern DOTS = Pattern.compile("\\.{2,}(?=[a-z0-9])");
 
