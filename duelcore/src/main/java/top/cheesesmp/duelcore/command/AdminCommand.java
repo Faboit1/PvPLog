@@ -76,6 +76,7 @@ final class AdminCommand {
         root.then(kit());
         root.then(season());
         root.then(rating());
+        root.then(antiSpam());
         root.then(Commands.literal("debug").requires(CommandService.perm("duelcore.admin.debug"))
             .executes(ctx -> debug(ctx, false))
             .then(Commands.literal("gc").executes(ctx -> debug(ctx, true)))
@@ -137,8 +138,45 @@ final class AdminCommand {
         return root.build();
     }
 
+    /** /duelcore antispam status|unmute <player>: chat anti-spam heat, strikes and mutes (online or recently seen). */
+    private LiteralArgumentBuilder<CommandSourceStack> antiSpam() {
+        return Commands.literal("antispam").requires(CommandService.perm("duelcore.admin.antispam"))
+            .then(Commands.literal("status").then(Commands.argument("player", StringArgumentType.word())
+                .suggests(cmd.onlineNames()).executes(ctx -> antiSpam(ctx, false))))
+            .then(Commands.literal("unmute").then(Commands.argument("player", StringArgumentType.word())
+                .suggests(cmd.onlineNames()).executes(ctx -> antiSpam(ctx, true))));
+    }
+
+    private int antiSpam(CommandContext<CommandSourceStack> ctx, boolean unmute) {
+        CommandSender sender = ctx.getSource().getSender();
+        String name = StringArgumentType.getString(ctx, "player");
+        org.bukkit.OfflinePlayer target = Bukkit.getPlayerExact(name);
+        if (target == null) target = Bukkit.getOfflinePlayerIfCached(name);
+        if (target == null) {
+            send(sender, "admin.antispam-unknown", Messages.text("player", name));
+            return 0;
+        }
+        String shown = target.getName() == null ? name : target.getName();
+        top.cheesesmp.duelcore.chat.AntiSpam spam = plugin.antiSpam();
+        if (unmute) {
+            boolean was = spam.unmute(target.getUniqueId());
+            send(sender, was ? "admin.antispam-unmuted" : "admin.antispam-not-muted-now", Messages.text("player", shown));
+            Player online = target.getPlayer();
+            if (was && online != null) plugin.messages().send(online, "chat.anti-spam.unmuted");
+            return Command.SINGLE_SUCCESS;
+        }
+        top.cheesesmp.duelcore.chat.AntiSpam.Status st = spam.status(target.getUniqueId());
+        String mute = st.muteLeftMillis() > 0 ? top.cheesesmp.duelcore.chat.AntiSpam.formatDuration(st.muteLeftMillis())
+            : plugin.messages().raw("admin.antispam-not-muted");
+        send(sender, "admin.antispam-status", Messages.text("player", shown),
+            Messages.text("heat", String.format(Locale.ROOT, "%.1f", st.heat())),
+            Messages.text("max", String.format(Locale.ROOT, "%.0f", plugin.settings().antiSpam.muteHeat())),
+            Messages.num("strikes", st.strikes()), Messages.num("recent", st.recentMessages()), Messages.text("mute", mute));
+        return Command.SINGLE_SUCCESS;
+    }
+
     private static boolean anyAdminChild(CommandSender sender) {
-        for (String child : List.of("reload", "sethub", "arena", "kit", "season", "rating", "debug", "match")) {
+        for (String child : List.of("reload", "sethub", "arena", "kit", "season", "rating", "debug", "match", "antispam")) {
             if (sender.hasPermission("duelcore.admin." + child)) return true;
         }
         return false;

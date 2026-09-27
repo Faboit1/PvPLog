@@ -232,6 +232,9 @@ public final class MainConfig {
 
     public final boolean verbose;
 
+    // chat.anti-spam
+    public final top.cheesesmp.duelcore.chat.AntiSpam.Settings antiSpam;
+
     public MainConfig(FileConfiguration c) {
         dbType = c.getString("database.type", "sqlite").toLowerCase(Locale.ROOT);
         sqliteFile = c.getString("database.sqlite.file", "data.db");
@@ -420,6 +423,8 @@ public final class MainConfig {
         geoMaxAgeDays = Math.clamp(c.getInt("geo.max-age-days", 35), 1, 365);
 
         verbose = c.getBoolean("debug.verbose", false);
+
+        antiSpam = top.cheesesmp.duelcore.chat.AntiSpam.Settings.from(c.getConfigurationSection("chat.anti-spam"));
     }
 
     private static Map<String, String> strings(ConfigurationSection section) {
