@@ -1,5 +1,5 @@
-# Creeper: spawn creepers on your opponent. Diamond Protection III armor, a Sharpness V / Knockback / Fire Aspect II
-# sword, 256 creeper eggs, 32 TNT, crossbow, bow and 20 arrows, 15 splash Wind Charged, cobwebs, cobblestone,
+# Creeper: spawn creepers on your opponent. Diamond Protection III armor, a Knockback II sword, 256 creeper eggs,
+# 32 TNT, crossbow, bow and 20 arrows, 14 splash Turtle Master, cobwebs, cobblestone,
 # a water bucket, 32 pearls, flint and steel, 2 totems and gapples.
 display-name: "Creeper"
 description: "Creeper eggs and flint and steel. Blast your opponent."
@@ -34,7 +34,7 @@ loadout:
     leggings: { item: diamond_leggings, enchants: { protection: 3, unbreaking: 3, mending: 1 } }
     boots: { item: diamond_boots, enchants: { protection: 3, unbreaking: 3, mending: 1 } }
   items:
-    0: { item: diamond_sword, enchants: { sharpness: 5, knockback: 1, fire_aspect: 2, unbreaking: 3, mending: 1 } }
+    0: { item: diamond_sword, enchants: { knockback: 2 } }
     1: { item: creeper_spawn_egg, amount: 64 }
     2: totem_of_undying
     3: { item: crossbow, enchants: { quick_charge: 3, unbreaking: 3, mending: 1 } }
@@ -42,28 +42,28 @@ loadout:
     5: { item: ender_pearl, amount: 16 }
     6: { item: golden_apple, amount: 64 }
     7: { item: shield, enchants: { unbreaking: 3, mending: 1 } }
-    8: { item: splash_potion, potion: wind_charged }
-    9: { item: tipped_arrow, amount: 10, potion: wind_charged }
+    8: { item: splash_potion, potion: turtle_master }
+    9: { item: tipped_arrow, amount: 10, potion: turtle_master }
     10: { item: creeper_spawn_egg, amount: 64 }
-    11: { item: splash_potion, potion: wind_charged }
-    12: { item: splash_potion, potion: wind_charged }
+    11: { item: splash_potion, potion: turtle_master }
+    12: { item: splash_potion, potion: turtle_master }
     13: { item: diamond_pickaxe, enchants: { efficiency: 5, unbreaking: 3, mending: 1 } }
-    14: { item: splash_potion, potion: wind_charged }
-    15: { item: splash_potion, potion: wind_charged }
-    16: { item: splash_potion, potion: wind_charged }
-    17: { item: splash_potion, potion: wind_charged }
+    14: { item: splash_potion, potion: turtle_master }
+    15: { item: splash_potion, potion: turtle_master }
+    16: { item: splash_potion, potion: turtle_master }
+    17: { item: splash_potion, potion: turtle_master }
     18: { item: arrow, amount: 10 }
     19: { item: creeper_spawn_egg, amount: 64 }
-    20: { item: splash_potion, potion: wind_charged }
-    21: { item: splash_potion, potion: wind_charged }
+    20: { item: splash_potion, potion: turtle_master }
+    21: { item: splash_potion, potion: turtle_master }
     22: { item: cobblestone, amount: 64 }
-    23: { item: splash_potion, potion: wind_charged }
-    24: { item: splash_potion, potion: wind_charged }
-    25: { item: splash_potion, potion: wind_charged }
-    26: { item: splash_potion, potion: wind_charged }
+    23: { item: splash_potion, potion: turtle_master }
+    24: { item: splash_potion, potion: turtle_master }
+    25: { item: splash_potion, potion: turtle_master }
+    26: { item: splash_potion, potion: turtle_master }
     27: water_bucket
     28: { item: creeper_spawn_egg, amount: 64 }
-    29: { item: splash_potion, potion: wind_charged }
+    29: { item: splash_potion, potion: turtle_master }
     30: { item: bow, enchants: { power: 5, unbreaking: 3, mending: 1 } }
     31: { item: cobweb, amount: 32 }
     32: { item: ender_pearl, amount: 16 }
