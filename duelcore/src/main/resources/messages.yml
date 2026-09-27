@@ -1032,6 +1032,10 @@ dialog:
     players-title: "Challenge a player"
     players-body: "<muted>Pick an opponent, then a kit. Challenges are unranked.</muted>"
     no-players: "<muted>Nobody is free to duel right now.</muted>"
+    # The picker's Search button and box (part of a name).
+    search: "<text>Search</text>"
+    search-label: "Search player"
+    no-results: "<muted>Nobody free to duel matches <text><query></text>.</muted>"
     player-button: "<head> <text><player></text> <tier>"
     title: "Challenge <muted>· <player></muted>"
     body: "<muted>Pick a kit. <text><player></text> can accept for 60 seconds. Challenges are unranked.</muted>"
