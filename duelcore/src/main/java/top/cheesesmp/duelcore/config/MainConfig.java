@@ -354,7 +354,7 @@ public final class MainConfig {
             ? top.cheesesmp.duelcore.ui.SoundPool.parse(List.of("block.note_block.pling 1.6")) : fightStart;
         voidDepth = Math.max(1, c.getInt("match.void-depth", 6));
         borderShrinkTo = Math.clamp(c.getDouble("match.border.shrink-to", 10), 1, 1000);
-        borderShrinkSeconds = Math.clamp(c.getInt("match.border.shrink-seconds", 123), 0, 3600);
+        borderShrinkSeconds = Math.clamp(c.getInt("match.border.shrink-seconds", 82), 0, 3600);
         borderDamagePerSecond = Math.clamp(c.getDouble("match.border.damage-per-second", 2.0), 0, 100);
         borderDamagePerBlock = Math.clamp(c.getDouble("match.border.damage-per-block", 0.5), 0, 100);
 
