@@ -280,6 +280,7 @@ public final class DialogService {
         Kit kit = overall ? null : plugin.kits().get(category);
         Component catName = overall ? msg().get("dialog.leaderboard.overall") : kit.displayName();
         List<Component> body = new ArrayList<>();
+        PlayerProfile own = plugin.profiles().get(viewer);
         int shown = Math.min(rows.size(), plugin.gui().leaderboardLines);
         if (shown == 0) body.add(msg().get("dialog.leaderboard.empty"));
         for (int i = 0; i < shown; i++) {
@@ -288,6 +289,7 @@ public final class DialogService {
             body.add(msg().get(overall ? "dialog.leaderboard.line-overall" : "dialog.leaderboard.line-kit",
                 Messages.num("rank", r.rank()),
                 Messages.comp("head", Icons.head(r.uuid(), r.name())),
+                Messages.comp("flag", plugin.flags().flag(Flags.Place.LEADERBOARD, own, r.country(), r.settings())),
                 Messages.text("player", r.name()),
                 Messages.comp("tier", plugin.tiers().format(tier)),
                 Messages.num("value", (int) Math.round(r.value())),
@@ -295,7 +297,6 @@ public final class DialogService {
                 Messages.num("wins", r.wins()), Messages.num("losses", r.losses()),
                 Messages.text("region", r.region() == null ? "" : r.region())));
         }
-        PlayerProfile own = plugin.profiles().get(viewer);
         for (LeaderboardDao.Row r : rows) {
             if (own != null && r.uuid().equals(own.uuid()) && r.rank() > shown) {
                 body.add(Component.empty());
@@ -325,7 +326,8 @@ public final class DialogService {
         // "My country": the same board for the viewer's own country
         String mine = own == null ? null : plugin.leaderboards().countryFilter(own.country(), own.country());
         if (mine != null) {
-            TagResolver[] named = {Messages.text("code", mine),
+            Component flag = plugin.flags().hasFlag(mine) ? plugin.flags().flag(mine) : msg().get("dialog.leaderboard.no-flag");
+            TagResolver[] named = {Messages.text("code", mine), Messages.comp("flag", flag),
                 Messages.text("country", plugin.leaderboards().countryName(mine))};
             String key = mine.equals(country) ? "dialog.leaderboard.my-country-selected" : "dialog.leaderboard.my-country";
             buttons.add(button(msg().get(key, named), msg().get("dialog.leaderboard.my-country-tooltip", named), small,

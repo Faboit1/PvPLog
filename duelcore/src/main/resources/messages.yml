@@ -759,8 +759,9 @@ dialog:
     global: "global"
     overall: "Overall"
     empty: "<muted>Nobody is ranked here yet.</muted>"
-    line-overall: "<muted><rank>.</muted> <head> <text><player></text>  <tier> <muted>· <elo> Elo · <wins>W</muted>"
-    line-kit: "<muted><rank>.</muted> <head> <text><player></text>  <tier> <muted>· <value> · <wins>W <losses>L</muted>"
+    # <flag>: the player's flag and a space (gui.yml flags; nothing when hidden or unknown)
+    line-overall: "<muted><rank>.</muted> <head> <flag><text><player></text>  <tier> <muted>· <elo> Elo · <wins>W</muted>"
+    line-kit: "<muted><rank>.</muted> <head> <flag><text><player></text>  <tier> <muted>· <value> · <wins>W <losses>L</muted>"
     you: "<muted>You · #<rank> · <value></muted>"
     overall-button: "<sprite:items:item/nether_star>"
     overall-button-selected: "<accent>•</accent><sprite:items:item/nether_star>"
@@ -771,8 +772,10 @@ dialog:
     region: "<muted><region></muted>"
     region-selected: "<accent><region></accent>"
     # "My country", after the regions (only for players with a country set): <code>, <country> = its name.
-    my-country: "<muted>⚑<code></muted>"
-    my-country-selected: "<accent>⚑<code></accent>"
+    # The "My country" button: <flag> = the country's flag head (no-flag when it has none), <code> = its code.
+    my-country: "<flag><muted><code></muted>"
+    my-country-selected: "<flag><accent><code></accent>"
+    no-flag: "<muted>⚑</muted>"
     my-country-tooltip: "<muted>Your country:</muted> <text><country></text>"
   # The settings menu (Settings item, /settings). Every click changes and saves a setting at once. Rows:
   # <icon> <name> <state>, the description in the hover. Icons and width are in gui.yml (settings-menu).

@@ -15,6 +15,7 @@ import top.cheesesmp.duelcore.db.dao.LeaderboardDao;
 import top.cheesesmp.duelcore.db.dao.PlayerDao;
 import top.cheesesmp.duelcore.db.dao.RatingDao;
 import top.cheesesmp.duelcore.profile.KitStats;
+import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.rating.Tier;
 
 /**
@@ -89,6 +90,44 @@ class LeaderboardDaoTest {
             assertEquals(List.of("Bert"), db.submit(c -> LeaderboardDao.kit(c, 1, 1, 5, null, "FR", 10)).join().stream()
                 .map(LeaderboardDao.Row::name).toList());
             assertEquals(4, db.submit(c -> LeaderboardDao.kit(c, 1, 1, 5, null, null, 10)).join().size());
+            assertEquals(0, db.failures());
+        } finally {
+            db.close();
+        }
+    }
+
+    /**
+     * Players with "Show my flag" off aren't on their country's board (it would give their country away), but stay on
+     * the global and region boards; rows carry the settings bits so the dialog can hide their flag there too.
+     */
+    @Test
+    void hiddenFlagsStayOffCountryBoards() throws Exception {
+        Database db = Database.sqlite(new File(dir.toFile(), "h.db"), Logger.getLogger("test"), () -> false);
+        try {
+            db.submit(c -> Migrations.migrate(c, db.dialect())).join();
+            int hidden = Setting.SHOW_MY_FLAG.write(Setting.defaults(), false);
+            String[] names = {"Open", "Private"};
+            int[] settings = {Setting.defaults(), hidden};
+            db.submit(c -> {
+                for (int i = 0; i < names.length; i++) {
+                    int id = PlayerDao.loadOrCreate(c, UUID.randomUUID(), names[i], 1L, 0).id();
+                    PlayerDao.saveSettings(c, id, settings[i], "EU", "NL", 0);
+                    KitStats s = new KitStats(1000 - i * 100, 350, 0.06);
+                    s.games = 10;
+                    RatingDao.upsert(c, db.dialect(), 1, id, 1, s);
+                    RatingDao.upsertStanding(c, db.dialect(), 1, id, 1000 - i * 100, Tier.LT5);
+                }
+                return null;
+            }).join();
+
+            List<LeaderboardDao.Row> country = db.submit(c -> LeaderboardDao.kit(c, 1, 1, 5, null, "NL", 10)).join();
+            assertEquals(List.of("Open"), country.stream().map(LeaderboardDao.Row::name).toList());
+            assertEquals(List.of("Open"), db.submit(c -> LeaderboardDao.overall(c, 1, null, "NL", 10)).join().stream()
+                .map(LeaderboardDao.Row::name).toList());
+            List<LeaderboardDao.Row> global = db.submit(c -> LeaderboardDao.kit(c, 1, 1, 5, null, null, 10)).join();
+            assertEquals(List.of("Open", "Private"), global.stream().map(LeaderboardDao.Row::name).toList());
+            assertEquals(false, Setting.SHOW_MY_FLAG.read(global.get(1).settings()));
+            assertEquals(true, Setting.SHOW_MY_FLAG.read(global.get(0).settings()));
             assertEquals(0, db.failures());
         } finally {
             db.close();

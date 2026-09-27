@@ -239,6 +239,11 @@ public final class ConfigManager {
                 "<muted>Two letters (DE, US, …), shown on your profile. Leave it empty to remove it.</muted>"),
             Map.entry("dialog.settings.country-label", "Country (2 letters)"),
             Map.entry("dialog.settings.items.country.hover", "Shown on your profile."),
+            // leaderboard lines without the flag
+            Map.entry("dialog.leaderboard.line-overall",
+                "<muted><rank>.</muted> <head> <text><player></text>  <tier> <muted>· <elo> Elo · <wins>W</muted>"),
+            Map.entry("dialog.leaderboard.line-kit",
+                "<muted><rank>.</muted> <head> <text><player></text>  <tier> <muted>· <value> · <wins>W <losses>L</muted>"),
             // settings texts rewritten for the newer rows (chat lines, menu sounds, the country board, Prefer my country)
             Map.entry("dialog.settings.section-hover.gameplay",
                 "<text>In your matches: spectators, the action bar and the results screen.</text>"),

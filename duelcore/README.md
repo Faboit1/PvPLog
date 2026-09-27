@@ -356,12 +356,14 @@ screen after a match has an *Edit kit* button for the match's kit.
 
 **Leaderboards** (Leaderboards item, `/leaderboard`) list the top players (gui.yml `dialogs.leaderboard-lines`, 10)
 overall or in a kit, with a button per kit and one per filter: *All* (global), the configured regions and, for players
-who have a country set, *My country* (`⚑DE`, the name in its tooltip): the same board for their country only, titled
+who have a country set, *My country* (its flag and code, the name in its tooltip): the same board for their country only, titled
 with the country's name from `countries.yml` (`dialog.leaderboard.title-country`). Ranks count within the filter, so
 on a country board the "You · #rank" line under the top players is your rank in your country. Switching the kit keeps
 the filter. `/leaderboard <kit|overall> <code>` takes a region code or a two-letter country code (any country
 `countries.yml` lists, or your own); region codes win where they are also a country (NA, SA, AS, AF: those countries'
-boards are behind the *My country* button).
+boards are behind the *My country* button). Every line shows the player's flag (gui.yml `flags.show.leaderboard`, the
+viewer's *Flags* setting and the player's *Show my flag*). Players with *Show my flag* off are left out of country
+boards, since being on one would show their country; they stay on the global and region boards.
 
 **Menus** stay open while you click: a button that leads to another menu (a tab, a page, Back, a player in the
 friends list, …) swaps the menu in place instead of closing and re-opening the screen, and one that does something

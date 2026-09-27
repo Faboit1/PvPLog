@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.db.Uuids;
+import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.rating.Tier;
 
 public final class LeaderboardDao {
@@ -19,7 +20,7 @@ public final class LeaderboardDao {
      * ({@link #BOT_PREFIX}) are never listed, so ranks count real players only.
      */
     public record Row(int rank, UUID uuid, String name, double value, @Nullable Tier tier, int wins, int losses,
-                      @Nullable String region, @Nullable String country) {
+                      @Nullable String region, @Nullable String country, int settings) {
     }
 
     /**
@@ -31,17 +32,24 @@ public final class LeaderboardDao {
     /** SQL condition (on {@code dc_players p}) that leaves out the test bots. */
     static final String NOT_BOT = "p.name_lower NOT LIKE '" + BOT_PREFIX + "%'";
 
+    /**
+     * SQL condition for country boards: players who turned "Show my flag" off aren't listed there (being on a
+     * country's board would give their country away). The setting is stored relative to its default (on), so its bit
+     * is set when it is off.
+     */
+    static final String SHOWS_COUNTRY = "(p.settings & " + Setting.SHOW_MY_FLAG.mask() + ") = 0";
+
     private LeaderboardDao() {
     }
 
     public static List<Row> kit(Connection c, int seasonId, int kitId, int placementGames, @Nullable String region,
                                 @Nullable String country, int limit) throws SQLException {
         StringBuilder sql = new StringBuilder(
-            "SELECT p.uuid, p.name, r.rating, r.tier_override, r.wins, r.losses, p.region, p.country "
+            "SELECT p.uuid, p.name, r.rating, r.tier_override, r.wins, r.losses, p.region, p.country, p.settings "
                 + "FROM dc_ratings r JOIN dc_players p ON p.id = r.player_id "
                 + "WHERE r.season_id = ? AND r.kit_id = ? AND (r.games >= ? OR r.tier_override IS NOT NULL) AND " + NOT_BOT);
         if (region != null) sql.append(" AND p.region = ?");
-        if (country != null) sql.append(" AND p.country = ?");
+        if (country != null) sql.append(" AND p.country = ? AND ").append(SHOWS_COUNTRY);
         sql.append(" ORDER BY r.rating DESC, r.wins DESC LIMIT ?");
         try (PreparedStatement ps = c.prepareStatement(sql.toString())) {
             int i = 1;
@@ -61,11 +69,11 @@ public final class LeaderboardDao {
             "SELECT p.uuid, p.name, s.elo, s.overall_tier, "
                 + "(SELECT COALESCE(SUM(r.wins), 0) FROM dc_ratings r WHERE r.season_id = s.season_id AND r.player_id = s.player_id), "
                 + "(SELECT COALESCE(SUM(r.losses), 0) FROM dc_ratings r WHERE r.season_id = s.season_id AND r.player_id = s.player_id), "
-                + "p.region, p.country "
+                + "p.region, p.country, p.settings "
                 + "FROM dc_standings s JOIN dc_players p ON p.id = s.player_id "
                 + "WHERE s.season_id = ? AND s.overall_tier IS NOT NULL AND " + NOT_BOT);
         if (region != null) sql.append(" AND p.region = ?");
-        if (country != null) sql.append(" AND p.country = ?");
+        if (country != null) sql.append(" AND p.country = ? AND ").append(SHOWS_COUNTRY);
         sql.append(" ORDER BY s.elo DESC, p.name ASC LIMIT ?");
         try (PreparedStatement ps = c.prepareStatement(sql.toString())) {
             int i = 1;
@@ -116,7 +124,7 @@ public final class LeaderboardDao {
                 int tierId = rs.getInt(4);
                 Tier tier = rs.wasNull() ? null : Tier.byId(tierId);
                 rows.add(new Row(++rank, Uuids.fromBytes(rs.getBytes(1)), rs.getString(2), rs.getDouble(3), tier,
-                    rs.getInt(5), rs.getInt(6), rs.getString(7), rs.getString(8)));
+                    rs.getInt(5), rs.getInt(6), rs.getString(7), rs.getString(8), rs.getInt(9)));
             }
         }
         return rows;
