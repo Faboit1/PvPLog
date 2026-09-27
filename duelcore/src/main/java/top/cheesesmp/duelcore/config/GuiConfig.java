@@ -43,6 +43,9 @@ public final class GuiConfig {
     public final String tabStatusMatch;
     public final String tabStatusQueue;
     public final String tabAdmin;
+    public final boolean matchHealthEnabled;
+    public final String matchHealthFormat;
+    public final String matchHealthAbsorption;
     public final String nametagPrefix;
     public final boolean hideUnrankedTag;
     public final String tagIconFormat;
@@ -136,6 +139,9 @@ public final class GuiConfig {
         tabStatusMatch = y.getString("tags.tab-status-match", "items:item/iron_sword");
         tabStatusQueue = y.getString("tags.tab-status-queue", "items:item/clock_00");
         tabAdmin = y.getString("tags.tab-admin", " <#ffd24a>★</#ffd24a>");
+        matchHealthEnabled = y.getBoolean("match-health.enabled", true);
+        matchHealthFormat = y.getString("match-health.format", "<#ff5555>❤</#ff5555> <hp_color><hearts></hp_color><absorption>");
+        matchHealthAbsorption = y.getString("match-health.absorption", " <#ffcc33>+<hearts></#ffcc33>");
         nametagPrefix = y.getString("tags.nametag-prefix", "<tier> ");
         hideUnrankedTag = y.getBoolean("tags.hide-unranked", false);
         tagIconFormat = y.getString("tags.icon-tier", "<icon><tier>");

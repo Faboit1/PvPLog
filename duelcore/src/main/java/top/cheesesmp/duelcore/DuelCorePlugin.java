@@ -193,6 +193,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         scheduler.runTaskTimer(this, spectate, 20L, 20L); // spectators who flew off their arena go back
         scheduler.runTaskTimer(this, tags, 40L, 40L);
         scheduler.runTaskTimer(this, tabListing, 20L, 10L);
+        scheduler.runTaskTimer(this, new top.cheesesmp.duelcore.ui.HealthTags(this), 20L, 2L); // opponents' health under names
         scheduler.runTaskTimer(this, duels, 20L, 20L);
         scheduler.runTaskTimer(this, leaderboards, 200L, 200L);
         scheduler.runTaskTimer(this, profiles::sweep, 1200L, 1200L);

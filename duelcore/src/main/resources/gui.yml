@@ -373,6 +373,14 @@ tags:
   # Hide the tag for players who have no ranked kit yet (instead of showing "???").
   hide-unranked: false
 
+# Under the names of your opponents during a match (and of every fighter while spectating): their health.
+# <hearts> = health in hearts with one decimal, <hp_color> = red → yellow → green by health left,
+# <absorption> = the absorption format below when they have absorption hearts (else nothing).
+match-health:
+  enabled: true
+  format: "<#ff5555>❤</#ff5555> <hp_color><hearts></hp_color><absorption>"
+  absorption: " <#ffcc33>+<hearts></#ffcc33>"
+
 # Tab list header and footer, refreshed every 2 s. Empty lists = none.
 # Placeholders: <online> <live> <fighting> <queued> <ping> <tps> <spectators> (spectating any match)
 #   <watching> (spectators of the player's own match, or of the match they watch)
