@@ -293,6 +293,21 @@ public final class MatchListener implements Listener {
         }
     }
 
+    /**
+     * Ender pearls and wind charges thrown by players fly exactly where they aim (config.yml
+     * {@code match.accurate-projectiles}): vanilla adds a small random spread to every throw; this takes it out and
+     * keeps the throw's speed and the thrower's own momentum. Everywhere, not only in matches.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onAccurateThrow(ProjectileLaunchEvent event) {
+        if (!plugin.settings().accurateProjectiles) return;
+        org.bukkit.entity.Projectile proj = event.getEntity();
+        if (!(proj instanceof EnderPearl || proj instanceof org.bukkit.entity.WindCharge)) return;
+        if (!(proj.getShooter() instanceof Player player)) return;
+        proj.setVelocity(ProjectileAim.straighten(proj.getVelocity(), player.getVelocity(), player.isOnGround(),
+            player.getEyeLocation().getDirection()));
+    }
+
     @EventHandler(ignoreCancelled = true)
     public void onProjectileHit(ProjectileHitEvent event) {
         if (!(event.getHitEntity() instanceof Player hit)) return;

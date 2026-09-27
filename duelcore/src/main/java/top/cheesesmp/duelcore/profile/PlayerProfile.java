@@ -23,6 +23,8 @@ public final class PlayerProfile {
     private int points;
     private @Nullable Tier overall;
     private @Nullable List<MatchDao.HistoryEntry> recent;
+    /** All-time PvP time in ms ({@link MatchDao#pvpTimeMs}); not reset by season changes. */
+    private long pvpTimeMs;
 
     public PlayerProfile(int id, UUID uuid, String name, int settings, @Nullable String region, @Nullable String country,
                          int maxPing, Map<String, KitStats> stats) {
@@ -145,6 +147,20 @@ public final class PlayerProfile {
 
     public void recent(@Nullable List<MatchDao.HistoryEntry> recent) {
         this.recent = recent;
+    }
+
+    /** All-time time spent fighting in matches, in ms. */
+    public long pvpTimeMs() {
+        return pvpTimeMs;
+    }
+
+    public void pvpTimeMs(long ms) {
+        this.pvpTimeMs = Math.max(0, ms);
+    }
+
+    /** Adds a saved match's duration (the in-memory counterpart of its new dc_matches row). */
+    public void addPvpTime(long ms) {
+        if (ms > 0) this.pvpTimeMs += ms;
     }
 
     public int totalWins() {

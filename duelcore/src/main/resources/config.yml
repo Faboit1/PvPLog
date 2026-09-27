@@ -156,6 +156,9 @@ match:
   totem-pop: true
   # Out of bounds: a player this many blocks below the arena floor counts as dead.
   void-depth: 6
+  # Ender pearls and wind charges fly exactly where you aim: Minecraft adds a small random spread to every throw,
+  # this takes it out (speed and your own momentum stay vanilla). Applies everywhere, not only in matches.
+  accurate-projectiles: true
   # The world border closes in while a round is fought: from the arena's size down to shrink-to blocks wide over
   # shrink-seconds (it restarts every round). Outside it you take damage-per-second health points (2 = one heart),
   # plus damage-per-block for every block you are past it. shrink-seconds: 0 = the border stays put.

@@ -212,6 +212,7 @@ public final class ProfileService implements Listener {
             Map<String, KitStats> stats = byKey(RatingDao.load(c, season.id(), row.id()));
             PlayerProfile profile = new PlayerProfile(row.id(), uuid, row.name(), row.settings(), row.region(),
                 row.country(), row.maxPing(), stats);
+            profile.pvpTimeMs(MatchDao.pvpTimeMs(c, row.id()));
             tiers.refresh(profile);
             return profile;
         });
@@ -253,6 +254,7 @@ public final class ProfileService implements Listener {
             PlayerDao.PlayerRow r = row.get();
             PlayerProfile p = new PlayerProfile(r.id(), r.uuid(), r.name(), r.settings(), r.region(), r.country(),
                 r.maxPing(), byKey(RatingDao.load(c, season, r.id())));
+            p.pvpTimeMs(MatchDao.pvpTimeMs(c, r.id()));
             tiers.refresh(p);
             return Optional.of(p);
         });
