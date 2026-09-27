@@ -604,6 +604,12 @@ invitations with Accept/Deny, and the open parties to join with one click.
 `%duelcore_losses_<kit>%`, `%duelcore_games_<kit>%`. Only cached data of online players is used, so placeholders
 never wait on the database.
 
+PvP time (all-time time spent fighting in matches: the summed duration of every saved match the player was in, 1v1
+and party/FFA, across all seasons; also shown on the profile dialog): `%duelcore_pvp_time%` ("12h 34m", "34m 5s"
+under an hour, "0m" when none), `%duelcore_pvp_time_seconds%` (raw seconds), `%duelcore_pvp_time_hours%` (one
+decimal, "12.6"). It is summed from the match history when the profile loads and added to in memory as matches are
+saved; offline players read 0.
+
 ## Developer API
 
 `DuelCoreApi` is registered as a Bukkit service (`getServicesManager().load(DuelCoreApi.class)`) and has `profile`,

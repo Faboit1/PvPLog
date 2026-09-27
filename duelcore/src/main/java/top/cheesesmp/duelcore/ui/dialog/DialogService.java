@@ -34,6 +34,7 @@ import top.cheesesmp.duelcore.match.Match;
 import top.cheesesmp.duelcore.match.Participant;
 import top.cheesesmp.duelcore.profile.KitStats;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
+import top.cheesesmp.duelcore.profile.PvpTime;
 import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.queue.QueueMode;
 import top.cheesesmp.duelcore.rating.Tier;
@@ -193,6 +194,11 @@ public final class DialogService {
             Messages.text("country_name", country == null ? "—" : plugin.flags().name(country))));
         body.add(msg().get("dialog.profile.record", Messages.num("wins", wins), Messages.num("losses", losses),
             Messages.text("winrate", games == 0 ? "0" : String.valueOf(Math.round(100.0 * wins / games)))));
+        if (!msg().raw("dialog.profile.pvp-time").isEmpty()) {
+            long pvp = target.pvpTimeMs();
+            body.add(msg().get("dialog.profile.pvp-time", Messages.text("time", PvpTime.format(pvp)),
+                Messages.text("hours", PvpTime.hours(pvp)), Messages.text("seconds", String.valueOf(PvpTime.seconds(pvp)))));
+        }
         if (legacy) body.add(msg().get("dialog.profile.legacy"));
         body.add(Component.empty());
         boolean any = false;

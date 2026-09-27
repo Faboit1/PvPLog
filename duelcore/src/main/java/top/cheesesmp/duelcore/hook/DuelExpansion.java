@@ -9,14 +9,16 @@ import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.match.Match;
 import top.cheesesmp.duelcore.profile.KitStats;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
+import top.cheesesmp.duelcore.profile.PvpTime;
 import top.cheesesmp.duelcore.rating.Tier;
 
 /**
  * %duelcore_tier%, %duelcore_tier_formatted%, %duelcore_points% (overall points: the placed kits' Elo added up),
  * %duelcore_elo% (overall Elo: their average), %duelcore_wins%, %duelcore_losses%,
  * %duelcore_tier_<kit>%, %duelcore_rating_<kit>%, %duelcore_wins_<kit>%, %duelcore_losses_<kit>%,
- * %duelcore_queued%, %duelcore_live%, %duelcore_in_match%, %duelcore_region%.
- * Only cached data of online players is used; nothing blocks on the database.
+ * %duelcore_queued%, %duelcore_live%, %duelcore_in_match%, %duelcore_region%,
+ * %duelcore_pvp_time% ("12h 34m"), %duelcore_pvp_time_seconds%, %duelcore_pvp_time_hours% ("12.6").
+ * Only cached data of online players is used; nothing blocks on the database (offline players: PvP time reads 0).
  */
 final class DuelExpansion extends PlaceholderExpansion {
 
@@ -59,6 +61,17 @@ final class DuelExpansion extends PlaceholderExpansion {
         }
         if (player == null) return "";
         PlayerProfile profile = plugin.profiles().get(player.getUniqueId());
+        switch (p) {
+            // all-time, kept in memory (loaded with the profile, added to when a match is saved)
+            case "pvp_time":
+                return PvpTime.format(profile == null ? 0 : profile.pvpTimeMs());
+            case "pvp_time_seconds":
+                return String.valueOf(PvpTime.seconds(profile == null ? 0 : profile.pvpTimeMs()));
+            case "pvp_time_hours":
+                return PvpTime.hours(profile == null ? 0 : profile.pvpTimeMs());
+            default:
+                break;
+        }
         if (profile == null) return "";
         switch (p) {
             case "tier":
