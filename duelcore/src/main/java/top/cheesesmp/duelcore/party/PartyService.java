@@ -61,7 +61,7 @@ public final class PartyService implements Listener, Runnable {
         OK, NOT_LOADED, NO_PROFILE, IN_PARTY, NOT_IN_PARTY, NOT_LEADER, FULL, OFFLINE, SELF, TARGET_IN_PARTY,
         ALREADY_MEMBER, INVITES_DISABLED, ALREADY_INVITED, NO_INVITE, NO_PARTY, PRIVATE, NEEDS_PASSWORD, WRONG_PASSWORD,
         BAD_PASSWORD, NOT_MEMBER, LEADER_MUST_BE_ONLINE, TOO_FEW, BUSY, MEMBER_BUSY, OWN_PARTY, ALREADY_CHALLENGED,
-        NO_CHALLENGE, LEADER_OFFLINE, NO_OPPONENTS, SLOW_DOWN, KIT_DISABLED, FAILED
+        NO_CHALLENGE, LEADER_OFFLINE, NO_OPPONENTS, SLOW_DOWN, KIT_DISABLED, TEAM_EMPTY, BAD_TEAM, FAILED
     }
 
     /** What an action did; {@code subject} is the player the message is about (the {@code <player>} tag). */
@@ -314,6 +314,21 @@ public final class PartyService implements Listener, Runnable {
         return n;
     }
 
+    /**
+     * Can be put in a party match right now: online, not in a match and with a loaded profile. Members who can't sit
+     * the match out instead of blocking it.
+     */
+    public boolean available(UUID uuid) {
+        Player player = Bukkit.getPlayer(uuid);
+        return player != null && plugin.matches().match(uuid) == null && plugin.profiles().get(player) != null;
+    }
+
+    public int availableCount(Party party) {
+        int n = 0;
+        for (Party.Member m : party.members()) if (available(m.uuid())) n++;
+        return n;
+    }
+
     /** Invites waiting for this player (not expired), newest last. */
     public List<Invite> invites(UUID player) {
         long now = System.currentTimeMillis();
@@ -342,7 +357,7 @@ public final class PartyService implements Listener, Runnable {
         if (!party.isLeader(player.getUniqueId())) return Result.NOT_LEADER;
         if (plugin.matches().match(player.getUniqueId()) != null) return Result.BUSY;
         if (mode == Mode.PVP) return challengeable(party).isEmpty() ? Result.NO_OPPONENTS : null;
-        return onlineCount(party) < 2 ? Result.TOO_FEW : null;
+        return availableCount(party) < 2 ? Result.TOO_FEW : null;
     }
 
     // ------------------------------------------------------------------ create / invite / join
@@ -780,16 +795,30 @@ public final class PartyService implements Listener, Runnable {
 
     // ------------------------------------------------------------------ party matches
 
-    /** Online members of a party as fighters; an error when one of them is in a match or still loading. */
-    private @Nullable Outcome fighters(Party party, List<Player> out) {
+    /**
+     * The members of a party who can fight now ({@link #available}) go to {@code out}; the online ones who can't (in a
+     * match, still loading) to {@code sittingOut}: they are left out of the match, not pulled in, and don't block it.
+     */
+    private void fighters(Party party, List<Player> out, List<Party.Member> sittingOut) {
         for (Party.Member m : party.members()) {
             Player p = Bukkit.getPlayer(m.uuid());
             if (p == null) continue;
-            if (plugin.matches().match(m.uuid()) != null) return Outcome.of(Result.MEMBER_BUSY, m.name());
-            if (plugin.profiles().get(p) == null) return Outcome.of(Result.NO_PROFILE);
-            out.add(p);
+            if (available(m.uuid())) out.add(p);
+            else sittingOut.add(m);
         }
-        return null;
+    }
+
+    /** Tells the members of a party who plays (and the leader) who sits this match out. */
+    private void announceSittingOut(Party party, List<Party.Member> sittingOut) {
+        if (sittingOut.isEmpty()) return;
+        List<String> names = new ArrayList<>();
+        for (Party.Member m : sittingOut) names.add(m.name());
+        TagResolver players = Messages.text("players", String.join(", ", names));
+        for (Party.Member m : party.members()) {
+            if (sittingOut.contains(m)) continue;
+            Player p = Bukkit.getPlayer(m.uuid());
+            if (p != null) plugin.messages().send(p, "party.sitting-out", players);
+        }
     }
 
     private @Nullable Outcome startable(Player leader, Kit kit) {
@@ -803,7 +832,7 @@ public final class PartyService implements Listener, Runnable {
         return startOwn(leader, kit, Mode.FFA);
     }
 
-    /** Party Duel: the online members in two random, balanced teams. */
+    /** Party Duel: the available members in the teams the leader picked, or else in two random, balanced teams. */
     public Outcome startSplit(Player leader, Kit kit) {
         return startOwn(leader, kit, Mode.SPLIT);
     }
@@ -815,14 +844,22 @@ public final class PartyService implements Listener, Runnable {
         Outcome blocked = startable(leader, kit);
         if (blocked != null) return blocked;
         List<Player> players = new ArrayList<>();
-        Outcome busy = fighters(party, players);
-        if (busy != null) return busy;
+        List<Party.Member> sittingOut = new ArrayList<>();
+        fighters(party, players, sittingOut);
         if (players.size() < 2) return Outcome.of(Result.TOO_FEW);
-        Match match = mode == Mode.FFA
-            ? plugin.matches().createFfa(players, kit, Match.Origin.PARTY)
-            : plugin.matches().create(Party.split(players, random), kit, false, Match.Origin.PARTY);
+        Match match;
+        if (mode == Mode.FFA) {
+            match = plugin.matches().createFfa(players, kit, Match.Origin.PARTY);
+        } else {
+            PartyTeams picked = party.teams();
+            List<List<Player>> teams = picked.picked() ? picked.apply(players, Player::getUniqueId) : Party.split(players, random);
+            // picked teams whose members all sit out: refuse rather than silently re-draw what the leader chose
+            if (!PartyTeams.playable(teams)) return Outcome.of(Result.TEAM_EMPTY);
+            match = plugin.matches().create(teams, kit, false, Match.Origin.PARTY);
+        }
         if (match == null) return Outcome.of(Result.FAILED);
         if (mode == Mode.SPLIT) announceTeams(match);
+        announceSittingOut(party, sittingOut);
         watch(match, mode, List.of(party.id()), List.of());
         return Outcome.OK;
     }
@@ -841,6 +878,71 @@ public final class PartyService implements Listener, Runnable {
             plugin.messages().send(player, mates.isEmpty() ? "party.match.teams-solo" : "party.match.teams",
                 Messages.text("team", String.join(", ", mates)), Messages.text("opponents", String.join(", ", others)));
         }
+    }
+
+    // ------------------------------------------------------------------ party duel teams
+
+    /** Picks the teams from now on (see {@link PartyTeams#alternate}); nothing changes when they are picked already. */
+    public Outcome pickTeams(Player leader) {
+        Led led = led(leader);
+        Party party = led.party();
+        if (party == null) return led.error();
+        if (!party.teams().picked()) party.teams().alternate(party.leaderFirstIds(), this::available);
+        return Outcome.OK;
+    }
+
+    /** Picks two random, balanced teams of the members who can play now, kept until changed. */
+    public Outcome randomTeams(Player leader) {
+        Led led = led(leader);
+        Party party = led.party();
+        if (party == null) return led.error();
+        party.teams().randomize(party.leaderFirstIds(), this::available, random);
+        return Outcome.OK;
+    }
+
+    /** Back to random teams every match. */
+    public Outcome autoTeams(Player leader) {
+        Led led = led(leader);
+        Party party = led.party();
+        if (party == null) return led.error();
+        party.teams().auto();
+        return Outcome.OK;
+    }
+
+    public Outcome setTeam(Player leader, String name, int team) {
+        Party party = byMember.get(leader.getUniqueId());
+        Party.Member member = party == null ? null : party.member(name);
+        if (party != null && member == null) return Outcome.of(Result.NOT_MEMBER, name);
+        return setTeam(leader, member == null ? null : member.uuid(), team);
+    }
+
+    /** Puts a member (the leader too) on team 0 or 1; teams that were random are picked first. */
+    public Outcome setTeam(Player leader, @Nullable UUID target, int team) {
+        Led led = led(leader);
+        Party party = led.party();
+        if (party == null) return led.error();
+        Party.Member member = target == null ? null : party.member(target);
+        if (member == null) return Outcome.of(Result.NOT_MEMBER);
+        if (team < 0 || team > 1) return Outcome.of(Result.BAD_TEAM);
+        if (!party.teams().picked()) party.teams().alternate(party.leaderFirstIds(), this::available);
+        party.teams().set(member.uuid(), team);
+        return Outcome.OK;
+    }
+
+    /** Moves a member to the other team (a click in the teams dialog; with random teams it only picks them). */
+    public Outcome toggleTeam(Player leader, @Nullable UUID target) {
+        Led led = led(leader);
+        Party party = led.party();
+        if (party == null) return led.error();
+        Party.Member member = target == null ? null : party.member(target);
+        if (member == null) return Outcome.of(Result.NOT_MEMBER);
+        PartyTeams teams = party.teams();
+        if (!teams.picked()) {
+            teams.alternate(party.leaderFirstIds(), this::available);
+            return Outcome.OK;
+        }
+        teams.set(member.uuid(), 1 - teams.team(member.uuid()));
+        return Outcome.OK;
     }
 
     /** Party vs Party: asks the other party's leader (chat + dialog); {@link #acceptChallenge} starts the match. */
@@ -892,8 +994,8 @@ public final class PartyService implements Listener, Runnable {
     }
 
     /**
-     * The challenged leader accepts: their online members against the challenging party's. The challenge stays open
-     * when something that can change (a member still in a match, a leader offline) blocks the start.
+     * The challenged leader accepts: their available members against the challenging party's (members in a match sit
+     * it out). The challenge stays open when something that can change (nobody available, a leader offline) blocks it.
      */
     public Outcome acceptChallenge(Player leader, @Nullable String fromPartyId) {
         Led led = led(leader);
@@ -913,14 +1015,17 @@ public final class PartyService implements Listener, Runnable {
         if (blocked != null) return blocked;
         List<Player> a = new ArrayList<>();
         List<Player> b = new ArrayList<>();
-        Outcome busy = fighters(from, a);
-        if (busy == null) busy = fighters(own, b);
-        if (busy != null) return busy;
+        List<Party.Member> outA = new ArrayList<>();
+        List<Party.Member> outB = new ArrayList<>();
+        fighters(from, a, outA);
+        fighters(own, b, outB);
         if (a.isEmpty() || b.isEmpty()) return Outcome.of(Result.TOO_FEW);
         dropChallenge(challenge);
         Match match = plugin.matches().create(List.of(a, b), kit, false, Match.Origin.PARTY);
         if (match == null) return Outcome.of(Result.FAILED);
         announceTeams(match);
+        announceSittingOut(from, outA);
+        announceSittingOut(own, outB);
         watch(match, Mode.PVP, List.of(from.id(), own.id()), List.of(fromLeader.getName(), leader.getName()));
         return Outcome.OK;
     }

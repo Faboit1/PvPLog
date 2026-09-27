@@ -331,6 +331,7 @@ public final class PartyDialogs {
         buttons.add(modeButton(party, player, Mode.FFA, w));
         buttons.add(modeButton(party, player, Mode.SPLIT, w));
         buttons.add(modeButton(party, player, Mode.PVP, w));
+        buttons.add(button(msg().get("party.dialog.teams"), msg().get("party.dialog.teams-tooltip"), w, "party/teams", Map.of()));
         Component privacy = msg().get("party.dialog.privacy");
         buttons.add(leader ? button(privacy, msg().get("party.dialog.privacy-tooltip"), w, "party/privacy", Map.of())
             : disabled(privacy, "party.dialog.why-leader", w));
@@ -388,6 +389,97 @@ public final class PartyDialogs {
         Component title = msg().get("party.dialog.member-title", Messages.text("player", member.name()));
         return new OpenDialogs.Rendered(dialog(title, body(null, info), List.of(),
             DialogType.multiAction(buttons).columns(2).exitAction(back()).build()), Fingerprint.of(title, info, buttons));
+    }
+
+    // ------------------------------------------------------------------ party duel teams
+
+    /** Who plays against who in a Party Duel: the leader moves members or randomizes, members only see it. */
+    public void openTeams(Player player, @Nullable Component notice) {
+        OpenDialogs.Rendered shown = buildTeams(player, notice);
+        if (shown == null) {
+            open(player);
+            return;
+        }
+        plugin.openDialogs().show(player, OpenDialogs.Kind.PARTY_TEAMS, shown, p -> buildTeams(p, notice));
+    }
+
+    /** The teams dialog, or null when the player isn't in a party. */
+    private OpenDialogs.@Nullable Rendered buildTeams(Player player, @Nullable Component notice) {
+        Party party = parties.party(player.getUniqueId());
+        if (party == null) return null;
+        boolean leader = party.isLeader(player.getUniqueId());
+        PartyTeams teams = party.teams();
+        Component intro = msg().get(!leader ? "party.dialog.teams-body-member"
+            : teams.picked() ? "party.dialog.teams-body-picked" : "party.dialog.teams-body-auto");
+        Component list = teamsText(party);
+        int w = plugin.gui().partyButtonWidth * 3 / 2;
+        List<ActionButton> buttons = new ArrayList<>();
+        Component random = msg().get("party.dialog.teams-random");
+        Component mode = msg().get(teams.picked() ? "party.dialog.teams-auto" : "party.dialog.teams-pick");
+        if (leader) {
+            buttons.add(button(random, msg().get("party.dialog.teams-random-tooltip"), w, "party/teams-random", Map.of()));
+            buttons.add(teams.picked()
+                ? button(mode, msg().get("party.dialog.teams-auto-tooltip"), w, "party/teams-auto", Map.of())
+                : button(mode, msg().get("party.dialog.teams-pick-tooltip"), w, "party/teams-pick", Map.of()));
+        } else {
+            buttons.add(disabled(random, "party.dialog.why-leader", w));
+            buttons.add(disabled(mode, "party.dialog.why-leader", w));
+        }
+        for (Party.Member m : party.leaderFirst()) {
+            Component label = msg().get("party.dialog.teams-member", Messages.comp("head", head(m)),
+                Messages.text("player", m.name()), Messages.comp("team", teamTag(teams.team(m.uuid()))));
+            Component tooltip = msg().get(leader && teams.picked() ? "party.dialog.teams-member-tooltip" : "party.dialog.teams-member-info",
+                Messages.text("player", m.name()), Messages.comp("status", status(m.uuid())));
+            // only the leader's buttons do something (and the click is checked again); with random teams they are info
+            buttons.add(leader && teams.picked()
+                ? button(label, tooltip, w, "party/team-toggle", payload("id", m.uuid().toString()))
+                : button(label, tooltip, w, null, Map.of()));
+        }
+        buttons.add(modeButton(party, player, Mode.SPLIT, w));
+        Component title = msg().get("party.dialog.teams-title");
+        return new OpenDialogs.Rendered(dialog(title, body(notice, intro, list), List.of(),
+            DialogType.multiAction(buttons).columns(2).exitAction(back()).build()),
+            Fingerprint.of(title, notice, intro, list, buttons));
+    }
+
+    private Component teamTag(int team) {
+        return msg().get(switch (team) {
+            case 0 -> "party.dialog.team-1";
+            case 1 -> "party.dialog.team-2";
+            default -> "party.dialog.team-random";
+        });
+    }
+
+    /**
+     * The teams as text: the picked ones with the members who would sit out now greyed out and a warning when a team has
+     * nobody who can play, or the line that they are random.
+     */
+    Component teamsText(Party party) {
+        PartyTeams teams = party.teams();
+        if (!teams.picked()) return msg().get("party.dialog.teams-random-line");
+        List<List<Component>> names = List.of(new ArrayList<>(), new ArrayList<>());
+        int[] playing = new int[2];
+        boolean away = false;
+        for (Party.Member m : party.leaderFirst()) {
+            int t = teams.team(m.uuid());
+            if (t < 0) continue;
+            boolean here = parties.available(m.uuid());
+            if (here) playing[t]++;
+            else away = true;
+            names.get(t).add(msg().get(here ? "party.dialog.teams-name" : "party.dialog.teams-name-away",
+                Messages.text("player", m.name())));
+        }
+        List<Component> lines = new ArrayList<>();
+        lines.add(msg().get("party.dialog.teams-list", Messages.comp("team1", names(names.get(0))),
+            Messages.comp("team2", names(names.get(1))), Messages.num("count1", playing[0]), Messages.num("count2", playing[1])));
+        if (away) lines.add(msg().get("party.dialog.teams-away-hint"));
+        if (playing[0] == 0 || playing[1] == 0) lines.add(msg().get("party.dialog.teams-empty-warning"));
+        return lines(lines);
+    }
+
+    private Component names(List<Component> names) {
+        if (names.isEmpty()) return msg().get("party.dialog.teams-nobody");
+        return Component.join(JoinConfiguration.separator(msg().get("party.dialog.teams-comma")), names);
     }
 
     // ------------------------------------------------------------------ invite
@@ -470,10 +562,20 @@ public final class PartyDialogs {
                     Messages.comp("kit", kit.displayName())), Component.text(kit.description()), gui.kitButtonWidth,
                 "party/start", payload("mode", mode.id(), "kit", kit.id(), "target", target == null ? "" : target)));
         }
-        Component info = msg().get("party.dialog.kit-body-" + mode.id(), Messages.num("online", parties.onlineCount(party)),
-            Messages.text("leader", targetParty == null ? "" : leaderName(targetParty)), Messages.num("seconds", parties.inviteSeconds()));
+        List<Component> info = new ArrayList<>();
+        info.add(msg().get("party.dialog.kit-body-" + mode.id(), Messages.num("online", parties.availableCount(party)),
+            Messages.text("leader", targetParty == null ? "" : leaderName(targetParty)), Messages.num("seconds", parties.inviteSeconds())));
+        List<String> away = new ArrayList<>();
+        for (Party.Member m : party.leaderFirst()) {
+            if (PartyService.online(m.uuid()) && !parties.available(m.uuid())) away.add(m.name());
+        }
+        if (!away.isEmpty()) info.add(msg().get("party.dialog.kit-sitting-out", Messages.text("players", String.join(", ", away))));
+        if (mode == Mode.SPLIT) {
+            info.add(teamsText(party));
+            info.add(msg().get("party.dialog.teams-edit-link").clickEvent(click("party/teams", Map.of())));
+        }
         Component title = msg().get("party.dialog.kit-title", Messages.comp("mode", msg().get("party.dialog.mode-" + mode.id())));
-        show(player, OpenDialogs.Kind.PARTY_KITS, dialog(title, body(null, info), List.of(), buttons.isEmpty() ? DialogType.notice(back())
+        show(player, OpenDialogs.Kind.PARTY_KITS, dialog(title, body(null, lines(info)), List.of(), buttons.isEmpty() ? DialogType.notice(back())
             : DialogType.multiAction(buttons).columns(gui.kitColumns).exitAction(back()).build()));
     }
 
@@ -628,6 +730,23 @@ public final class PartyDialogs {
                 Outcome o = parties.disband(player);
                 if (o.ok()) openNone(player, null);
                 else openMenu(player, 0, refused(player, o));
+            }
+            case "party/teams" -> openTeams(player, null);
+            case "party/teams-random" -> {
+                Outcome o = parties.randomTeams(player);
+                openTeams(player, o.ok() ? null : refused(player, o));
+            }
+            case "party/teams-auto" -> {
+                Outcome o = parties.autoTeams(player);
+                openTeams(player, o.ok() ? null : refused(player, o));
+            }
+            case "party/teams-pick" -> {
+                Outcome o = parties.pickTeams(player);
+                openTeams(player, o.ok() ? null : refused(player, o));
+            }
+            case "party/team-toggle" -> {
+                Outcome o = parties.toggleTeam(player, uuid(data.get("id")));
+                openTeams(player, o.ok() ? null : refused(player, o));
             }
             case "party/privacy" -> openPrivacy(player, null);
             case "party/privacy-save" -> savePrivacy(player, view);
