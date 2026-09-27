@@ -41,6 +41,9 @@ public final class ProfileService implements Listener {
     public record RatingWrite(int playerId, String kit, KitStats snapshot, int elo, @Nullable Tier overall) {
     }
 
+    /** dc_meta key: countries typed in before auto-detection existed were marked as picked by hand. */
+    private static final String MANUAL_COUNTRIES = "geo_manual_countries";
+
     private final DuelCorePlugin plugin;
     private final Database db;
     private final Map<UUID, PlayerProfile> online = new ConcurrentHashMap<>();
@@ -63,6 +66,12 @@ public final class ProfileService implements Listener {
         this.started = db.submit(c -> {
             int before = Migrations.installedVersion(c);
             int version = Migrations.migrate(c, db.dialect());
+            if (MetaDao.get(c, MANUAL_COUNTRIES, "").isEmpty()) {
+                // once: a country set before Setting.AUTO_COUNTRY existed was picked by hand, keep it (auto-detect off)
+                int n = PlayerDao.markCountriesManual(c, Setting.AUTO_COUNTRY.write(0, false));
+                MetaDao.set(c, db.dialect(), MANUAL_COUNTRIES, "1");
+                if (n > 0) plugin.getLogger().info(n + " players picked their country by hand: auto-detect stays off for them");
+            }
             Map<String, Integer> ids = MetaDao.syncKits(c, kits);
             MetaDao.Season s = MetaDao.currentSeason(c, firstSeasonName, System.currentTimeMillis());
             applyKitIds(ids);

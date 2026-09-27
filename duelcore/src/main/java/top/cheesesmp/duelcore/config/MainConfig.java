@@ -210,6 +210,12 @@ public final class MainConfig {
     public final boolean dialogRefresh;
     public final int dialogRefreshTicks;
 
+    // geo
+    /** Countries from IP addresses (geo/GeoIpService): on/off, the monthly database URL, how old the file may get. */
+    public final boolean geoEnabled;
+    public final String geoDatabaseUrl;
+    public final int geoMaxAgeDays;
+
     public final boolean verbose;
 
     public MainConfig(FileConfiguration c) {
@@ -379,6 +385,12 @@ public final class MainConfig {
 
         dialogRefresh = c.getBoolean("dialogs.refresh.enabled", true);
         dialogRefreshTicks = top.cheesesmp.duelcore.ui.dialog.DialogRefresh.interval(c.getInt("dialogs.refresh.interval-ticks", 20));
+
+        geoEnabled = c.getBoolean("geo.enabled", true);
+        String geoUrl = c.getString("geo.database-url", "").strip();
+        geoDatabaseUrl = geoUrl.startsWith("https://") || geoUrl.startsWith("http://") ? geoUrl
+            : top.cheesesmp.duelcore.geo.GeoIpService.DEFAULT_URL;
+        geoMaxAgeDays = Math.clamp(c.getInt("geo.max-age-days", 35), 1, 365);
 
         verbose = c.getBoolean("debug.verbose", false);
     }

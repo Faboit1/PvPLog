@@ -11,13 +11,14 @@ import java.util.Map;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
+import top.cheesesmp.duelcore.geo.Countries;
 import top.cheesesmp.duelcore.rating.Tier;
 import top.cheesesmp.duelcore.rating.TierLadder;
 import top.cheesesmp.duelcore.rating.TierService;
 
 /**
- * Loads config.yml, messages.yml, tiers.yml and gui.yml. Missing keys are filled from the bundled defaults and
- * written back (comments are kept), so upgrading the plugin never leaves a config without new options.
+ * Loads config.yml, messages.yml, tiers.yml, gui.yml and countries.yml. Missing keys are filled from the bundled
+ * defaults and written back (comments are kept), so upgrading the plugin never leaves a config without new options.
  */
 public final class ConfigManager {
 
@@ -27,6 +28,7 @@ public final class ConfigManager {
     private TierService tiers;
     private GuiConfig gui;
     private top.cheesesmp.duelcore.chat.ChatFilter chatFilter;
+    private volatile Countries countries = Countries.EMPTY;
 
     public ConfigManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -42,10 +44,42 @@ public final class ConfigManager {
         this.tiers = parseTiers(tierYml);
         this.gui = new GuiConfig(guiYml);
         this.chatFilter = new top.cheesesmp.duelcore.chat.ChatFilter(loadWithDefaults("chat-filter.yml"), plugin.getLogger());
+        this.countries = loadCountries();
     }
 
     public top.cheesesmp.duelcore.chat.ChatFilter chatFilter() {
         return chatFilter;
+    }
+
+    /** countries.yml: names, regions and flags by country code (see {@link Countries}). */
+    public Countries countries() {
+        return countries;
+    }
+
+    /**
+     * Reads countries.yml from the plugin folder (written there on first start, so owners can edit it). Countries
+     * missing from it come from the bundled file; a file that doesn't parse is left alone and the bundled list is used
+     * until it is fixed. Entries that can't be used are logged.
+     */
+    private Countries loadCountries() {
+        String name = "countries.yml";
+        Countries bundled = Countries.EMPTY;
+        try (InputStream in = plugin.getResource(name)) {
+            if (in != null) bundled = Countries.parse(new InputStreamReader(in, StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            plugin.getLogger().warning("The bundled " + name + " could not be read: " + e.getMessage());
+        }
+        File file = new File(plugin.getDataFolder(), name);
+        if (!file.exists()) plugin.saveResource(name, false);
+        try (java.io.Reader in = java.nio.file.Files.newBufferedReader(file.toPath(), StandardCharsets.UTF_8)) {
+            Countries own = Countries.parse(in);
+            for (String problem : own.problems()) plugin.getLogger().warning(name + ": " + problem);
+            return own.withFallback(bundled);
+        } catch (Exception e) {
+            plugin.getLogger().severe(name + " is invalid, using the bundled list until it is fixed (the file was not"
+                + " changed): " + e.getMessage());
+            return bundled;
+        }
     }
 
     private YamlConfiguration loadWithDefaults(String name) {
@@ -67,6 +101,7 @@ public final class ConfigManager {
                 YamlConfiguration defaults = YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
                 boolean changed = name.equals("config.yml") && upgrade(yml, plugin.getLogger());
                 if (name.equals("messages.yml")) changed |= retireDefaults(yml, defaults, RETIRED_MESSAGES);
+                if (name.equals("gui.yml")) changed |= retireDefaults(yml, defaults, RETIRED_GUI);
                 for (String key : defaults.getKeys(true)) {
                     if (defaults.isConfigurationSection(key)) continue;
                     if (!yml.contains(key, true) && !isUserMap(name, key)) {
@@ -187,25 +222,64 @@ public final class ConfigManager {
 
     /**
      * messages.yml texts whose bundled default changed, as key → old default. A file still holding the old default
-     * gets the new one; a text edited by hand is kept.
+     * gets the new one; a text edited by hand is kept. (The texts with {@code <flag>} got it when country flags came.)
      */
-    static final Map<String, String> RETIRED_MESSAGES = Map.of(
-            "kit-editor.picker.category", "<icon> <text><name></text>",
+    static final Map<String, String> RETIRED_MESSAGES = Map.ofEntries(
+            Map.entry("kit-editor.picker.category", "<icon> <text><name></text>"),
+            Map.entry("match.found-subtitle", "<kit_icon> <text><opponent></text> <muted>· <tier> · <mode></muted>"),
+            Map.entry("results.subtitle", "<text><you>–<opp></text> <muted>vs <opponent></muted>"),
+            Map.entry("duel.received",
+                "<kit_icon> <text><player></text> <muted>challenged you to</muted> <text><kit></text>  <accept> <deny>"),
+            Map.entry("duel.sent", "<muted>Challenge sent to <text><player></text> · <kit_icon> <kit>. It expires in 60s.</muted>"),
+            Map.entry("dialog.profile.header",
+                "<head> <text><player></text>  <tier> <muted>· <elo> Elo · <region> <country></muted>"),
+            Map.entry("dialog.settings.country-value", "<text><country></text>"),
+            Map.entry("dialog.settings.country-change-hover", "<muted>Type your country's two letters</muted>"),
+            Map.entry("dialog.settings.country-body",
+                "<muted>Two letters (DE, US, …), shown on your profile. Leave it empty to remove it.</muted>"),
+            Map.entry("dialog.settings.country-label", "Country (2 letters)"),
+            Map.entry("dialog.settings.items.country.hover", "Shown on your profile."),
             // settings texts rewritten for the newer rows (chat lines, menu sounds, the country board, Prefer my country)
-            "dialog.settings.section-hover.gameplay",
-            "<text>In your matches: spectators, the action bar and the results screen.</text>",
-            "dialog.settings.section-body.queue",
-            "<muted>Region and max ping help the matchmaker find opponents with a similar connection.</muted>",
-            "dialog.settings.items.sounds.hover",
-            "Every DuelCore sound effect, match sounds included. The music while searching has its own switch.",
-            "dialog.settings.items.country.hover", "Shown on your profile.");
+            Map.entry("dialog.settings.section-hover.gameplay",
+                "<text>In your matches: spectators, the action bar and the results screen.</text>"),
+            Map.entry("dialog.settings.section-body.queue",
+                "<muted>Region and max ping help the matchmaker find opponents with a similar connection.</muted>"),
+            Map.entry("dialog.settings.items.sounds.hover",
+                "Every DuelCore sound effect, match sounds included. The music while searching has its own switch."));
 
-    /** Replaces every value that still equals its retired default with the current default; true when any did. */
-    static boolean retireDefaults(YamlConfiguration yml, YamlConfiguration defaults, Map<String, String> retired) {
+    /**
+     * gui.yml values whose bundled default changed, as key → old default (a text or a list of lines), handled like
+     * {@link #RETIRED_MESSAGES}: the name formats and the match / spectate sidebars got {@code <flag>}.
+     */
+    static final Map<String, Object> RETIRED_GUI = Map.of(
+            "tags.chat", "<tier> <text><name></text><muted>:</muted> <message>",
+            "tags.tab", "<tier> <text><name></text>",
+            "tags.nametag-prefix", "<tier> ",
+            "sidebar.match", List.of("", "<kit_icon> <text><kit></text> <muted><mode></muted>", "",
+                "<text>You</text>  <accent><you_score></accent>", "<text><opponent></text>  <accent><opp_score></accent>",
+                "<muted>First to <first_to> · round <round></muted>", "", "<muted>Time</muted>  <text><time></text>",
+                "<muted>Your ping</muted>  <text><ping>ms</text>", "<muted><opponent></muted>  <text><opp_ping>ms</text>", "",
+                "<muted>pvp.cheesesmp.top</muted>"),
+            "sidebar.spectate", List.of("", "<kit_icon> <text><kit></text> <muted>spectating</muted>", "",
+                "<text><red_name></text>  <accent><red_score></accent>", "<text><blue_name></text>  <accent><blue_score></accent>",
+                "<muted>Round <round></muted>", "", "<muted>Time</muted>  <text><time></text>", "",
+                "<muted>pvp.cheesesmp.top</muted>"));
+
+    /**
+     * Replaces every value that still equals its retired default (a text, or a list of lines) with the current
+     * default; true when any did.
+     */
+    static boolean retireDefaults(YamlConfiguration yml, YamlConfiguration defaults, Map<String, ?> retired) {
         boolean changed = false;
-        for (Map.Entry<String, String> e : retired.entrySet()) {
-            if (defaults.isString(e.getKey()) && e.getValue().equals(yml.getString(e.getKey()))) {
-                yml.set(e.getKey(), defaults.getString(e.getKey()));
+        for (Map.Entry<String, ?> e : retired.entrySet()) {
+            String key = e.getKey();
+            if (e.getValue() instanceof List<?> old) {
+                if (defaults.isList(key) && yml.isList(key) && yml.getStringList(key).equals(old)) {
+                    yml.set(key, defaults.getStringList(key));
+                    changed = true;
+                }
+            } else if (defaults.isString(key) && String.valueOf(e.getValue()).equals(yml.getString(key))) {
+                yml.set(key, defaults.getString(key));
                 changed = true;
             }
         }

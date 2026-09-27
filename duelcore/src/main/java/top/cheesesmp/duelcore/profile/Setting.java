@@ -54,8 +54,15 @@ public enum Setting {
     SEARCHING_BAR(20, true),
     /** The totem-pop animation with the kit's icon when a match is found. */
     MATCH_FOUND_POP(21, true),
-
-    // (bits 22-24: the country flag settings)
+    /**
+     * The country is detected from the player's IP address when they join ({@code geo/GeoIpService}). Picking a
+     * country by hand turns it off.
+     */
+    AUTO_COUNTRY(22, true),
+    /** This player sees country flags next to names (chat, nametags, menus; the tab list is the same for everyone). */
+    SHOW_FLAGS(23, true),
+    /** This player's own flag is shown next to their name, and their country on their profile (off: to nobody). */
+    SHOW_MY_FLAG(24, true),
 
     /**
      * The matchmaker slightly favours opponents from this player's country ({@link PlayerProfile#country}); only

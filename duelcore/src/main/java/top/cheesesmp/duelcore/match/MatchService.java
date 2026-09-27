@@ -35,6 +35,7 @@ import top.cheesesmp.duelcore.arena.ArenaInstance;
 import top.cheesesmp.duelcore.config.MainConfig;
 import top.cheesesmp.duelcore.config.Messages;
 import top.cheesesmp.duelcore.db.dao.MatchDao;
+import top.cheesesmp.duelcore.geo.Flags;
 import top.cheesesmp.duelcore.kit.Kit;
 import top.cheesesmp.duelcore.kit.KitManager;
 import top.cheesesmp.duelcore.profile.KitStats;
@@ -179,8 +180,12 @@ public final class MatchService implements Runnable {
             MatchSounds.playMatch(plugin, player, foundSounds, 1);
             Participant opp = match.opponentOf(p);
             PlayerProfile oppProfile = opp == null ? null : plugin.profiles().get(opp.uuid());
+            // a flag only for a lone opponent (a team is shown by its names)
+            boolean single = !match.ffa() && match.team(1 - p.team()).size() == 1;
             Component subtitle = plugin.messages().get(match.ffa() ? "party.match.found-ffa" : "match.found-subtitle",
                 Messages.text("opponent", match.teamName(1 - p.team())),
+                Messages.comp("flag", single ? plugin.flags().flag(Flags.Place.MATCH, plugin.profiles().get(player), oppProfile)
+                    : Component.empty()),
                 Messages.comp("tier", plugin.tiers().format(opp == null ? null : opp.tierBefore())),
                 Messages.comp("kit", kit.displayName()),
                 Messages.comp("kit_icon", kit.sprite()),

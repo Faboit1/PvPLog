@@ -18,6 +18,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.config.Messages;
+import top.cheesesmp.duelcore.geo.Flags;
 import top.cheesesmp.duelcore.kit.Kit;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.DuelRequests;
@@ -58,10 +59,13 @@ public final class DuelRequestService implements Listener, Runnable {
             .clickEvent(ClickEvent.custom(Key.key("duelcore", "duel/accept"), BinaryTagHolder.binaryTagHolder(payload)));
         Component deny = plugin.messages().get("duel.deny-button")
             .clickEvent(ClickEvent.custom(Key.key("duelcore", "duel/deny"), BinaryTagHolder.binaryTagHolder(payload)));
+        PlayerProfile challenger = plugin.profiles().get(from);
         plugin.messages().send(to, "duel.received", Messages.text("player", from.getName()),
+            Messages.comp("flag", plugin.flags().flag(Flags.Place.DUEL, target, challenger)),
             Messages.comp("kit", kit.displayName()), Messages.comp("kit_icon", kit.sprite()),
             Messages.comp("accept", accept), Messages.comp("deny", deny));
         plugin.messages().send(from, "duel.sent", Messages.text("player", to.getName()), Messages.comp("kit", kit.displayName()),
+            Messages.comp("flag", plugin.flags().flag(Flags.Place.DUEL, challenger, target)),
             Messages.comp("kit_icon", kit.sprite()));
         return Result.SENT;
     }

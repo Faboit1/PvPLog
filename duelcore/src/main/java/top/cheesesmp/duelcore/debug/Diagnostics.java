@@ -96,6 +96,8 @@ public final class Diagnostics {
             + " reveals=" + plugin.progress().size() + " testers=" + plugin.tester().online());
         out.add("animations " + plugin.anim().stats());
         out.add("dialogs " + plugin.openDialogs().stats());
+        out.add("geoip " + plugin.geo().describe() + " countries=" + plugin.flags().countries().size()
+            + " flags=" + plugin.flags().countries().flags());
         out.add("server tasks(plugin)=" + tasks + " heapUsedMB=" + used + " heapMaxMB=" + rt.maxMemory() / (1024 * 1024)
             + String.format(Locale.ROOT, " tps=%.2f mspt=%.2f", Bukkit.getTPS()[0], Bukkit.getAverageTickTime()));
         for (World w : Bukkit.getWorlds()) {

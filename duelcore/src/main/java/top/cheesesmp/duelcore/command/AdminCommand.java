@@ -6,9 +6,11 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
+import io.papermc.paper.command.brigadier.MessageComponentSerializer;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,12 +24,14 @@ import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.arena.ArenaEditor;
 import top.cheesesmp.duelcore.arena.ArenaTemplate;
 import top.cheesesmp.duelcore.config.Messages;
+import top.cheesesmp.duelcore.geo.Countries;
 import top.cheesesmp.duelcore.kit.Kit;
 import top.cheesesmp.duelcore.kit.KitManager;
 import top.cheesesmp.duelcore.match.Match;
 import top.cheesesmp.duelcore.profile.KitStats;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.ProfileService;
+import top.cheesesmp.duelcore.profile.Setting;
 
 /** /duelcore — administration. Every branch has its own permission node under duelcore.admin. */
 final class AdminCommand {
@@ -513,18 +517,55 @@ final class AdminCommand {
                 });
                 return Command.SINGLE_SUCCESS;
             })))
-            .then(Commands.literal("setcountry").then(Commands.argument("country", StringArgumentType.word()).executes(ctx -> {
-                CommandSender sender = ctx.getSource().getSender();
-                String cc = StringArgumentType.getString(ctx, "country").toUpperCase(Locale.ROOT);
-                withProfile(sender, StringArgumentType.getString(ctx, "player"), p -> {
-                    p.country(cc.matches("[A-Z]{2}") ? cc : null);
-                    plugin.profiles().saveSettings(p);
-                    send(sender, "admin.country-set", Messages.text("player", p.name()),
-                        Messages.text("country", p.country() == null ? "—" : p.country()));
-                });
-                return Command.SINGLE_SUCCESS;
-            }))));
+            .then(Commands.literal("setcountry").then(Commands.argument("country", StringArgumentType.word())
+                .suggests(countrySuggestions()).executes(ctx -> {
+                    setCountry(ctx.getSource().getSender(), StringArgumentType.getString(ctx, "player"),
+                        StringArgumentType.getString(ctx, "country"));
+                    return Command.SINGLE_SUCCESS;
+                }))));
         return r;
+    }
+
+    /**
+     * {@code setcountry <code>}: a countries.yml code, which turns the player's auto-detect off (like picking one in
+     * Settings); {@code none} clears it (auto-detect off too); {@code auto} turns auto-detect back on and, for an online
+     * player, looks the country up right away.
+     */
+    private void setCountry(CommandSender sender, String name, String raw) {
+        String arg = raw.strip().toLowerCase(Locale.ROOT);
+        String cc = arg.equals("none") || arg.equals("auto") ? null : Countries.code(arg);
+        if (!arg.equals("none") && !arg.equals("auto") && (cc == null || !plugin.flags().isKnown(cc))) {
+            send(sender, "admin.country-unknown", Messages.text("country", raw));
+            return;
+        }
+        withProfile(sender, name, p -> {
+            Player online = Bukkit.getPlayer(p.uuid());
+            if (arg.equals("auto")) {
+                p.setting(Setting.AUTO_COUNTRY, true);
+                if (online != null && plugin.profiles().get(online) == p) plugin.geo().apply(online, p);
+                plugin.profiles().saveSettings(p);
+                send(sender, "admin.country-auto", Messages.text("player", p.name()));
+                return;
+            }
+            p.country(cc);
+            p.setting(Setting.AUTO_COUNTRY, false);
+            plugin.profiles().saveSettings(p);
+            send(sender, "admin.country-set", Messages.text("player", p.name()),
+                Messages.text("country", p.country() == null ? "—" : p.country()));
+        });
+    }
+
+    /** "auto", "none" and the countries.yml codes (with the country's name as the tooltip). */
+    private SuggestionProvider<CommandSourceStack> countrySuggestions() {
+        return (ctx, builder) -> {
+            String rem = builder.getRemainingLowerCase();
+            for (String s : List.of("auto", "none")) if (s.startsWith(rem)) builder.suggest(s);
+            for (Countries.Country c : plugin.flags().countries().all()) {
+                if (!c.code().toLowerCase(Locale.ROOT).startsWith(rem)) continue;
+                builder.suggest(c.code(), MessageComponentSerializer.message().serialize(net.kyori.adventure.text.Component.text(c.name())));
+            }
+            return builder.buildFuture();
+        };
     }
 
     private void withProfile(CommandSender sender, String name, java.util.function.Consumer<PlayerProfile> action) {

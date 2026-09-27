@@ -10,9 +10,7 @@ import io.papermc.paper.registry.data.dialog.ActionButton;
 import io.papermc.paper.registry.data.dialog.DialogBase;
 import io.papermc.paper.registry.data.dialog.body.DialogBody;
 import io.papermc.paper.registry.data.dialog.type.DialogType;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,11 +25,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.ShadowColor;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.object.ObjectContents;
-import net.kyori.adventure.text.object.PlayerHeadObjectContents;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Input;
@@ -666,15 +661,7 @@ public final class QueueDialog {
 
     /** One bar segment: a solid-colour head (textures.minecraft.net id), or the plain fallback text. */
     private static Component segment(String texture, Component fallback) {
-        if (!texture.matches("[0-9a-f]{16,80}")) return fallback;
-        String json = "{\"textures\":{\"SKIN\":{\"url\":\"http://textures.minecraft.net/texture/" + texture + "\"}}}";
-        String value = Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
-        return Component.object()
-            .contents(ObjectContents.playerHead().profileProperty(PlayerHeadObjectContents.property("textures", value)).hat(false).build())
-            .fallback(fallback)
-            .color(NamedTextColor.WHITE)
-            .shadowColor(ShadowColor.none())
-            .build();
+        return Icons.textureHead(texture, fallback, false);
     }
 
     /** The kit item on the left: custom name, counts as lore, no attribute/enchant tooltips; glinting while queued. */

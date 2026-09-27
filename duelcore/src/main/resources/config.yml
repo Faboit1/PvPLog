@@ -355,6 +355,23 @@ leaderboard:
   # Region codes players can pick in Settings (used by leaderboards and matchmaking).
   regions: [EU, NA, SA, AS, OC, AF]
 
+# Players' countries from their IP address, for the flags next to names (gui.yml flags). When a player joins with
+# Settings → Auto-detect country on (the default), their address is looked up and their country set, and their
+# region too while they have none; picking a country in Settings turns it off for them. Addresses are only looked up
+# in memory: never stored or logged. Behind a proxy (Velocity, BungeeCord) the proxy must forward players' IPs
+# (Velocity: modern forwarding), or everyone gets the proxy's country.
+# Uses the free "IP to Country Lite" database by DB-IP (https://db-ip.com), licensed under CC BY 4.0
+# (https://creativecommons.org/licenses/by/4.0/): IP Geolocation by DB-IP. It is downloaded (about 5 MB) to
+# plugins/DuelCore/geoip/ in the background and loaded without pausing the server.
+geo:
+  enabled: true
+  # The monthly database file: {year} and {month} (two digits) are filled in. While this month's isn't out yet,
+  # last month's is used.
+  database-url: "https://download.db-ip.com/free/dbip-country-lite-{year}-{month}.csv.gz"
+  # A new copy is downloaded when the file is older than this many days (checked on start, on /duelcore reload and
+  # twice a day). If the download fails, the old file stays in use.
+  max-age-days: 35
+
 dialogs:
   # Open menus whose content changes (the queue menu's timers and counts, the party menu and friends list's online
   # states, the live spectate list, a profile's "5m ago") are rebuilt this often and sent again only when something
