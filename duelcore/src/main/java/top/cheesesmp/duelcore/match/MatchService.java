@@ -367,7 +367,9 @@ public final class MatchService implements Runnable {
         }
         for (UUID s : m.spectators()) {
             Player sp = Bukkit.getPlayer(s);
-            if (sp != null) plugin.sidebar().refresh(sp);
+            if (sp == null) continue;
+            plugin.sidebar().refresh(sp);
+            applyBorder(sp, arena);
         }
     }
 
@@ -383,6 +385,10 @@ public final class MatchService implements Runnable {
         if (m.firstFightAt == 0) m.firstFightAt = System.currentTimeMillis();
         for (Participant p : m.participants()) earlyLeaves.remove(p.uuid());
         List<SoundPool.Played> fightSounds = plugin.settings().fightStartSounds.pick(java.util.concurrent.ThreadLocalRandom.current());
+        for (UUID s : m.spectators()) {
+            Player sp = Bukkit.getPlayer(s);
+            if (sp != null) shrinkBorder(sp, m);
+        }
         for (Participant p : m.participants()) {
             Player player = Bukkit.getPlayer(p.uuid());
             if (player == null || !p.alive) continue;
@@ -465,6 +471,23 @@ public final class MatchService implements Runnable {
         border.setWarningDistance(0);
         border.setDamageAmount(0);
         player.setWorldBorder(border);
+    }
+
+    /**
+     * Shows a spectator the match's border as the fighters see it right now (closing in while a round is fought).
+     * Called when they start watching; later rounds reset and close it for them with the fighters.
+     */
+    public void showBorder(Player viewer, Match m) {
+        ArenaInstance arena = m.arena;
+        if (arena == null) return;
+        applyBorder(viewer, arena);
+        MainConfig cfg = plugin.settings();
+        WorldBorder border = viewer.getWorldBorder();
+        if (m.state != Match.State.FIGHTING || cfg.borderShrinkSeconds <= 0 || border == null) return;
+        double to = Math.min(cfg.borderShrinkTo, fullBorder(arena));
+        border.setSize(borderSize(fullBorder(arena), to, cfg.borderShrinkSeconds, m.roundTicks));
+        long left = cfg.borderShrinkSeconds * 20L - m.roundTicks;
+        if (left > 0) border.changeSize(to, left);
     }
 
     /** The border's width at the start of a round: the arena and a block on each side. */

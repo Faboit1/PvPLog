@@ -82,6 +82,7 @@ public final class SpectateService implements Listener, Runnable {
             plugin.hub().giveSpectatorItems(viewer);
             plugin.visibility().refresh(viewer);
             plugin.sidebar().refresh(viewer);
+            plugin.matches().showBorder(viewer, match);
             // after the refresh: a fighter may still have them hidden from the hub until then
             if (arriving) alert(match, viewer, true);
         });
@@ -136,6 +137,7 @@ public final class SpectateService implements Listener, Runnable {
         player.setAllowFlight(false);
         player.setFlying(false);
         player.setInvulnerable(false);
+        player.setWorldBorder(null);
         plugin.visibility().refresh(player);
         if (toHub) plugin.hub().send(player);
         return true;

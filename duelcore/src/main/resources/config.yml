@@ -174,7 +174,7 @@ match:
     medium: []
   border:
     shrink-to: 10
-    shrink-seconds: 82
+    shrink-seconds: 123
     damage-per-second: 2.0
     damage-per-block: 0.5
 
