@@ -177,7 +177,7 @@ Player commands (all players by default):
 | `/queue [kit]` | `/play`, `/q` | Opens the queue menu, or joins a kit's (ranked) queue directly |
 | `/leave` | `/forfeit` | Leaves the queue, stops spectating, or forfeits (asks to confirm within 5 s) |
 | `/draw` | | Offers your 1v1 opponent a draw, or accepts theirs (`/draw deny` declines). An agreed draw changes nobody's Elo |
-| `/profile [player]` | `/stats` | Profile: overall tier and Elo, per-kit tier/rating/record, recent matches. `/profile <p> legacy` shows last season |
+| `/profile [player]` | `/stats` | Profile: overall tier and points, per-kit tier/rating/record, recent matches. `/profile <p> legacy` shows last season |
 | `/leaderboard [kit\|overall] [region\|country]` | `/lb`, `/top` | Leaderboards, global, per region (`EU`) or per country (two letters, `DE`; see *Leaderboards* below). Test bots (names starting with `dcbot`) are never listed or counted in ranks |
 | `/spectate [player]` | `/spec` | Watch a match. Without a name it opens the live list (search; highest Elo first, then by name). `/spectate stop` |
 | `/party` | `/p` | Party menu (see *Parties*). `create`, `invite <player>`, `accept\|deny [player]`, `join <leader>`, `leave`, `kick <player>`, `promote <player>`, `disband`, `chat`, `open`, `private`, `password`, `list`, `teams [random\|auto]`, `team <player> <1\|2>`, `ffa [kit]`, `split [kit]`, `duel [leader] [kit]`, `duel accept\|deny [leader]` |
@@ -197,7 +197,7 @@ Staff:
 | `/duelcore sethub` | `duelcore.admin.sethub` | Set the hub spawn |
 | `/duelcore arena …` | `duelcore.admin.arena` | See *Arenas* |
 | `/duelcore kit list\|give <id>\|save <id>` | `duelcore.admin.kit` | Kits |
-| `/duelcore season info\|reset <name> confirm\|recalc` | `duelcore.admin.season` | New season: ratings reset, the old season stays viewable as "legacy". `recalc` rebuilds the overall tiers after changing tiers.yml |
+| `/duelcore season info\|reset <name> confirm\|recalc` | `duelcore.admin.season` | New season: ratings reset, the old season stays viewable as "legacy". `recalc` rebuilds the overall tiers and points after changing tiers.yml |
 | `/duelcore player <name> setrating <kit> <r>\|setgames <kit> <n>\|setregion <r>\|setcountry <cc\|auto\|none>` | `duelcore.admin.rating` | Edit a player. `setcountry` takes a countries.yml code (turns the player's auto-detect off), `auto` (detect it again) or `none` |
 | `/duelcore forceend <player>` | `duelcore.admin.match` | End a match without rating changes |
 | `/animtest [on\|off\|play <preview>]` | `duelcore.animtest` | Animation test mode (see *Animations*): preview animations on yourself, simulated progress after unranked matches |
@@ -358,7 +358,7 @@ player back into the same queues after each match. The ✎ after a kit opens its
 screen after a match has an *Edit kit* button for the match's kit.
 
 **Leaderboards** (Leaderboards item, `/leaderboard`) list the top players (gui.yml `dialogs.leaderboard-lines`, 10)
-overall or in a kit, with a button per kit and one per filter: *All* (global), the configured regions and, for players
+overall (by points, see *tiers.yml* below) or in a kit (by Elo), with a button per kit and one per filter: *All* (global), the configured regions and, for players
 who have a country set, *My country* (its flag and code, the name in its tooltip): the same board for their country only, titled
 with the country's name from `countries.yml` (`dialog.leaderboard.title-country`). Ranks count within the filter, so
 on a country board the "You · #rank" line under the top players is your rank in your country. Switching the kit keeps
@@ -388,8 +388,13 @@ search box); neither does the queue menu while its progress animation plays.
 - The rating threshold of every tier: `kit-thresholds.default`, per-kit overrides, and an optional `overall` override.
 - How each tier is drawn (`format`).
 
-Players are ranked by Elo. A tier is just the label for the Elo range a rating falls in. The overall ranking is
-the overall Elo: the average rating of every kit a player has finished placement in.
+Kit boards rank by Elo. A tier is just the label for the Elo range a rating falls in. The overall board ranks by
+**points**: the Elo of every kit a player has finished placement in, added up (a kit still in placement doesn't
+count), so playing more kits well climbs the overall board. The overall *tier* still comes from the overall Elo, the
+average of those same kits (`kit-thresholds.overall` if set). Profiles, the hub / queue sidebars, the join title and
+`/duelcore tier info` show the points ("2480 pts"). Points are stored in `dc_standings.points` (schema v9); upgrading
+fills them in once for every season from the stored ratings, and `/duelcore season recalc` rebuilds them for the
+current season.
 
 **gui.yml**
 
@@ -568,7 +573,8 @@ invitations with Accept/Deny, and the open parties to join with one click.
 
 ## PlaceholderAPI
 
-`%duelcore_elo%` (overall Elo), `%duelcore_tier%`, `%duelcore_tier_formatted%`,
+`%duelcore_points%` (overall points: the placed kits' Elo added up, what the overall board ranks by),
+`%duelcore_elo%` (overall Elo: their average), `%duelcore_tier%`, `%duelcore_tier_formatted%`,
 `%duelcore_wins%`, `%duelcore_losses%`, `%duelcore_region%`, `%duelcore_in_match%`, `%duelcore_queued%`,
 `%duelcore_live%`, and per kit `%duelcore_tier_<kit>%`, `%duelcore_rating_<kit>%`, `%duelcore_wins_<kit>%`,
 `%duelcore_losses_<kit>%`, `%duelcore_games_<kit>%`. Only cached data of online players is used, so placeholders
@@ -577,7 +583,7 @@ never wait on the database.
 ## Developer API
 
 `DuelCoreApi` is registered as a Bukkit service (`getServicesManager().load(DuelCoreApi.class)`) and has `profile`,
-`overallTier`, `kitTier`, `elo` (the overall Elo), `match` and `liveMatches`. `setMatchPolicy` plugs in
+`overallTier`, `kitTier`, `points` (the overall points), `elo` (the overall Elo), `match` and `liveMatches`. `setMatchPolicy` plugs in
 your own pairing rules. `MatchStartEvent` and `MatchEndEvent` are fired for every match.
 
 ---

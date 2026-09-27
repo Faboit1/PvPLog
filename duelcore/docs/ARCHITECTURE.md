@@ -69,8 +69,8 @@ dc_ratings       (season_id, player_id, kit_id, rating DOUBLE, rd DOUBLE, vol DO
                   losses INT, streak SMALLINT, best_streak SMALLINT, peak DOUBLE, tier_override TINYINT NULL,
                   updated_at BIGINT, PK(season_id, player_id, kit_id))   -- WITHOUT ROWID
                   IDX (season_id, kit_id, rating)
-dc_standings     (season_id, player_id, elo SMALLINT, overall_tier TINYINT, PK(season_id, player_id))
-                  IDX (season_id, elo)                                   -- overall leaderboard
+dc_standings     (season_id, player_id, elo SMALLINT, points INT, overall_tier TINYINT, PK(season_id, player_id))
+                  IDX (season_id, points)                                -- overall leaderboard (schema v9)
 dc_matches       (id BIGINT PK AUTO, season_id, kit_id, ranked TINYINT, arena VARCHAR(32), started_at BIGINT,
                   duration_ms INT, end_reason TINYINT, winner_team TINYINT, first_to TINYINT, rounds VARCHAR(64))
 dc_match_players (match_id, player_id, team TINYINT, rounds_won TINYINT, hits INT, damage_dealt FLOAT,
@@ -131,7 +131,7 @@ A server shutdown during a match cancels it without any rating change. `/duelcor
 
 * Default is **Elo**: K = 32, raised to 48 during the placement games (default 5). **Glicko-2** can be chosen in config. Each kit has its own rating, starting at 1000.
 * A kit tier comes from rating thresholds on the 15-step ladder (HT1 … LT5). Thresholds live in `tiers.yml` and can be overridden per kit. Until placement is done, the tier shows `???`.
-* **Overall Elo** is the average rating over the kits a player finished placement in. The overall tier uses the same Elo thresholds. Both are stored in `dc_standings` for fast leaderboards. (Tier points were dropped in schema v3.)
+* **Overall points** are the sum of the (rounded) ratings of the kits a player finished placement in; the overall leaderboard and overall rank order by them. **Overall Elo** is the average of the same kits and sets the overall tier (same Elo thresholds). All three are stored in `dc_standings` for fast leaderboards. (Tier points were dropped in schema v3; schema v9 added the sum as `points`, backfilled once on upgrade.)
 * `/tier set <player> <kit> <tier>` pins a tier (`tier_override`). `/tier clear` removes the pin.
 
 ## UI
@@ -161,7 +161,7 @@ A server shutdown during a match cancels it without any rating change. `/duelcor
   queue menu's m:ss clock is only used on tabs with at most `queue-menu.clock-max-kits` kits. Dialogs with inputs are
   never refreshed (`Rendered.inputs` drops the renderer): the live spectate list has no search box, its Search
   button opens the list with one (not refreshed).
-* **Sidebar** uses a blank number format and per-line custom names. The hub shows name, tier and overall Elo, queued and live counts. In a match it shows score, round, timer and ping.
+* **Sidebar** uses a blank number format and per-line custom names. The hub shows name, tier and overall points, queued and live counts. In a match it shows score, round, timer and ping.
 * **Queue music**: while searching, `QueueMusic` plays a random music disc to the player only (record source,
   emitted from the player, `Setting.QUEUE_MUSIC`). The next track starts from the configured track length; the music
   stops as soon as the player is matched, leaves every queue, spectates or quits (QueueService stops it on removal).
