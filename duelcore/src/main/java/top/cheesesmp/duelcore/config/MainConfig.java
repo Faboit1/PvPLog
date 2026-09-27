@@ -154,6 +154,8 @@ public final class MainConfig {
      */
     public final List<String> soundProblems = new java.util.ArrayList<>();
     public final int voidDepth;
+    /** match.accurate-projectiles: pearls and wind charges fly exactly where aimed (no random spread). */
+    public final boolean accurateProjectiles;
     /** match.border: the round's border closes in to shrinkTo blocks over shrinkSeconds (0 = off); damage outside. */
     public final double borderShrinkTo;
     public final int borderShrinkSeconds;
@@ -356,6 +358,7 @@ public final class MainConfig {
         fightStartSounds = fightStart.combos().isEmpty() && !fightStart.problems().isEmpty()
             ? top.cheesesmp.duelcore.ui.SoundPool.parse(List.of("block.note_block.pling 1.6")) : fightStart;
         voidDepth = Math.max(1, c.getInt("match.void-depth", 6));
+        accurateProjectiles = c.getBoolean("match.accurate-projectiles", true);
         borderShrinkTo = Math.clamp(c.getDouble("match.border.shrink-to", 10), 1, 1000);
         borderShrinkSeconds = Math.clamp(c.getInt("match.border.shrink-seconds", 148), 0, 3600);
         borderDamagePerSecond = Math.clamp(c.getDouble("match.border.damage-per-second", 2.0), 0, 100);
