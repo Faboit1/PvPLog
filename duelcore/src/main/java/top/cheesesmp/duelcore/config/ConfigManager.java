@@ -221,10 +221,11 @@ public final class ConfigManager {
     }
 
     /**
-     * messages.yml texts whose bundled default changed, as key → old default. A file still holding the old default
-     * gets the new one; a text edited by hand is kept. (The texts with {@code <flag>} got it when country flags came.)
+     * messages.yml texts whose bundled default changed, as key → old default (a key can have several). A file still
+     * holding an old default gets the new one; a text edited by hand is kept. (The texts with {@code <flag>} got it
+     * when country flags came; the overall standing shows points instead of the overall Elo since schema v9.)
      */
-    static final Map<String, String> RETIRED_MESSAGES = Map.ofEntries(
+    static final List<Map.Entry<String, String>> RETIRED_MESSAGES = List.of(
             Map.entry("kit-editor.picker.category", "<icon> <text><name></text>"),
             Map.entry("match.found-subtitle", "<kit_icon> <text><opponent></text> <muted>· <tier> · <mode></muted>"),
             Map.entry("results.subtitle", "<text><you>–<opp></text> <muted>vs <opponent></muted>"),
@@ -250,12 +251,19 @@ public final class ConfigManager {
             Map.entry("dialog.settings.section-body.queue",
                 "<muted>Region and max ping help the matchmaker find opponents with a similar connection.</muted>"),
             Map.entry("dialog.settings.items.sounds.hover",
-                "Every DuelCore sound effect, match sounds included. The music while searching has its own switch."));
+                "Every DuelCore sound effect, match sounds included. The music while searching has its own switch."),
+            // the overall standing in Elo (average) before it became points (sum)
+            Map.entry("hub.welcome-subtitle", "<tier> <muted>· <elo> Elo</muted>"),
+            Map.entry("tier.info-header", "<text><player></text> <muted>· <tier> · <elo> Elo</muted>"),
+            Map.entry("dialog.profile.header",
+                "<head> <flag><text><player></text>  <tier> <muted>· <elo> Elo · <region> · <country_name></muted>"),
+            Map.entry("dialog.leaderboard.line-overall",
+                "<muted><rank>.</muted> <head> <flag><text><player></text>  <tier> <muted>· <elo> Elo · <wins>W</muted>"));
 
     /**
      * gui.yml values whose bundled default changed, as key → old default (a text or a list of lines), handled like
      * {@link #RETIRED_MESSAGES}: the name formats and the match / spectate sidebars got {@code <flag>}, the match
-     * health line the HUD's heart sprites.
+     * health line the HUD's heart sprites, the hub / queue sidebars the overall points instead of the overall Elo.
      */
     static final Map<String, Object> RETIRED_GUI = Map.of(
             "match-health.format", "<#ff5555>❤</#ff5555> <hp_color><hearts></hp_color><absorption>",
@@ -271,15 +279,27 @@ public final class ConfigManager {
             "sidebar.spectate", List.of("", "<kit_icon> <text><kit></text> <muted>spectating</muted>", "",
                 "<text><red_name></text>  <accent><red_score></accent>", "<text><blue_name></text>  <accent><blue_score></accent>",
                 "<muted>Round <round></muted>", "", "<muted>Time</muted>  <text><time></text>", "",
-                "<muted>pvp.cheesesmp.top</muted>"));
+                "<muted>pvp.cheesesmp.top</muted>"),
+            "sidebar.hub", List.of("", "<text><player></text>", "<tier> <muted>· <elo> Elo</muted>", "",
+                "<muted>Queued</muted>  <text><queued></text>", "<muted>Live</muted>  <text><live></text>", "",
+                "<muted>pvp.cheesesmp.top</muted>"),
+            "sidebar.queue", List.of("", "<text><player></text>", "<tier> <muted>· <elo> Elo</muted>", "",
+                "<kit_icon> <text><kit></text> <muted><mode></muted>", "<muted>Searching</muted>  <text><wait></text>",
+                "<muted>Range</muted>  <text>±<range></text>", "", "<muted>pvp.cheesesmp.top</muted>"));
 
     /**
      * Replaces every value that still equals its retired default (a text, or a list of lines) with the current
      * default; true when any did.
      */
     static boolean retireDefaults(YamlConfiguration yml, YamlConfiguration defaults, Map<String, ?> retired) {
+        return retireDefaults(yml, defaults, retired.entrySet());
+    }
+
+    /** Like {@link #retireDefaults(YamlConfiguration, YamlConfiguration, Map)}, a key may be listed more than once. */
+    static boolean retireDefaults(YamlConfiguration yml, YamlConfiguration defaults,
+                                  java.util.Collection<? extends Map.Entry<String, ?>> retired) {
         boolean changed = false;
-        for (Map.Entry<String, ?> e : retired.entrySet()) {
+        for (Map.Entry<String, ?> e : retired) {
             String key = e.getKey();
             if (e.getValue() instanceof List<?> old) {
                 if (defaults.isList(key) && yml.isList(key) && yml.getStringList(key).equals(old)) {

@@ -126,7 +126,7 @@ class ResourcesTest {
             "piercing", "knockback", "breach", "sweeping_edge", "respiration", "aqua_affinity", "swift_sneak", "depth_strider",
             "soul_speed", "silk_touch", "multishot", "projectile_protection");
         Set<String> potions = Set.of("strong_healing", "strong_swiftness", "fire_resistance", "long_fire_resistance",
-            "strong_strength", "swiftness", "strength", "long_regeneration", "long_slow_falling");
+            "strong_strength", "swiftness", "strength", "long_regeneration", "long_slow_falling", "wind_charged");
         for (String id : KitManager.DEFAULT_KITS) {
             Map<String, Object> kit = yaml("kits/" + id + ".yml");
             assertNotNull(kit.get("display-name"), id + " display-name");

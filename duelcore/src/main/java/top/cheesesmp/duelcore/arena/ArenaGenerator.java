@@ -11,10 +11,12 @@ import org.jspecify.annotations.Nullable;
  * {@code arenas/<name>.dca} + {@code .yml} on first start and editable afterwards like any other arena.
  *
  * <p>Every map is {@value #SIZE}×{@value #SIZE} blocks with a bedrock floor about {@value #GROUND} blocks under the
- * surface, fenced by a {@value #RING}-block-thick ring of invisible barrier from just above the bedrock up to a
- * {@value #RING}-block-thick barrier ceiling (only the ring's top surface block and its plant are left, so the edge
- * still looks natural; digging into it hits barrier; the outermost column is solid barrier so mining those surface
- * blocks never opens a way out). Hills get gentler towards the middle, the ground around both
+ * surface. The lower half of the ground is deepslate (with tuff pockets), blending into the stone above over a few
+ * mixed layers, and the floor is bumpy like vanilla bedrock: the bottom layer is solid, the four above it get
+ * sparser upwards (see {@link #bedrock}). The map is fenced by a {@value #RING}-block-thick ring of invisible
+ * barrier from just above the bottom bedrock layer up to a {@value #RING}-block-thick barrier ceiling (only the
+ * ring's top surface block and its plant are left, so the edge still looks natural; digging into it hits barrier;
+ * the outermost column is solid barrier so mining those surface blocks never opens a way out). Hills get gentler towards the middle, the ground around both
  * spawns is levelled, and trees stay out of the ring and the corridor between the spawns so the fighting area stays
  * open.
  *
@@ -33,18 +35,30 @@ public final class ArenaGenerator {
      * <ul>
      *   <li>1: the first 180×56×180 maps, ~10 blocks of ground, 1-thick fence, with Blossom (cherry grove).</li>
      *   <li>2: ~30 blocks of ground, 3-thick barrier ring and ceiling, no Blossom.</li>
+     *   <li>3: ~60 blocks of ground, deepslate in the lower half, bumpy bedrock floor.</li>
      * </ul>
      */
-    public static final int VERSION = 2;
+    public static final int VERSION = 3;
     /** Built-in maps that older versions generated and this one no longer does: removed on existing servers. */
     public static final List<String> REMOVED = List.of("blossom");
 
     static final int SIZE = 180;
     /** Mean surface height inside the snapshot (the bedrock floor is at y = 0). */
-    static final int GROUND = 30;
+    static final int GROUND = 60;
+    /**
+     * Deepslate replaces the stone below this height (the depth of the version 2 maps), always under
+     * {@code DEEPSLATE - DEEPSLATE_BAND} and ever more rarely over the {@value #DEEPSLATE_BAND} layers above that.
+     */
+    static final int DEEPSLATE = 32;
+    static final int DEEPSLATE_BAND = 6;
+    /** Layers of the bumpy bedrock floor: y = 0 is solid, each of the next ones holds bedrock less often. */
+    static final int BEDROCK_LAYERS = 5;
     /** Thickness of the barrier ring around the map and of the barrier ceiling. */
     static final int RING = 3;
-    /** Room for {@value #GROUND} blocks of ground and the same 44 blocks of air above the mean surface as version 1. */
+    /**
+     * Room for {@value #GROUND} blocks of ground and the same 44 blocks of air above the mean surface as version 1
+     * ({@value #HEIGHT} in all: at the default {@code arena.base-y} 64 an arena spans y 64..171).
+     */
     static final int HEIGHT = GROUND + 45 + RING;
     /** The spawns sit on the middle line, {@code SPAWN_Z2 - SPAWN_Z1} (61) blocks apart. */
     static final int SPAWN_Z1 = 59;
@@ -57,6 +71,7 @@ public final class ArenaGenerator {
 
     private static final String AIR = "minecraft:air";
     private static final String BARRIER = "minecraft:barrier";
+    private static final String BEDROCK = "minecraft:bedrock";
 
     private enum Tree { OAK, BIRCH, SPRUCE, ACACIA, CACTUS }
 
@@ -149,6 +164,33 @@ public final class ArenaGenerator {
         return v < 0.06 ? "minecraft:andesite" : v < 0.09 ? "minecraft:gravel" : "minecraft:stone";
     }
 
+    /** Deepslate, with flat pockets of tuff (value noise that changes every 3 layers). */
+    private static String deepslateBlock(long seed, int x, int y, int z) {
+        return noise(seed + 23 + Math.floorDiv(y, 3), x / 5.0, z / 5.0) > 0.55 ? "minecraft:tuff" : "minecraft:deepslate[axis=y]";
+    }
+
+    /**
+     * True where the floor holds bedrock: always at y = 0, with chance {@code (BEDROCK_LAYERS - y) / BEDROCK_LAYERS}
+     * on the layers above (80, 60, 40, 20 %), never higher. Depends only on the arguments, so every paste and reset of
+     * a map has the same floor.
+     */
+    static boolean bedrock(long seed, int x, int y, int z) {
+        if (y <= 0) return true;
+        if (y >= BEDROCK_LAYERS) return false;
+        return chance(seed + 5, x, y, z) < (BEDROCK_LAYERS - y) / (double) BEDROCK_LAYERS;
+    }
+
+    /**
+     * True where the ground is deepslate instead of the map's own stone: always below
+     * {@code DEEPSLATE - DEEPSLATE_BAND}, never from {@link #DEEPSLATE} up, and with a chance falling from 6/7 to 1/7
+     * over the band in between (like vanilla's y 0..8), so the change of rock is not a flat line.
+     */
+    static boolean deepslate(long seed, int x, int y, int z) {
+        if (y >= DEEPSLATE) return false;
+        if (y < DEEPSLATE - DEEPSLATE_BAND) return true;
+        return chance(seed + 17, x, y, z) < (DEEPSLATE - y) / (double) (DEEPSLATE_BAND + 1);
+    }
+
     // ------------------------------------------------------------------ generation
 
     private static Generated generate(Style s) {
@@ -159,8 +201,12 @@ public final class ArenaGenerator {
             for (int z = 0; z < SIZE; z++) {
                 int top = h[x][z];
                 double patch = noise(s.seed() + 99, x / 7.0, z / 7.0);
-                set(grid, x, 0, z, "minecraft:bedrock");
-                for (int y = 1; y <= top; y++) set(grid, x, y, z, s.column().block(x, y, z, top - y, patch, r));
+                for (int y = 0; y <= top; y++) {
+                    String block = bedrock(s.seed(), x, y, z) ? BEDROCK
+                        : deepslate(s.seed(), x, y, z) ? deepslateBlock(s.seed(), x, y, z)
+                        : s.column().block(x, y, z, top - y, patch, r);
+                    set(grid, x, y, z, block);
+                }
             }
         }
         // decorations first, trees overwrite them (the ring keeps its plants too, so the edge looks natural)
@@ -373,6 +419,11 @@ public final class ArenaGenerator {
 
     private static double lerp(double a, double b, double t) {
         return a + (b - a) * t;
+    }
+
+    /** Uniform in [0, 1) per block, from the seed and position only. */
+    private static double chance(long seed, int x, int y, int z) {
+        return (hash(seed ^ (y * 0x632BE59BD9B4E019L), x, z) + 1) / 2;
     }
 
     private static double hash(long seed, int x, int z) {

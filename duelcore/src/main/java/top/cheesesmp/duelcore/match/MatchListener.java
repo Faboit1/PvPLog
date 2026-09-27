@@ -468,7 +468,8 @@ public final class MatchListener implements Listener {
         String label = event.getMessage().substring(1).split(" ", 2)[0].toLowerCase(Locale.ROOT);
         int colon = label.indexOf(':');
         if (colon >= 0) label = label.substring(colon + 1);
-        if (label.equals("leave") || label.equals("draw") || label.equals("spectate") || plugin.settings().allowedCommands.contains(label)) return;
+        if (label.equals("leave") || label.equals("draw") || label.equals("spectate") || label.equals("stopmusic")
+            || label.equals("playmusic") || plugin.settings().allowedCommands.contains(label)) return;
         if (label.equals("pc") || label.equals("party") || label.equals("p")) return; // party chat and menu work anywhere
         event.setCancelled(true);
         plugin.messages().send(player, "match.command-blocked");

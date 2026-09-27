@@ -100,6 +100,12 @@ matchmaking:
     penalty-per-ms: 0.75
     over-max-ping-penalty: 300
   relax-after-seconds: 30
+  # Not the same opponent twice in a row: the player you just played is skipped while anyone else fits, and only
+  # paired again once both of you have searched long enough for your rating windows to reach allow-at-window
+  # (the same growth as window above, in every mode: 450 = 40 s with the defaults).
+  avoid-rematch:
+    enabled: true
+    allow-at-window: 450
   # Anti-boosting: at most this many ranked games between the same two players per 24 h (0 = off).
   max-ranked-rematches-per-day: 10
   # Log every pairing decision (gap, windows, wait) to the console.
@@ -143,12 +149,34 @@ match:
   trade:
     window-max-ms: 250
     draws-max: 2
-  # Commands usable during a match (everything else is blocked). Admins with duelcore.bypass.commands ignore this.
+  # Commands usable during a match besides /leave, /draw, /spectate, /stopmusic and /playmusic (everything else is
+  # blocked). Admins with duelcore.bypass.commands ignore this.
   allowed-commands: [leave, forfeit, draw, msg, tell, w, r, reply, profile, ping]
   # Play the totem animation with the kit's item when a match is found (silent: animations.match-found-sounds play).
   totem-pop: true
   # Out of bounds: a player this many blocks below the arena floor counts as dead.
   void-depth: 6
+  # The world border closes in while a round is fought: from the arena's size down to shrink-to blocks wide over
+  # shrink-seconds (it restarts every round). Outside it you take damage-per-second health points (2 = one heart),
+  # plus damage-per-block for every block you are past it. shrink-seconds: 0 = the border stays put.
+  # Music in matches: a random track when the first countdown starts and a different one every round, heard by the
+  # fighters and spectators who have Settings > Match music on (/stopmusic and /playmusic switch it too). Tracks
+  # are "<sound id> <length in seconds or m:ss> [speed]" like queue.music.tracks. Only real sound ids work:
+  # Minecraft's background songs (Aria Math, Key, ...) have none of their own, only the music discs do.
+  # medium-chance: how often (0-1) a round gets a medium track instead of a high-energy one.
+  music:
+    enabled: true
+    volume: 0.5
+    medium-chance: 0.25
+    high:
+      - "music_disc.pigstep 148"
+      - "music_disc.cat 185"
+    medium: []
+  border:
+    shrink-to: 10
+    shrink-seconds: 148
+    damage-per-second: 2.0
+    damage-per-block: 0.5
 
 animations:
   # From round 2 on, both fighters are brought back to their spawn with a respawn animation (respawn-styles) instead
@@ -412,6 +440,91 @@ party:
   invite-seconds: 60
   # New parties start open (listed in the party menu for anyone to join) instead of private (invite or password).
   open-by-default: false
+
+chat:
+  # Anti-spam for chat, party chat (@ and /pc) and private messages (/msg, /tell, /w, /r, /me, ...). Players with
+  # duelcore.antispam.bypass (ops by default) skip it; duelcore.antispam.notify sees ads and mutes. Runs before the
+  # slur filter (chat-filter.yml), so blocked messages never show and the filter sees the cleaned text.
+  # Staff: /duelcore antispam status <player>, /duelcore antispam unmute <player>. Texts: messages.yml chat.anti-spam.
+  anti-spam:
+    enabled: true
+    # At most max-messages per window-seconds, and at least min-delay-ms between two messages (all channels
+    # together). Messages that get blocked don't count.
+    rate-limit:
+      enabled: true
+      max-messages: 4
+      window-seconds: 5
+      min-delay-ms: 600
+    # A message the player already sent in the last window-seconds (same chat or same /msg recipient) is blocked;
+    # the comparison ignores caps, accents, look-alike letters, leetspeak, punctuation, spaces, stretched letters and
+    # word order. Near-duplicates (at least `similarity` alike, 0.5-1, for messages of min-similar-length letters or
+    # more) get similar-allowed passes first, so fixing a typo is fine. history: messages remembered per player.
+    duplicates:
+      enabled: true
+      window-seconds: 30
+      history: 5
+      similarity: 0.85
+      similar-allowed: 1
+      min-similar-length: 6
+      # These (and anything of 1-2 letters) may be repeated after lenient-seconds, up to lenient-max times in the
+      # window; they're still rate-limited.
+      lenient-seconds: 3
+      lenient-max: 4
+      lenient-phrases: [gg, gg wp, ggwp, gf, wp, ez, lol, lmao, xd, ty, thx, np, gl, glhf, rematch, 1v1, 2v2, again,
+        nice, rip, ok, "yes", "no", yeah, nah, hi, hey, hello, bye, gn, o7, bruh, same, what, why, lag, wow, omg]
+    # Clean-up (never blocks on its own): invisible and formatting characters (zero-width, right-to-left overrides,
+    # private-use glyphs, Hangul fillers) are removed with strip-unicode, zalgo is cut to max-marks accents per
+    # letter, runs of one character or a short unit ("hahaha") are cut to max-repeat (numbers are kept), and a
+    # message of at least caps-min-letters letters that is more than caps-percent capitals is lowercased
+    # (0 = off). Blocked: messages of junk-min-length or more characters of which under junk-max-alnum-percent are
+    # letters or digits (symbol walls), and messages that are empty once cleaned.
+    flood:
+      enabled: true
+      strip-unicode: true
+      max-marks: 2
+      max-repeat: 4
+      caps-percent: 70
+      caps-min-letters: 8
+      junk-min-length: 16
+      junk-max-alnum-percent: 25
+    # Blocks IP addresses, web addresses and Discord invites, also written as "1 2 3 . 4 5 . 6 7 . 8 9",
+    # "name dot net", "name(.)net", "n a m e . n e t", with leetspeak or look-alike letters. Addresses on the
+    # whitelist (and their subdomains) are allowed; an invite is allowed only when it's listed exactly.
+    advertising:
+      enabled: true
+      whitelist: [cheesesmp.top, pvp.cheesesmp.top, discord.gg/cheesesmp]
+    # Waves: once `players` different players sent the same (or nearly the same) message within window-seconds,
+    # the next ones are blocked. Only messages of min-length letters or more (never the lenient phrases).
+    waves:
+      enabled: true
+      players: 3
+      window-seconds: 10
+      min-length: 12
+    # Every blocked message adds heat (weights below); heat drops by decay-per-minute. From warn-heat on the player
+    # is warned; at mute-heat they're muted from chat and private messages. Each mute within strike-reset-minutes of
+    # the last one is longer (the last length repeats). Mutes are kept across rejoins (not across restarts).
+    escalation:
+      enabled: true
+      warn-heat: 3
+      mute-heat: 6
+      decay-per-minute: 6
+      mute-durations: [30s, 2m, 10m]
+      strike-reset-minutes: 30
+      heat:
+        too-fast: 1
+        rate: 1
+        duplicate: 1
+        similar: 1
+        junk: 1
+        empty: 1
+        advertising: 4
+        wave: 0.5
+        commands: 0
+    # Commands: at most max-commands per window-seconds (the extra ones are refused with a gentle note).
+    commands:
+      enabled: true
+      max-commands: 8
+      window-seconds: 3
 
 debug:
   # Extra console output for matches and arena resets.

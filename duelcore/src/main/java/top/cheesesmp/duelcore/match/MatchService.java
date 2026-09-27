@@ -288,6 +288,7 @@ public final class MatchService implements Runnable {
                     timeout(m);
                 } else if (m.roundTicks % 5 == 0) {
                     boundsCheck(m);
+                    if (m.roundTicks % 20 == 0 && m.state == Match.State.FIGHTING) borderDamage(m);
                     if (cfg.animHeartbeat && m.state == Match.State.FIGHTING) heartbeats(m);
                 }
             }
@@ -366,7 +367,9 @@ public final class MatchService implements Runnable {
         }
         for (UUID s : m.spectators()) {
             Player sp = Bukkit.getPlayer(s);
-            if (sp != null) plugin.sidebar().refresh(sp);
+            if (sp == null) continue;
+            plugin.sidebar().refresh(sp);
+            applyBorder(sp, arena);
         }
     }
 
@@ -382,11 +385,16 @@ public final class MatchService implements Runnable {
         if (m.firstFightAt == 0) m.firstFightAt = System.currentTimeMillis();
         for (Participant p : m.participants()) earlyLeaves.remove(p.uuid());
         List<SoundPool.Played> fightSounds = plugin.settings().fightStartSounds.pick(java.util.concurrent.ThreadLocalRandom.current());
+        for (UUID s : m.spectators()) {
+            Player sp = Bukkit.getPlayer(s);
+            if (sp != null) shrinkBorder(sp, m);
+        }
         for (Participant p : m.participants()) {
             Player player = Bukkit.getPlayer(p.uuid());
             if (player == null || !p.alive) continue;
             unfreeze(player);
             player.setInvulnerable(false);
+            shrinkBorder(player, m);
             plugin.animations().fightStart(player, audience(m));
             if (!plugin.animations().fx().fight(player)) {
                 player.showTitle(Title.title(plugin.messages().get("match.fight"), Component.empty(),
@@ -459,10 +467,67 @@ public final class MatchService implements Runnable {
     private void applyBorder(Player player, ArenaInstance arena) {
         WorldBorder border = Bukkit.createWorldBorder();
         border.setCenter(arena.originX() + arena.template().sizeX() / 2.0, arena.originZ() + arena.template().sizeZ() / 2.0);
-        border.setSize(Math.max(arena.template().sizeX(), arena.template().sizeZ()) + 2);
+        border.setSize(fullBorder(arena));
         border.setWarningDistance(0);
         border.setDamageAmount(0);
         player.setWorldBorder(border);
+    }
+
+    /**
+     * Shows a spectator the match's border as the fighters see it right now (closing in while a round is fought).
+     * Called when they start watching; later rounds reset and close it for them with the fighters.
+     */
+    public void showBorder(Player viewer, Match m) {
+        ArenaInstance arena = m.arena;
+        if (arena == null) return;
+        applyBorder(viewer, arena);
+        MainConfig cfg = plugin.settings();
+        WorldBorder border = viewer.getWorldBorder();
+        if (m.state != Match.State.FIGHTING || cfg.borderShrinkSeconds <= 0 || border == null) return;
+        double to = Math.min(cfg.borderShrinkTo, fullBorder(arena));
+        border.setSize(borderSize(fullBorder(arena), to, cfg.borderShrinkSeconds, m.roundTicks));
+        long left = cfg.borderShrinkSeconds * 20L - m.roundTicks;
+        if (left > 0) border.changeSize(to, left);
+    }
+
+    /** The border's width at the start of a round: the arena and a block on each side. */
+    private static double fullBorder(ArenaInstance arena) {
+        return Math.max(arena.template().sizeX(), arena.template().sizeZ()) + 2;
+    }
+
+    /** Starts closing the border in (config.yml match.border) for a fighter or a spectator of {@code m}. */
+    private void shrinkBorder(Player player, Match m) {
+        MainConfig cfg = plugin.settings();
+        WorldBorder border = player.getWorldBorder();
+        if (cfg.borderShrinkSeconds <= 0 || border == null || m.arena == null) return;
+        border.changeSize(Math.min(cfg.borderShrinkTo, fullBorder(m.arena)), cfg.borderShrinkSeconds * 20L);
+    }
+
+    /** The border's width {@code roundTicks} into a fight (the same closing-in the players see). */
+    static double borderSize(double full, double to, int seconds, int roundTicks) {
+        if (seconds <= 0 || to >= full) return full;
+        double f = Math.min(1, roundTicks / (seconds * 20.0));
+        return full + (to - full) * f;
+    }
+
+    /** Once a second while fighting: everyone past the closing border takes damage, more the farther out. */
+    private void borderDamage(Match m) {
+        MainConfig cfg = plugin.settings();
+        ArenaInstance arena = m.arena;
+        if (arena == null || cfg.borderShrinkSeconds <= 0 || cfg.borderDamagePerSecond <= 0) return;
+        double half = borderSize(fullBorder(arena), cfg.borderShrinkTo, cfg.borderShrinkSeconds, m.roundTicks) / 2;
+        double cx = arena.originX() + arena.template().sizeX() / 2.0;
+        double cz = arena.originZ() + arena.template().sizeZ() / 2.0;
+        for (Participant p : m.participants()) {
+            if (!p.alive || p.left()) continue;
+            Player player = Bukkit.getPlayer(p.uuid());
+            if (player == null || player.getWorld() != arena.world()) continue;
+            Location loc = player.getLocation();
+            double out = Math.max(Math.abs(loc.getX() - cx), Math.abs(loc.getZ() - cz)) - half;
+            if (out <= 0) continue;
+            player.damage(cfg.borderDamagePerSecond + cfg.borderDamagePerBlock * out,
+                org.bukkit.damage.DamageSource.builder(org.bukkit.damage.DamageType.OUTSIDE_BORDER).build());
+        }
     }
 
     // ------------------------------------------------------------------ freeze
@@ -1058,7 +1123,7 @@ public final class MatchService implements Runnable {
                 plugin.tiers().placementMatches(), p.tierBefore(), p.tierAfter, false));
             plugin.tiers().refresh(profile);
             writes.add(new ProfileService.RatingWrite(profile.id(), m.kit().id(), stats.snapshot(), profile.elo(),
-                profile.overall()));
+                profile.points(), profile.overall()));
             profile.recent(null);
         }
     }

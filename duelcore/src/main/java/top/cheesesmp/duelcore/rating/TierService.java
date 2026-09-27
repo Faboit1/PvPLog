@@ -10,9 +10,10 @@ import top.cheesesmp.duelcore.profile.KitStats;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 
 /**
- * Turns stats into tiers, the overall Elo and their display. Immutable; replaced on reload.
- * Overall Elo = average rating of the kits a player finished placement in; the overall tier uses the same thresholds
- * as kit tiers (tiers.yml kit-thresholds.overall when present, otherwise default).
+ * Turns stats into tiers, the overall standing and their display. Immutable; replaced on reload.
+ * Overall points = the sum of the (rounded) Elo of every kit a player finished placement in; the overall board ranks by
+ * them. Overall Elo = the average rating of those kits; the overall tier comes from it with the same thresholds as kit
+ * tiers (tiers.yml kit-thresholds.overall when present, otherwise default).
  */
 public final class TierService {
 
@@ -59,6 +60,19 @@ public final class TierService {
         return n == 0 ? 0 : (int) Math.round(sum / n);
     }
 
+    /**
+     * Overall points: the sum of the Elo (each kit's rating rounded, as shown) of the kits whose placement is finished
+     * (0 when none). Same as {@link top.cheesesmp.duelcore.db.dao.RatingDao#backfillPoints}.
+     */
+    public int overallPoints(PlayerProfile profile) {
+        long sum = 0;
+        for (KitStats s : profile.allStats().values()) {
+            if (s.games < ladder.placementMatches()) continue;
+            sum += Math.round(s.rating);
+        }
+        return (int) Math.min(Integer.MAX_VALUE, sum);
+    }
+
     /** Overall tier from the overall Elo, or null when the player has no ranked kit yet. */
     public @Nullable Tier overall(PlayerProfile profile, int elo) {
         for (Map.Entry<String, KitStats> e : profile.allStats().entrySet()) {
@@ -67,15 +81,20 @@ public final class TierService {
         return null;
     }
 
-    /** Recomputes and stores the overall Elo + overall tier on the profile. */
+    /** Recomputes and stores the overall Elo, points and overall tier on the profile. */
     public void refresh(PlayerProfile profile) {
         int elo = overallElo(profile);
-        profile.standing(elo, overall(profile, elo));
+        profile.standing(elo, overallPoints(profile), overall(profile, elo));
     }
 
     /** The overall Elo for display: the number, or "—" while no kit has finished placement. */
     public static String eloText(@Nullable PlayerProfile profile) {
         return profile == null || profile.overall() == null ? "—" : String.valueOf(profile.elo());
+    }
+
+    /** The overall points for display: the number, or "—" while no kit has finished placement. */
+    public static String pointsText(@Nullable PlayerProfile profile) {
+        return profile == null || profile.overall() == null ? "—" : String.valueOf(profile.points());
     }
 
     public String label(@Nullable Tier tier) {

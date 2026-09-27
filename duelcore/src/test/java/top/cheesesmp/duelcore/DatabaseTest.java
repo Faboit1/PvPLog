@@ -62,8 +62,8 @@ class DatabaseTest {
             db.transaction(c -> {
                 RatingDao.upsert(c, db.dialect(), s1.id(), a.id(), sword, sa);
                 RatingDao.upsert(c, db.dialect(), s1.id(), b.id(), sword, sb);
-                RatingDao.upsertStanding(c, db.dialect(), s1.id(), a.id(), 1, Tier.MT5);
-                RatingDao.upsertStanding(c, db.dialect(), s1.id(), b.id(), 22, Tier.LT4);
+                RatingDao.upsertStanding(c, db.dialect(), s1.id(), a.id(), 1, 1, Tier.MT5);
+                RatingDao.upsertStanding(c, db.dialect(), s1.id(), b.id(), 22, 22, Tier.LT4);
                 return null;
             }).join();
             sa.rating = 1040;

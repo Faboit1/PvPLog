@@ -78,7 +78,9 @@ public enum Setting {
     /** The animated round banner title ("ROUND WON") when a round ends; off: the round result on the action bar. */
     ROUND_BANNERS(29, true),
     /** A chat line when someone starts or stops watching this player's match. */
-    SPECTATOR_ALERTS(30, true);
+    SPECTATOR_ALERTS(30, true),
+    /** Music during matches ({@code match/MatchMusic}); /stopmusic and /playmusic switch it. The last free bit. */
+    MATCH_MUSIC(31, true);
 
     /** The first bit that is stored relative to the default. */
     public static final int RELATIVE_FROM = 10;

@@ -97,7 +97,8 @@ class RatingTest {
         p = new PlayerProfile(1, p.uuid(), "p", 0, null, null, 0, stats); // the profile copies the map
         tiers.refresh(p);
         assertEquals(1400, p.elo());
-        assertEquals(Tier.LT3, p.overall()); // 1350 <= 1400 < 1410
+        assertEquals(2800, p.points()); // the placed kits added up (mace not placed yet)
+        assertEquals(Tier.LT3, p.overall()); // 1350 <= 1400 < 1410: the tier stays from the average
     }
 
     private static KitStats vet(double rating) {

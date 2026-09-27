@@ -64,6 +64,22 @@ public final class CommandService {
                 if (p != null) plugin.dialogs().settings(p);
                 return Command.SINGLE_SUCCESS;
             }).build(), "Duel settings", List.of());
+        commands.register(Commands.literal("stopmusic").requires(perm("duelcore.music"))
+            .executes(ctx -> {
+                Player p = player(ctx);
+                if (p == null) return 0;
+                plugin.matchMusic().stopNow(p);
+                plugin.messages().send(p, "match.music.stopped");
+                return Command.SINGLE_SUCCESS;
+            }).build(), "Stop the match music (switches Settings > Match music off)", List.of());
+        commands.register(Commands.literal("playmusic").requires(perm("duelcore.music"))
+            .executes(ctx -> {
+                Player p = player(ctx);
+                if (p == null) return 0;
+                plugin.matchMusic().playNow(p);
+                plugin.messages().send(p, "match.music.playing");
+                return Command.SINGLE_SUCCESS;
+            }).build(), "Play the match music (switches Settings > Match music on)", List.of());
         commands.register(tier(), "Tier management", List.of());
         commands.register(plugin.tester().command(), "Animation test mode: preview animations, simulated progress", List.of());
         new top.cheesesmp.duelcore.friends.FriendCommands(plugin, plugin.friends()).register(commands);
@@ -466,7 +482,8 @@ public final class CommandService {
                         PlayerProfile p = o.get();
                         plugin.messages().send(sender, "tier.info-header", Messages.text("player", p.name()),
                             Messages.comp("tier", plugin.tiers().format(p.overall())),
-                            Messages.text("elo", top.cheesesmp.duelcore.rating.TierService.eloText(p)));
+                            Messages.text("elo", top.cheesesmp.duelcore.rating.TierService.eloText(p)),
+                            Messages.text("points", top.cheesesmp.duelcore.rating.TierService.pointsText(p)));
                         p.allStats().forEach((kit, s) -> plugin.messages().send(sender, "tier.info-line",
                             Messages.text("kit", kit), Messages.comp("tier", plugin.tiers().format(plugin.tiers().kitTier(kit, s))),
                             Messages.num("rating", (int) Math.round(s.rating)), Messages.num("games", s.games),
@@ -493,7 +510,7 @@ public final class CommandService {
             stats.updatedAt = System.currentTimeMillis();
             plugin.tiers().refresh(p);
             plugin.profiles().persistRating(p.uuid(), new ProfileService.RatingWrite(p.id(), kit.id(), stats.snapshot(),
-                p.elo(), p.overall()));
+                p.elo(), p.points(), p.overall()));
             plugin.leaderboards().invalidate(kit.id());
             Player online = Bukkit.getPlayer(p.uuid());
             if (online != null) {

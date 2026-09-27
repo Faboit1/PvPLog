@@ -71,17 +71,36 @@ public final class RatingDao {
         }
     }
 
-    public static void upsertStanding(Connection c, Dialect d, int seasonId, int playerId, int elo, @Nullable Tier overall)
-        throws SQLException {
+    /** Stores a player's overall standing: overall Elo (average), points (sum) and overall tier. */
+    public static void upsertStanding(Connection c, Dialect d, int seasonId, int playerId, int elo, int points,
+                                      @Nullable Tier overall) throws SQLException {
         try (PreparedStatement ps = c.prepareStatement(
-            "INSERT INTO dc_standings (season_id, player_id, elo, overall_tier) VALUES (?, ?, ?, ?)"
-                + d.upsert("season_id, player_id", "elo", "overall_tier"))) {
+            "INSERT INTO dc_standings (season_id, player_id, elo, points, overall_tier) VALUES (?, ?, ?, ?, ?)"
+                + d.upsert("season_id, player_id", "elo", "points", "overall_tier"))) {
             ps.setInt(1, seasonId);
             ps.setInt(2, playerId);
             ps.setInt(3, elo);
-            if (overall == null) ps.setNull(4, Types.TINYINT);
-            else ps.setInt(4, overall.id());
+            ps.setInt(4, points);
+            if (overall == null) ps.setNull(5, Types.TINYINT);
+            else ps.setInt(5, overall.id());
             ps.executeUpdate();
+        }
+    }
+
+    /**
+     * Fills dc_standings.points of every standing in every season from the stored ratings: the sum of the rounded
+     * rating of each kit with at least {@code placementGames} games (the same as
+     * {@link top.cheesesmp.duelcore.rating.TierService#overallPoints}). Run once after schema v9 added the column.
+     * Returns the number of standings updated.
+     */
+    public static int backfillPoints(Connection c, Dialect d, int placementGames) throws SQLException {
+        try (PreparedStatement ps = c.prepareStatement(
+            "UPDATE dc_standings SET points = (SELECT COALESCE(SUM(CAST(ROUND(r.rating) AS "
+                + (d == Dialect.SQLITE ? "INTEGER" : "SIGNED") + ")), 0) "
+                + "FROM dc_ratings r WHERE r.season_id = dc_standings.season_id AND r.player_id = dc_standings.player_id "
+                + "AND r.games >= ?)")) {
+            ps.setInt(1, placementGames);
+            return ps.executeUpdate();
         }
     }
 

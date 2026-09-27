@@ -141,6 +141,11 @@ public final class ClickRouter implements Listener {
                     deny(player);
                 }
             }
+            case "duel/find" -> plugin.dialogs().duelSearch(player, "");
+            case "duel/search" -> {
+                String query = view == null ? "" : java.util.Objects.requireNonNullElse(view.getText("search"), "");
+                plugin.dialogs().duelSearch(player, query.length() > 16 ? query.substring(0, 16) : query);
+            }
             case "duel/pick" -> {
                 Player target = uuidPlayer(data.get("target"));
                 if (target == null) {

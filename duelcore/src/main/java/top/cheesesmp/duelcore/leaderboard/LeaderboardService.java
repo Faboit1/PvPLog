@@ -134,9 +134,10 @@ public final class LeaderboardService implements Runnable {
         return db.submit(c -> LeaderboardDao.kitRank(c, season, kitId, placement, rating));
     }
 
-    public CompletableFuture<Integer> overallRank(int elo) {
+    /** Rank of overall points on the overall board. */
+    public CompletableFuture<Integer> overallRank(int points) {
         int season = plugin.profiles().season().id();
-        return db.submit(c -> LeaderboardDao.overallRank(c, season, elo));
+        return db.submit(c -> LeaderboardDao.overallRank(c, season, points));
     }
 
     /** Background refresh of boards viewed in the last 5 minutes; drops the rest. */

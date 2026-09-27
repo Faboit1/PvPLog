@@ -54,7 +54,10 @@ instance when it's pasted):
 | Savanna | savanna | grass and coarse dirt, acacias |
 | Pinewood | taiga | podzol, ferns, leaf litter, spruce |
 
-Every map is 180×180 with about 30 blocks of ground over a bedrock floor, and 44 blocks of air above. A 3-block-thick
+Every map is 180×180 with about 60 blocks of ground over a bedrock floor, and 44 blocks of air above (108 blocks
+tall in all). The lower half of the ground is deepslate with tuff pockets, mixed into the stone above over a few
+layers, and the bedrock floor is bumpy like vanilla's: the bottom layer is solid, the four above it hold bedrock
+ever more rarely (the same on every reset). A 3-block-thick
 ring of invisible barrier runs around the edge from the bedrock up to a 3-block-thick barrier ceiling, so nobody
 can dig or tower out (the top surface block of the ring's inner two columns is kept, so the edge looks natural;
 the outermost column is solid barrier). The spawns are 61 blocks
@@ -174,10 +177,10 @@ Player commands (all players by default):
 | `/queue [kit]` | `/play`, `/q` | Opens the queue menu, or joins a kit's (ranked) queue directly |
 | `/leave` | `/forfeit` | Leaves the queue, stops spectating, or forfeits (asks to confirm within 5 s) |
 | `/draw` | | Offers your 1v1 opponent a draw, or accepts theirs (`/draw deny` declines). An agreed draw changes nobody's Elo |
-| `/profile [player]` | `/stats` | Profile: overall tier and Elo, per-kit tier/rating/record, recent matches. `/profile <p> legacy` shows last season |
+| `/profile [player]` | `/stats` | Profile: overall tier and points, per-kit tier/rating/record, recent matches. `/profile <p> legacy` shows last season |
 | `/leaderboard [kit\|overall] [region\|country]` | `/lb`, `/top` | Leaderboards, global, per region (`EU`) or per country (two letters, `DE`; see *Leaderboards* below). Test bots (names starting with `dcbot`) are never listed or counted in ranks |
 | `/spectate [player]` | `/spec` | Watch a match. Without a name it opens the live list (search; highest Elo first, then by name). `/spectate stop` |
-| `/party` | `/p` | Party menu (see *Parties*). `create`, `invite <player>`, `accept\|deny [player]`, `join <leader>`, `leave`, `kick <player>`, `promote <player>`, `disband`, `chat`, `open`, `private`, `password`, `list`, `ffa [kit]`, `split [kit]`, `duel [leader] [kit]`, `duel accept\|deny [leader]` |
+| `/party` | `/p` | Party menu (see *Parties*). `create`, `invite <player>`, `accept\|deny [player]`, `join <leader>`, `leave`, `kick <player>`, `promote <player>`, `disband`, `chat`, `open`, `private`, `password`, `list`, `teams [random\|auto]`, `team <player> <1\|2>`, `ffa [kit]`, `split [kit]`, `duel [leader] [kit]`, `duel accept\|deny [leader]` |
 | `/pc <message>` | | Party chat. Starting a chat message with `@` does the same |
 | `/duel [player] [kit]` | | Unranked challenge. Without arguments it opens a player picker. `/duel accept\|deny <player>` |
 | `/settings` | | Player settings in five tabs: Gameplay, Visuals, Sounds, Social, Queue (see *Player settings*) |
@@ -194,9 +197,10 @@ Staff:
 | `/duelcore sethub` | `duelcore.admin.sethub` | Set the hub spawn |
 | `/duelcore arena …` | `duelcore.admin.arena` | See *Arenas* |
 | `/duelcore kit list\|give <id>\|save <id>` | `duelcore.admin.kit` | Kits |
-| `/duelcore season info\|reset <name> confirm\|recalc` | `duelcore.admin.season` | New season: ratings reset, the old season stays viewable as "legacy". `recalc` rebuilds the overall tiers after changing tiers.yml |
+| `/duelcore season info\|reset <name> confirm\|recalc` | `duelcore.admin.season` | New season: ratings reset, the old season stays viewable as "legacy". `recalc` rebuilds the overall tiers and points after changing tiers.yml |
 | `/duelcore player <name> setrating <kit> <r>\|setgames <kit> <n>\|setregion <r>\|setcountry <cc\|auto\|none>` | `duelcore.admin.rating` | Edit a player. `setcountry` takes a countries.yml code (turns the player's auto-detect off), `auto` (detect it again) or `none` |
 | `/duelcore forceend <player>` | `duelcore.admin.match` | End a match without rating changes |
+| `/duelcore antispam status\|unmute <player>` | `duelcore.admin.antispam` | Chat anti-spam: a player's heat, strikes and mute; `unmute` lifts the mute and forgives heat and strikes (see *Configuration*, anti-spam) |
 | `/animtest [on\|off\|play <preview>]` | `duelcore.animtest` | Animation test mode (see *Animations*): preview animations on yourself, simulated progress after unranked matches |
 | `/duelcore debug [gc\|trace\|matches\|player <name>]` | `duelcore.admin.debug` | Health numbers (instances, chunks, entities, tasks, caches, heap, DB threads, the GeoIP database), live matches, one player's client version, brand, ping and state |
 
@@ -308,7 +312,9 @@ switches and both players' settings applied; use the second for rows without a l
 | `duelcore.hub.build` | op | Build in the hub (in creative) |
 | `duelcore.chatfilter.notify` | op | See messages the chat filter blocked |
 | `duelcore.chatfilter.bypass` | false | Messages skip the chat filter (not even ops have it unless given) |
-| `duelcore.admin` | op | All admin permissions: `.reload`, `.sethub`, `.arena`, `.kit`, `.season`, `.rating`, `.debug`, `.match`, `.tournament` |
+| `duelcore.antispam.bypass` | op | Chat, private messages and commands skip the anti-spam |
+| `duelcore.antispam.notify` | op | See ads and spam mutes caught by the anti-spam |
+| `duelcore.admin` | op | All admin permissions: `.reload`, `.sethub`, `.arena`, `.kit`, `.season`, `.rating`, `.debug`, `.match`, `.tournament`, `.antispam` |
 
 ---
 
@@ -355,7 +361,7 @@ player back into the same queues after each match. The ✎ after a kit opens its
 screen after a match has an *Edit kit* button for the match's kit.
 
 **Leaderboards** (Leaderboards item, `/leaderboard`) list the top players (gui.yml `dialogs.leaderboard-lines`, 10)
-overall or in a kit, with a button per kit and one per filter: *All* (global), the configured regions and, for players
+overall (by points, see *tiers.yml* below) or in a kit (by Elo), with a button per kit and one per filter: *All* (global), the configured regions and, for players
 who have a country set, *My country* (its flag and code, the name in its tooltip): the same board for their country only, titled
 with the country's name from `countries.yml` (`dialog.leaderboard.title-country`). Ranks count within the filter, so
 on a country board the "You · #rank" line under the top players is your rank in your country. Switching the kit keeps
@@ -385,8 +391,13 @@ search box); neither does the queue menu while its progress animation plays.
 - The rating threshold of every tier: `kit-thresholds.default`, per-kit overrides, and an optional `overall` override.
 - How each tier is drawn (`format`).
 
-Players are ranked by Elo. A tier is just the label for the Elo range a rating falls in. The overall ranking is
-the overall Elo: the average rating of every kit a player has finished placement in.
+Kit boards rank by Elo. A tier is just the label for the Elo range a rating falls in. The overall board ranks by
+**points**: the Elo of every kit a player has finished placement in, added up (a kit still in placement doesn't
+count), so playing more kits well climbs the overall board. The overall *tier* still comes from the overall Elo, the
+average of those same kits (`kit-thresholds.overall` if set). Profiles, the hub / queue sidebars, the join title and
+`/duelcore tier info` show the points ("2480 pts"). Points are stored in `dc_standings.points` (schema v9); upgrading
+fills them in once for every season from the stored ratings, and `/duelcore season recalc` rebuilds them for the
+current season.
 
 **gui.yml**
 
@@ -424,6 +435,27 @@ other alphabets, accents, zero-width characters, stretched letters, up to three 
 `Scunthorpe`). `on-block-commands` can mute or warn. Staff with `duelcore.chatfilter.notify` see blocked messages.
 Note: masked words are sent as the server-side edit of a player message; clients with "Only Show Secure Chat" on
 still see the original of a *masked* message (blocked messages never reach anyone).
+
+**Anti-spam** (`config.yml` → `chat.anti-spam`): checks public chat, party chat (`@…`, `/pc`) and private messages
+(`/msg`, `/tell`, `/w`, `/r`, `/me`, …) before the slur filter, so blocked spam is never shown and everything after it
+(filter, party chat, chat tags, shortcodes) sees the cleaned text. Every check can be turned off on its own:
+
+| Check | Default | |
+| --- | --- | --- |
+| Rate limit | 4 messages / 5 s, 600 ms apart | Shared by chat and private messages; blocked messages don't count |
+| Duplicates | last 5 messages, 30 s | Compared after folding caps, accents, look-alike letters (Cyrillic, fullwidth, small caps), leetspeak, punctuation, spaces (`h e l l o`), stretched letters and word order. A near-duplicate (85 % alike) passes once, so fixing a typo is fine; the next one is blocked. Private messages have a history per recipient |
+| Short phrases | `gg`, `gg wp`, `ez`, `lol`, `ty`, `1v1`, `rematch`, … | `lenient-phrases` (and anything of 1-2 letters) may be repeated after 3 s, up to 4 times per 30 s, and never count as a wave |
+| Clean-up | on | Zero-width and formatting characters, right-to-left overrides, private-use glyphs and invisible fillers are removed; zalgo is cut to 2 accents per letter; runs like `noooooooo`/`hahahahaha` are cut to 4 (numbers are kept); a message of 8+ letters that is over 70 % caps is lowercased. Nothing is blocked for this |
+| Junk | 16+ characters, under 25 % letters/digits | Symbol walls and messages that are empty once cleaned are blocked |
+| Advertising | on | IPs and web addresses (common TLDs) and Discord invites, also written `1 2 3 . 4 5 . 6 7 . 8 9`, `name dot net`, `name(.)net`, `n a m e . n e t`, with leetspeak or look-alike letters. `whitelist` (default `cheesesmp.top`, `pvp.cheesesmp.top`, `discord.gg/cheesesmp`) allows those addresses and their subdomains, spelled normally; invites only exactly. Staff with `duelcore.antispam.notify` are told |
+| Waves | 3 players / 10 s | Once three players sent the same (or nearly the same) message of 12+ letters, the next ones are blocked (raids, copy-paste trains) |
+| Commands | 8 / 3 s | Extra commands are refused with a gentle note |
+
+Every blocked message adds *heat* (ads 4, most others 1), which drops by 6 a minute. From 3 heat the player is warned
+on the action bar; at 6 they're muted from chat and private messages for 30 s, then 2 min, then 10 min for repeat
+offences within 30 minutes. Muted players see the time left. Mutes are kept by UUID, so leaving and rejoining doesn't
+reset them (a restart does). `/duelcore antispam status <player>` and `/duelcore antispam unmute <player>` for staff;
+`duelcore.antispam.bypass` (ops) skips all of it. Texts are in `messages.yml` → `chat.anti-spam`.
 
 **messages.yml**: every player-facing text. The theme tags `<accent> <text> <muted> <good> <bad>` are defined at the
 top, so recolouring means editing five lines.
@@ -543,23 +575,30 @@ invitations with Accept/Deny, and the open parties to join with one click.
   Players who turned off *party invites from anyone* (setting `PARTY_INVITES`) can only be invited by their friends
   (mutual follows); friends are listed first in the menu's invite list.
 - **The menu** shows the members (leader ★, head, online / offline / in match, pages of 8) and the buttons *Invite
-  Player*, *Party Chat*, *Party FFA*, *Party Duel*, *Party vs Party*, *Privacy* and *Disband* / *Leave*. Buttons that
+  Player*, *Party Chat*, *Party FFA*, *Party Duel*, *Party vs Party*, *Teams*, *Privacy* and *Disband* / *Leave*. Buttons that
   can't be used right now are struck through and their tooltip says why. The leader clicks a member to kick them or
   make them leader.
 - **Party chat.** `/pc <message>`, a chat message starting with `@`, or every message while *Party Chat* is on (saved
   per member) goes to the online party members only, with a `[Party]` prefix. It passes the chat filter like normal
   chat: blocked stays blocked, masked stays masked.
-- **Party matches** (leader only, unranked, the leader picks the kit). Everyone online must be free of matches;
-  queues and spectating are left automatically. *Party FFA*: everyone for themselves, one round, last one standing
-  wins (spawns on a ring between the arena spawns). *Party Duel*: the online members in two random teams of equal
-  size (±1). *Party vs Party*: the other leader gets a request (dialog and chat; the same leader can ask again after
+- **Party matches** (leader only, unranked, the leader picks the kit). Members who are in a match (or still loading)
+  sit it out instead of blocking it, and the others are told who sat out; at least 2 members must be able to play.
+  Queues and spectating are left automatically. *Party FFA*: everyone for themselves, one round, last one standing
+  wins (spawns on a ring between the arena spawns). *Party Duel*: by default the available members in two random
+  teams of equal size (±1), drawn again every match. The leader can pick the teams instead (*Teams* in the menu,
+  `/party teams`): move each member to Team 1 or 2 with a click (or `/party team <player> <1|2>`), *Randomize*
+  (`/party teams random`: balanced random teams kept until changed) or back to *Auto* (`/party teams auto`). Picked
+  teams stay until the leader changes them (memory only; a restart goes back to auto): new members join the smaller
+  team, members who leave drop out, members who sit a match out are only left out of that match. A picked team with
+  nobody who can play refuses to start. The teams are shown in the kit picker. *Party vs Party*: the other leader gets a request (dialog and chat; the same leader can ask again after
   15 seconds) and the match is party against party. Team mates can't hurt each other. The party is told the result afterwards and stays together.
 - **Notices.** The party hears about joins, leaves, kicks, leader changes, members coming online or going offline
   and disbanding. Someone removed or disbanded while offline is told on their next join.
 
 ## PlaceholderAPI
 
-`%duelcore_elo%` (overall Elo), `%duelcore_tier%`, `%duelcore_tier_formatted%`,
+`%duelcore_points%` (overall points: the placed kits' Elo added up, what the overall board ranks by),
+`%duelcore_elo%` (overall Elo: their average), `%duelcore_tier%`, `%duelcore_tier_formatted%`,
 `%duelcore_wins%`, `%duelcore_losses%`, `%duelcore_region%`, `%duelcore_in_match%`, `%duelcore_queued%`,
 `%duelcore_live%`, and per kit `%duelcore_tier_<kit>%`, `%duelcore_rating_<kit>%`, `%duelcore_wins_<kit>%`,
 `%duelcore_losses_<kit>%`, `%duelcore_games_<kit>%`. Only cached data of online players is used, so placeholders
@@ -568,7 +607,7 @@ never wait on the database.
 ## Developer API
 
 `DuelCoreApi` is registered as a Bukkit service (`getServicesManager().load(DuelCoreApi.class)`) and has `profile`,
-`overallTier`, `kitTier`, `elo` (the overall Elo), `match` and `liveMatches`. `setMatchPolicy` plugs in
+`overallTier`, `kitTier`, `points` (the overall points), `elo` (the overall Elo), `match` and `liveMatches`. `setMatchPolicy` plugs in
 your own pairing rules. `MatchStartEvent` and `MatchEndEvent` are fired for every match.
 
 ---

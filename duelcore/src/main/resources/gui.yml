@@ -174,6 +174,7 @@ settings-menu:
     match-sounds: "items:item/goat_horn"
     menu-sounds: "items:item/comparator"
     queue-music: "items:item/music_disc_cat"
+    match-music: "items:item/music_disc_pigstep"
     # Social
     duel-requests: "items:item/iron_sword"
     party-invites: "items:item/cake"
@@ -294,11 +295,12 @@ sidebar:
     width: 1.6
     sweep-ticks: 32
     pause-ticks: 160
-  # Placeholders: <player> <tier> <elo> (overall Elo) <queued> <live> <online> <region> <ping>
+  # Placeholders: <player> <tier> <points> (overall points: the placed kits' Elo added up) <elo> (overall Elo, their
+  # average) <queued> <live> <online> <region> <ping>
   hub:
     - ""
     - "<text><player></text>"
-    - "<tier> <muted>· <elo> Elo</muted>"
+    - "<tier> <muted>· <points> pts</muted>"
     - ""
     - "<muted>Queued</muted>  <text><queued></text>"
     - "<muted>Live</muted>  <text><live></text>"
@@ -308,7 +310,7 @@ sidebar:
   queue:
     - ""
     - "<text><player></text>"
-    - "<tier> <muted>· <elo> Elo</muted>"
+    - "<tier> <muted>· <points> pts</muted>"
     - ""
     - "<kit_icon> <text><kit></text> <muted><mode></muted>"
     - "<muted>Searching</muted>  <text><wait></text>"
@@ -426,12 +428,12 @@ flags:
     duel: true
     leaderboard: true
 
-# Tab list header and footer, refreshed every 2 s. Empty lists = none.
+# Tab list header and footer, refreshed every 0.65 s. Empty lists = none.
 # Placeholders: <online> <live> <fighting> <queued> <ping> <tps> <spectators> (spectating any match)
 #   <watching> (spectators of the player's own match, or of the match they watch)
 tab:
   # <logo> in the header: the text in a colour wave between two colours that shifts by step (1.0 = a full cycle) at
-  # every tab refresh (every 2 seconds; config.yml animations.tab-logo, off = a still wave).
+  # every tab refresh (every 0.65 seconds; config.yml animations.tab-logo, off = a still wave).
   logo:
     text: "Cheese PvP"
     colors: ["#f2c14e", "#fff1b8"]

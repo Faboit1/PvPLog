@@ -42,8 +42,17 @@ public final class MainConfig {
     public final boolean stopClientMusic;
     public final float queueMusicVolume;
     public final top.cheesesmp.duelcore.queue.MusicTracks queueMusicTracks;
+    /** match.music: a random track per round, from high (or with mediumChance, medium). */
+    public final boolean matchMusicEnabled;
+    public final float matchMusicVolume;
+    public final double matchMusicMediumChance;
+    public final top.cheesesmp.duelcore.queue.MusicTracks matchMusicHigh;
+    public final top.cheesesmp.duelcore.queue.MusicTracks matchMusicMedium;
 
     // matchmaking
+    /** matchmaking.avoid-rematch: not the same opponent twice in a row until both windows reach allowAt. */
+    public final boolean mmAvoidRematch;
+    public final double mmAvoidRematchAllowAt;
     public final int mmIntervalTicks;
     public final double mmWindowInitial;
     public final double mmWindowGrowth;
@@ -145,6 +154,11 @@ public final class MainConfig {
      */
     public final List<String> soundProblems = new java.util.ArrayList<>();
     public final int voidDepth;
+    /** match.border: the round's border closes in to shrinkTo blocks over shrinkSeconds (0 = off); damage outside. */
+    public final double borderShrinkTo;
+    public final int borderShrinkSeconds;
+    public final double borderDamagePerSecond;
+    public final double borderDamagePerBlock;
 
     // rating
     public final String ratingSystem;
@@ -218,6 +232,9 @@ public final class MainConfig {
 
     public final boolean verbose;
 
+    // chat.anti-spam
+    public final top.cheesesmp.duelcore.chat.AntiSpam.Settings antiSpam;
+
     public MainConfig(FileConfiguration c) {
         dbType = c.getString("database.type", "sqlite").toLowerCase(Locale.ROOT);
         sqliteFile = c.getString("database.sqlite.file", "data.db");
@@ -246,8 +263,17 @@ public final class MainConfig {
         queueMusicVolume = (float) Math.clamp(c.getDouble("queue.music.volume", 0.5), 0.0, 1.0);
         queueMusicTracks = top.cheesesmp.duelcore.queue.MusicTracks.parse(c.getStringList("queue.music.tracks"));
         for (String p : queueMusicTracks.problems()) soundProblems.add("queue.music.tracks: " + p);
+        matchMusicEnabled = c.getBoolean("match.music.enabled", true);
+        matchMusicVolume = (float) Math.clamp(c.getDouble("match.music.volume", 0.5), 0.0, 1.0);
+        matchMusicMediumChance = Math.clamp(c.getDouble("match.music.medium-chance", 0.25), 0.0, 1.0);
+        matchMusicHigh = top.cheesesmp.duelcore.queue.MusicTracks.parse(c.getStringList("match.music.high"));
+        matchMusicMedium = top.cheesesmp.duelcore.queue.MusicTracks.parse(c.getStringList("match.music.medium"));
+        for (String p : matchMusicHigh.problems()) soundProblems.add("match.music.high: " + p);
+        for (String p : matchMusicMedium.problems()) soundProblems.add("match.music.medium: " + p);
 
         mmIntervalTicks = Math.max(1, c.getInt("matchmaking.interval-ticks", 20));
+        mmAvoidRematch = c.getBoolean("matchmaking.avoid-rematch.enabled", true);
+        mmAvoidRematchAllowAt = Math.max(0, c.getDouble("matchmaking.avoid-rematch.allow-at-window", 450));
         mmWindowInitial = c.getDouble("matchmaking.window.initial", 50);
         mmWindowGrowth = c.getDouble("matchmaking.window.growth-per-second", 10);
         mmWindowMax = c.getDouble("matchmaking.window.max", 500);
@@ -330,6 +356,10 @@ public final class MainConfig {
         fightStartSounds = fightStart.combos().isEmpty() && !fightStart.problems().isEmpty()
             ? top.cheesesmp.duelcore.ui.SoundPool.parse(List.of("block.note_block.pling 1.6")) : fightStart;
         voidDepth = Math.max(1, c.getInt("match.void-depth", 6));
+        borderShrinkTo = Math.clamp(c.getDouble("match.border.shrink-to", 10), 1, 1000);
+        borderShrinkSeconds = Math.clamp(c.getInt("match.border.shrink-seconds", 148), 0, 3600);
+        borderDamagePerSecond = Math.clamp(c.getDouble("match.border.damage-per-second", 2.0), 0, 100);
+        borderDamagePerBlock = Math.clamp(c.getDouble("match.border.damage-per-block", 0.5), 0, 100);
 
         ratingSystem = c.getString("rating.system", "elo").toLowerCase(Locale.ROOT);
         ratingDefault = c.getDouble("rating.default", 750);
@@ -393,6 +423,8 @@ public final class MainConfig {
         geoMaxAgeDays = Math.clamp(c.getInt("geo.max-age-days", 35), 1, 365);
 
         verbose = c.getBoolean("debug.verbose", false);
+
+        antiSpam = top.cheesesmp.duelcore.chat.AntiSpam.Settings.from(c.getConfigurationSection("chat.anti-spam"));
     }
 
     private static Map<String, String> strings(ConfigurationSection section) {

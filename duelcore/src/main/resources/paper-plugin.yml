@@ -32,6 +32,7 @@ permissions:
       duelcore.spectate: true
       duelcore.duel: true
       duelcore.settings: true
+      duelcore.music: true
       duelcore.friends: true
       duelcore.party: true
       duelcore.kiteditor: true
@@ -62,6 +63,9 @@ permissions:
     default: op
   duelcore.duel:
     description: Send and answer unranked duel requests (/duel)
+    default: true
+  duelcore.music:
+    description: Stop or play the match music (/stopmusic, /playmusic)
     default: true
   duelcore.settings:
     description: Change personal settings (/settings)
@@ -96,6 +100,12 @@ permissions:
   duelcore.chatfilter.notify:
     description: See messages the chat filter blocked
     default: op
+  duelcore.antispam.bypass:
+    description: Chat, private messages and commands skip the anti-spam checks
+    default: op
+  duelcore.antispam.notify:
+    description: See ads and spam mutes caught by the anti-spam
+    default: op
   duelcore.admin:
     description: All DuelCore admin commands (/duelcore)
     default: op
@@ -109,6 +119,7 @@ permissions:
       duelcore.admin.debug: true
       duelcore.admin.match: true
       duelcore.admin.tournament: true
+      duelcore.admin.antispam: true
       duelcore.tier: true
       duelcore.animtest: true
       duelcore.spectate.bypass: true
@@ -140,4 +151,7 @@ permissions:
     default: op
   duelcore.admin.tournament:
     description: /tournament create|start|cancel|export
+    default: op
+  duelcore.admin.antispam:
+    description: /duelcore antispam status|unmute <player>
     default: op

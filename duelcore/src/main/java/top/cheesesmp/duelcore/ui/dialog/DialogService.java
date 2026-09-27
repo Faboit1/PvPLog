@@ -187,6 +187,7 @@ public final class DialogService {
             Messages.text("player", target.name()),
             Messages.comp("tier", plugin.tiers().format(target.overall())),
             Messages.text("elo", TierService.eloText(target)),
+            Messages.text("points", TierService.pointsText(target)),
             Messages.text("region", target.region() == null ? "—" : target.region()),
             Messages.text("country", country == null ? "—" : country),
             Messages.text("country_name", country == null ? "—" : plugin.flags().name(country))));
@@ -294,6 +295,7 @@ public final class DialogService {
                 Messages.comp("tier", plugin.tiers().format(tier)),
                 Messages.num("value", (int) Math.round(r.value())),
                 Messages.num("elo", (int) Math.round(r.value())),
+                Messages.num("points", (int) Math.round(r.value())),
                 Messages.num("wins", r.wins()), Messages.num("losses", r.losses()),
                 Messages.text("region", r.region() == null ? "" : r.region())));
         }
@@ -302,7 +304,8 @@ public final class DialogService {
                 body.add(Component.empty());
                 body.add(msg().get("dialog.leaderboard.you", Messages.num("rank", r.rank()),
                     Messages.num("value", (int) Math.round(r.value())),
-                    Messages.num("elo", (int) Math.round(r.value()))));
+                    Messages.num("elo", (int) Math.round(r.value())),
+                    Messages.num("points", (int) Math.round(r.value()))));
             }
         }
         List<ActionButton> buttons = new ArrayList<>();
@@ -484,30 +487,55 @@ public final class DialogService {
 
     /** Opponent picker for a bare /duel: online players who are free. */
     public void duelPlayers(Player player) {
-        open().show(player, OpenDialogs.Kind.DUEL_PLAYERS, buildDuelPlayers(player), this::buildDuelPlayers);
+        open().show(player, OpenDialogs.Kind.DUEL_PLAYERS, buildDuelPlayers(player, "", false), p -> buildDuelPlayers(p, "", false));
     }
 
-    /** Opponent picker; refreshed while open (players joining, leaving, starting or ending matches). */
-    private OpenDialogs.Rendered buildDuelPlayers(Player player) {
+    /**
+     * The opponent picker filtered by {@code query} (part of a name, case-insensitive), with the search box; not
+     * refreshed (a re-send would clear what the player types). A blank query from the list's Search button.
+     */
+    public void duelSearch(Player player, String query) {
+        open().show(player, OpenDialogs.Kind.DUEL_PLAYERS, buildDuelPlayers(player, query, true), null);
+    }
+
+    /**
+     * Opponent picker; without the search box it is refreshed while open (players joining, leaving, starting or
+     * ending matches). Its first button is Search (opens the box, or runs the search typed into it).
+     */
+    private OpenDialogs.Rendered buildDuelPlayers(Player player, String query, boolean search) {
+        String q = query.strip().toLowerCase(Locale.ROOT);
         List<ActionButton> buttons = new ArrayList<>();
+        buttons.add(button(msg().get("dialog.duel.search"), null, plugin.gui().kitButtonWidth + 40,
+            search ? "duel/search" : "duel/find", Map.of()));
+        int free = 0;
         for (Player other : Bukkit.getOnlinePlayers()) {
             if (other.equals(player) || plugin.matches().match(other.getUniqueId()) != null) continue;
             PlayerProfile p = plugin.profiles().get(other);
             if (!plugin.duels().accepts(player, other)) continue; // their duel requests setting (nobody / friends only)
+            free++;
+            if (!q.isEmpty() && !other.getName().toLowerCase(Locale.ROOT).contains(q)) continue;
+            if (buttons.size() > 60) continue;
             buttons.add(button(msg().get("dialog.duel.player-button", Messages.comp("head", Icons.head(other.getUniqueId(), other.getName())),
                     Messages.text("player", other.getName()), Messages.comp("tier", plugin.tiers().format(p == null ? null : p.overall()))),
                 null, plugin.gui().kitButtonWidth + 40, "duel/pick", payload("target", other.getUniqueId().toString())));
-            if (buttons.size() >= 60) break;
         }
         Component title = msg().get("dialog.duel.players-title");
-        if (buttons.isEmpty()) {
+        if (free == 0) {
             Component none = msg().get("dialog.duel.no-players");
             return new OpenDialogs.Rendered(dialog(title, List.of(text(none)), List.of(), DialogType.notice(close())),
                 Fingerprint.of(title, none));
         }
-        Component body = msg().get("dialog.duel.players-body");
-        return new OpenDialogs.Rendered(dialog(title, List.of(text(body)), List.of(),
-            DialogType.multiAction(buttons).columns(2).exitAction(close()).build()), Fingerprint.of(title, body, buttons));
+        List<DialogInput> inputs = new ArrayList<>();
+        if (search) {
+            inputs.add(DialogInput.text("search", msg().get("dialog.duel.search-label")).width(plugin.gui().wideWidth)
+                .initial(query.strip()).maxLength(16).build());
+        }
+        Component body = buttons.size() == 1 && !q.isEmpty()
+            ? msg().get("dialog.duel.no-results", Messages.text("query", query.strip()))
+            : msg().get("dialog.duel.players-body");
+        return new OpenDialogs.Rendered(dialog(title, List.of(text(body)), inputs,
+            DialogType.multiAction(buttons).columns(2).exitAction(close()).build()), Fingerprint.of(title, body, buttons, query.strip()),
+            !inputs.isEmpty());
     }
 
     public void duelPicker(Player player, Player target) {

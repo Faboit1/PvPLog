@@ -94,7 +94,7 @@ class ArenaGeneratorTest {
                     // the lowest non-barrier block is the surface: everything below it is barrier
                     int surface = 1;
                     while (surface < sy && at(s, x, surface, z).equals("minecraft:barrier")) surface++;
-                    assertTrue(surface >= 10 && surface < sy - ring, where + ": no surface block (" + surface + ")");
+                    assertTrue(surface >= 40 &&surface < sy - ring, where + ": no surface block (" + surface + ")");
                     String top = at(s, x, surface, z);
                     assertFalse(passable(top), where + ": surface is " + top);
                     assertFalse(top.contains("log") || top.contains("leaves") || top.contains("cactus"), where + ": tree " + top);
@@ -117,7 +117,7 @@ class ArenaGeneratorTest {
         for (ArenaGenerator.Generated g : ArenaGenerator.defaults()) {
             ArenaSnapshot s = g.snapshot();
             double spawn = Math.min(g.spawn1().y(), g.spawn2().y());
-            assertTrue(spawn >= 25, g.name() + " only " + spawn + " blocks of ground under the spawn");
+            assertTrue(spawn >= 55,g.name() + " only " + spawn + " blocks of ground under the spawn");
             assertTrue(s.sizeY() - 3 - spawn >= 38, g.name() + " too little air above the spawn");
             assertTrue(spawn + g.buildHeight() < s.sizeY() - 3, g.name() + " build limit inside the ceiling");
         }

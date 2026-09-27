@@ -1,6 +1,6 @@
-# Creeper: spawn creepers and light them with flint and steel (they blow up at once). Maxed netherite with
-# blast-protection leggings and boots, 128 creeper eggs, 2 flint and steel, sword, axe, shield, 2 totems,
-# 128 gapples, 48 pearls, 128 cobwebs, planks, 128 XP and 4 Strength II, 4 Speed II and 2 Fire Resistance.
+# Creeper: spawn creepers on your opponent. Diamond Protection III armor, a Sharpness V / Knockback / Fire Aspect II
+# sword, 256 creeper eggs, 32 TNT, crossbow, bow and 20 arrows, 15 splash Wind Charged, cobwebs, cobblestone,
+# a water bucket, 32 pearls, 2 totems and gapples.
 display-name: "Creeper"
 description: "Creeper eggs and flint and steel. Blast your opponent."
 icon: creeper_spawn_egg
@@ -17,7 +17,7 @@ rules:
   fall-damage: true
   build: true
   break: all
-  allowed-blocks: [oak_planks, cobweb]
+  allowed-blocks: [cobblestone, cobweb, tnt]
   ender-pearls: true
   pearl-cooldown: 1
   totems: true
@@ -25,42 +25,50 @@ rules:
   anchors: false
   cobwebs: true
   spawn-eggs: true
+  buckets: true
   item-drops: false
 loadout:
   armor:
-    helmet: { item: netherite_helmet, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
-    chestplate: { item: netherite_chestplate, enchants: { protection: 4, unbreaking: 3, mending: 1 } }
-    leggings: { item: netherite_leggings, enchants: { blast_protection: 4, unbreaking: 3, mending: 1 } }
-    boots: { item: netherite_boots, enchants: { blast_protection: 4, feather_falling: 4, unbreaking: 3, mending: 1 } }
+    helmet: { item: diamond_helmet, enchants: { protection: 3, unbreaking: 3, mending: 1 } }
+    chestplate: { item: diamond_chestplate, enchants: { protection: 3, unbreaking: 3, mending: 1 } }
+    leggings: { item: diamond_leggings, enchants: { protection: 3, unbreaking: 3, mending: 1 } }
+    boots: { item: diamond_boots, enchants: { protection: 3, unbreaking: 3, mending: 1 } }
   items:
-    0: { item: netherite_sword, enchants: { sharpness: 5, knockback: 1, unbreaking: 3, mending: 1 } }
+    0: { item: diamond_sword, enchants: { sharpness: 5, knockback: 1, fire_aspect: 2, unbreaking: 3, mending: 1 } }
     1: { item: creeper_spawn_egg, amount: 64 }
-    2: { item: flint_and_steel, enchants: { unbreaking: 3 } }
-    3: { item: golden_apple, amount: 64 }
-    4: { item: ender_pearl, amount: 16 }
-    5: { item: cobweb, amount: 64 }
-    6: { item: oak_planks, amount: 64 }
-    7: { item: netherite_axe, enchants: { sharpness: 5, efficiency: 5, unbreaking: 3, mending: 1 } }
-    8: totem_of_undying
-    9: { item: creeper_spawn_egg, amount: 64 }
-    10: { item: flint_and_steel, enchants: { unbreaking: 3 } }
-    11: { item: golden_apple, amount: 64 }
-    12: { item: ender_pearl, amount: 16 }
-    13: { item: cobweb, amount: 64 }
-    14: { item: oak_planks, amount: 64 }
-    15: { item: ender_pearl, amount: 16 }
-    16: { item: experience_bottle, amount: 64 }
-    17: { item: experience_bottle, amount: 64 }
-    18: { item: splash_potion, potion: strong_strength }
-    19: { item: splash_potion, potion: strong_strength }
-    20: { item: splash_potion, potion: strong_swiftness }
-    21: { item: splash_potion, potion: strong_swiftness }
-    22: { item: splash_potion, potion: long_fire_resistance }
-    26: totem_of_undying
-    27: { item: splash_potion, potion: strong_strength }
-    28: { item: splash_potion, potion: strong_strength }
-    29: { item: splash_potion, potion: strong_swiftness }
-    30: { item: splash_potion, potion: strong_swiftness }
-    31: { item: splash_potion, potion: long_fire_resistance }
-  offhand: { item: shield, enchants: { unbreaking: 3, mending: 1 } }
+    2: totem_of_undying
+    3: { item: crossbow, enchants: { quick_charge: 3, unbreaking: 3, mending: 1 } }
+    4: { item: tnt, amount: 32 }
+    5: { item: ender_pearl, amount: 16 }
+    6: { item: golden_apple, amount: 64 }
+    7: { item: shield, enchants: { unbreaking: 3, mending: 1 } }
+    8: { item: splash_potion, potion: wind_charged }
+    9: { item: tipped_arrow, amount: 10, potion: wind_charged }
+    10: { item: creeper_spawn_egg, amount: 64 }
+    11: { item: splash_potion, potion: wind_charged }
+    12: { item: splash_potion, potion: wind_charged }
+    13: { item: diamond_pickaxe, enchants: { efficiency: 5, unbreaking: 3, mending: 1 } }
+    14: { item: splash_potion, potion: wind_charged }
+    15: { item: splash_potion, potion: wind_charged }
+    16: { item: splash_potion, potion: wind_charged }
+    17: { item: splash_potion, potion: wind_charged }
+    18: { item: arrow, amount: 10 }
+    19: { item: creeper_spawn_egg, amount: 64 }
+    20: { item: splash_potion, potion: wind_charged }
+    21: { item: splash_potion, potion: wind_charged }
+    22: { item: cobblestone, amount: 64 }
+    23: { item: splash_potion, potion: wind_charged }
+    24: { item: splash_potion, potion: wind_charged }
+    25: { item: splash_potion, potion: wind_charged }
+    26: { item: splash_potion, potion: wind_charged }
+    27: water_bucket
+    28: { item: creeper_spawn_egg, amount: 64 }
+    29: { item: splash_potion, potion: wind_charged }
+    30: { item: bow, enchants: { power: 5, unbreaking: 3, mending: 1 } }
+    31: { item: cobweb, amount: 32 }
+    32: { item: ender_pearl, amount: 16 }
+    33: { item: diamond_axe, enchants: { sharpness: 5, efficiency: 5, unbreaking: 3, mending: 1 } }
+    34: { item: splash_potion, potion: wind_charged }
+    35: { item: cobblestone, amount: 64 }
+  offhand: totem_of_undying
 effects: []
