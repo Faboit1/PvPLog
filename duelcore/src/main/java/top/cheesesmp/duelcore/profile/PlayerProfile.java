@@ -20,6 +20,7 @@ public final class PlayerProfile {
     private int maxPing;
     private final Map<String, KitStats> stats;
     private int elo;
+    private int points;
     private @Nullable Tier overall;
     private @Nullable List<MatchDao.HistoryEntry> recent;
 
@@ -113,6 +114,7 @@ public final class PlayerProfile {
     public void clearStats() {
         stats.clear();
         elo = 0;
+        points = 0;
         overall = null;
         recent = null;
     }
@@ -122,12 +124,18 @@ public final class PlayerProfile {
         return elo;
     }
 
+    /** Overall points (sum of the Elo of the kits with finished placement); the overall board ranks by this. */
+    public int points() {
+        return points;
+    }
+
     public @Nullable Tier overall() {
         return overall;
     }
 
-    public void standing(int elo, @Nullable Tier overall) {
+    public void standing(int elo, int points, @Nullable Tier overall) {
         this.elo = elo;
+        this.points = points;
         this.overall = overall;
     }
 

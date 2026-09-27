@@ -227,7 +227,7 @@ class ConfigUpgradeTest {
         try (var in = new InputStreamReader(ConfigUpgradeTest.class.getResourceAsStream("/messages.yml"), StandardCharsets.UTF_8)) {
             bundled.load(in);
         }
-        for (var e : ConfigManager.RETIRED_MESSAGES.entrySet()) {
+        for (var e : ConfigManager.RETIRED_MESSAGES) {
             assertTrue(bundled.isString(e.getKey()), e.getKey());
             assertFalse(e.getValue().equals(bundled.getString(e.getKey())), e.getKey());
         }
@@ -257,14 +257,16 @@ class ConfigUpgradeTest {
             if (e.getValue() instanceof List<?> old) {
                 assertTrue(bundled.isList(e.getKey()), e.getKey());
                 assertFalse(old.equals(bundled.getStringList(e.getKey())), e.getKey());
-                assertEquals(old.size(), bundled.getStringList(e.getKey()).size(), e.getKey() + ": only a flag was added");
+                assertEquals(old.size(), bundled.getStringList(e.getKey()).size(), e.getKey() + ": no line added or removed");
                 now = String.join("\n", bundled.getStringList(e.getKey()));
             } else {
                 assertTrue(bundled.isString(e.getKey()), e.getKey());
                 assertFalse(e.getValue().equals(bundled.getString(e.getKey())), e.getKey());
                 now = bundled.getString(e.getKey());
             }
-            if (e.getKey().startsWith("match-health.")) assertTrue(now.contains("<heart>"), e.getKey() + " shows the heart sprite");
+            if (e.getKey().equals("sidebar.hub") || e.getKey().equals("sidebar.queue")) {
+                assertTrue(now.contains("<points> pts"), e.getKey() + " shows the overall points");
+            } else if (e.getKey().startsWith("match-health.")) assertTrue(now.contains("<heart>"), e.getKey() + " shows the heart sprite");
             else assertTrue(now.contains("flag>"), e.getKey() + " shows a flag");
         }
     }

@@ -38,11 +38,14 @@ import top.cheesesmp.duelcore.rating.TierService;
 public final class ProfileService implements Listener {
 
     /** A rating row to persist, detached from the live profile. */
-    public record RatingWrite(int playerId, String kit, KitStats snapshot, int elo, @Nullable Tier overall) {
+    public record RatingWrite(int playerId, String kit, KitStats snapshot, int elo, int points, @Nullable Tier overall) {
     }
 
     /** dc_meta key: countries typed in before auto-detection existed were marked as picked by hand. */
     private static final String MANUAL_COUNTRIES = "geo_manual_countries";
+
+    /** dc_meta key: the overall points (schema v9) were filled in from the stored ratings. */
+    private static final String POINTS_BACKFILLED = "points_backfilled";
 
     private final DuelCorePlugin plugin;
     private final Database db;
@@ -77,6 +80,15 @@ public final class ProfileService implements Listener {
             applyKitIds(ids);
             this.season = s;
             this.ready = true;
+            if (MetaDao.get(c, POINTS_BACKFILLED, "").isEmpty()) {
+                // once: schema v9 added the overall points, fill them in for every season's standings (a fresh
+                // database has none; a failed backfill is retried on the next start)
+                if (before > 0) {
+                    int n = RatingDao.backfillPoints(c, db.dialect(), plugin.tiers().placementMatches());
+                    plugin.getLogger().info("Filled in the overall points of " + n + " standings");
+                }
+                MetaDao.set(c, db.dialect(), POINTS_BACKFILLED, "1");
+            }
             if (before > 0 && before < 3) {
                 // v3 replaced tier points with overall Elo: rebuild the stored standings once (queued after this task)
                 recalcStandings().thenAccept(n -> plugin.getLogger().info("Rebuilt the overall Elo of " + n + " players"));
@@ -282,7 +294,7 @@ public final class ProfileService implements Listener {
                 Integer kitId = ids.get(w.kit());
                 if (kitId == null) continue;
                 RatingDao.upsert(c, db.dialect(), seasonId, w.playerId(), kitId, w.snapshot());
-                RatingDao.upsertStanding(c, db.dialect(), seasonId, w.playerId(), w.elo(), w.overall());
+                RatingDao.upsertStanding(c, db.dialect(), seasonId, w.playerId(), w.elo(), w.points(), w.overall());
             }
             return matchId;
         });
@@ -329,7 +341,7 @@ public final class ProfileService implements Listener {
             for (Map.Entry<Integer, Map<String, KitStats>> e : byPlayer.entrySet()) {
                 PlayerProfile tmp = new PlayerProfile(e.getKey(), new UUID(0, 0), "", 0, null, null, 0, e.getValue());
                 tiers.refresh(tmp);
-                RatingDao.upsertStanding(c, db.dialect(), seasonId, e.getKey(), tmp.elo(), tmp.overall());
+                RatingDao.upsertStanding(c, db.dialect(), seasonId, e.getKey(), tmp.elo(), tmp.points(), tmp.overall());
             }
             return byPlayer.size();
         });

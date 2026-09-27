@@ -38,6 +38,15 @@ public final class DuelCoreApi {
         return p == null ? null : p.overall();
     }
 
+    /**
+     * Overall points (the Elo of every kit with finished placement added up; the overall board ranks by these), 0
+     * while unranked or offline.
+     */
+    public int points(UUID player) {
+        PlayerProfile p = profile(player);
+        return p == null ? 0 : p.points();
+    }
+
     /** Overall Elo (average rating of the kits with finished placement), 0 while unranked or offline. */
     public int elo(UUID player) {
         PlayerProfile p = profile(player);

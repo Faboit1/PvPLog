@@ -11,7 +11,7 @@ import java.util.List;
 /** Versioned schema. Append new versions; never edit a released one. */
 public final class Migrations {
 
-    public static final int LATEST = 8;
+    public static final int LATEST = 9;
 
     private Migrations() {
     }
@@ -26,7 +26,7 @@ public final class Migrations {
         try {
             for (int v = current + 1; v <= LATEST; v++) {
                 try (Statement st = c.createStatement()) {
-                    for (String sql : statements(v, d)) st.executeUpdate(sql);
+                    for (String sql : statements(c, v, d)) st.executeUpdate(sql);
                 }
                 setVersion(c, d, v);
             }
@@ -64,7 +64,7 @@ public final class Migrations {
         }
     }
 
-    private static List<String> statements(int version, Dialect d) {
+    private static List<String> statements(Connection c, int version, Dialect d) throws SQLException {
         List<String> s = new ArrayList<>();
         String uuid = d.uuidType();
         switch (version) {
@@ -207,9 +207,39 @@ public final class Migrations {
                     + "updated_at BIGINT NOT NULL, "
                     + "PRIMARY KEY (player_id, kit_id))" + d.clustered());
             }
+            case 9 -> {
+                // overall points (sum of the Elo of the placed kits) rank the overall board again; elo stays the average
+                // (overall tier). Filled in once after migrating (ProfileService.start → RatingDao.backfillPoints),
+                // since which kits count depends on tiers.yml placement-matches.
+                // (checked first: MySQL commits each ALTER on its own, so a half-applied v9 must be re-runnable)
+                if (!hasColumn(c, "dc_standings", "points")) {
+                    s.add("ALTER TABLE dc_standings ADD COLUMN points INT NOT NULL DEFAULT 0");
+                }
+                if (!hasIndex(c, "dc_standings", "dc_standings_points")) {
+                    s.add("CREATE INDEX dc_standings_points ON dc_standings (season_id, points)");
+                }
+            }
             default -> throw new IllegalStateException("unknown schema version " + version);
         }
         return s;
+    }
+
+    private static boolean hasColumn(Connection c, String table, String column) throws SQLException {
+        try (ResultSet rs = c.getMetaData().getColumns(c.getCatalog(), null, table, null)) {
+            while (rs.next()) {
+                if (column.equalsIgnoreCase(rs.getString("COLUMN_NAME"))) return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasIndex(Connection c, String table, String index) throws SQLException {
+        try (ResultSet rs = c.getMetaData().getIndexInfo(c.getCatalog(), null, table, false, true)) {
+            while (rs.next()) {
+                if (index.equalsIgnoreCase(rs.getString("INDEX_NAME"))) return true;
+            }
+        }
+        return false;
     }
 
     private static String ifNotExists(Dialect d) {

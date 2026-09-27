@@ -75,7 +75,8 @@ final class JoinWelcome {
         PlayerProfile profile = plugin.profiles().get(p);
         if (first || profile == null || profile.overall() == null) return plugin.messages().get("hub.welcome-subtitle-unranked");
         return plugin.messages().get("hub.welcome-subtitle", Messages.comp("tier", plugin.tags().tag(p.getUniqueId())),
-            Messages.comp("overall", plugin.tiers().format(profile.overall())), Messages.num("elo", profile.elo()));
+            Messages.comp("overall", plugin.tiers().format(profile.overall())), Messages.num("elo", profile.elo()),
+            Messages.num("points", profile.points()));
     }
 
     /** Two soft chimes as typing starts and a high amethyst note when the name is complete. */
