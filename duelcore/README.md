@@ -24,7 +24,7 @@ Optional:
 
 - **MySQL**: set `database.type: mysql` and fill in `database.mysql` in `config.yml`, then restart.
 - **Regions**: players pick EU/NA/… in Settings. The matchmaker prefers same-region opponents
-  (`matchmaking.region`, `leaderboard.regions`).
+  (`matchmaking.region`, `leaderboard.regions`) and, a little, same-country ones (`matchmaking.country`).
 - **PlaceholderAPI**: placeholders register automatically when PAPI is installed (see below).
 
 ### Arenas
@@ -172,7 +172,7 @@ Player commands (all players by default):
 | `/leave` | `/forfeit` | Leaves the queue, stops spectating, or forfeits (asks to confirm within 5 s) |
 | `/draw` | | Offers your 1v1 opponent a draw, or accepts theirs (`/draw deny` declines). An agreed draw changes nobody's Elo |
 | `/profile [player]` | `/stats` | Profile: overall tier and Elo, per-kit tier/rating/record, recent matches. `/profile <p> legacy` shows last season |
-| `/leaderboard [kit\|overall] [region]` | `/lb`, `/top` | Leaderboards, global or per region. Test bots (names starting with `dcbot`) are never listed or counted in ranks |
+| `/leaderboard [kit\|overall] [region\|country]` | `/lb`, `/top` | Leaderboards, global, per region (`EU`) or per country (two letters, `DE`; see *Leaderboards* below). Test bots (names starting with `dcbot`) are never listed or counted in ranks |
 | `/spectate [player]` | `/spec` | Watch a match. Without a name it opens the live list (search; highest Elo first, then by name). `/spectate stop` |
 | `/party` | `/p` | Party menu (see *Parties*). `create`, `invite <player>`, `accept\|deny [player]`, `join <leader>`, `leave`, `kick <player>`, `promote <player>`, `disband`, `chat`, `open`, `private`, `password`, `list`, `ffa [kit]`, `split [kit]`, `duel [leader] [kit]`, `duel accept\|deny [leader]` |
 | `/pc <message>` | | Party chat. Starting a chat message with `@` does the same |
@@ -213,19 +213,24 @@ the menu stays open and shows the new state (switching tabs works the same way).
 | Tab | Setting | Default | What it does |
 | --- | --- | --- | --- |
 | Gameplay | Allow spectators | on | Others can watch your matches (off: they're hidden from the spectate list and `/spectate` is refused) |
+| | Spectator alerts | on | A chat line (`spectate.alert-started` / `-stopped`) when someone starts or stops watching your match. At most one "now watching" per spectator and match every 30 s, so spectating in a loop can't spam you; spectators hidden from you (vanished) aren't announced, and staff watching through `duelcore.spectate.bypass` aren't announced to fighters who don't allow spectators |
 | | Spectators in tab | on | While you fight, your match's spectators are listed in your tab list |
 | | Combo counter | on | The hit-combo and kill pop-ups on the action bar (`animations.combo-bar`) |
 | | Low-health heartbeat | on | The heartbeat sound and red health pulse when low (`animations.heartbeat`) |
+| | Death messages | on | The "X was killed by Y" / "X died" chat lines (`match.death-by`, `match.death`) of matches you're in or watch |
 | | Results screen | on | The results dialog back in the hub after a match (off: only the title and chat summary) |
 | Visuals | Sidebar | on | The scoreboard |
 | | Tier tags in chat | on | Tiers next to names in chat |
 | | Hide hub players | off | Other players are invisible to you in the hub |
 | | Hotbar hints | on | The action bar hint of the held hub item |
 | | Match particles | on | Fight-start rings, round spirals, death bursts, fireworks and confetti of matches you're in or watch |
+| | Round banners | on | The `ROUND WON` / `ROUND LOST` title when a round ends (`animations.round-banner`); off: the round result on the action bar |
+| | Respawn animations | on | Your between-round respawn animation (`animations.respawn-throw`); off: a plain teleport to your spawn, frozen until the round starts as usual |
 | | Rank-up animations | on | After a match: the Elo / placement count, tier-up titles, the queue menu's progress animation, the hub XP bar fill and tier ring |
 | | Match found pop | on | The totem pop with the kit's icon when a match is found |
 | Sounds | All sounds | on | Every DuelCore sound effect (the master switch) |
 | | Match sounds | on | Match found, countdown, FIGHT!, round results, kills, victory / defeat jingles |
+| | Menu sounds | on | The press sounds of menu buttons, chat buttons, hub items and the kit editor (gui.yml `menu-sounds`, `kit-editor.sounds`) |
 | | Music while searching | on | A music disc while in a queue |
 | Social | Duel requests | everyone | Everyone / Friends only / Nobody (click to cycle); enforced for `/duel`, the player picker and the friends list |
 | | Party invites from anyone | on | Off: only friends can invite you |
@@ -233,11 +238,14 @@ the menu stays open and shows the new state (switching tabs works the same way).
 | | Auto GG | off | Says "gg" (`match.auto-gg`) to your match's fighters and spectators a second after it ends |
 | Queue | Keep queuing | off | Search again in the same kits after a match (also in the queue menu) |
 | | Searching bar | on | The queue's "searching" action bar (`queue.searching-action-bar`) |
-| | Region, Max opponent ping, Country | — | Region choices, ping in steps (50–500 ms or any), and a two-letter country set in a small dialog |
+| | Region, Max opponent ping, Country | — | Region choices, ping in steps (50–500 ms or any), and a two-letter country set in a small dialog (also the leaderboard's *My country* board) |
+| | Prefer my country | on | The matchmaker favours opponents from your country a little (`matchmaking.country`), only against players who have a country and this on too; it fades out like the region and ping preferences |
 
-Server switches in config.yml (`animations.*`, `queue.searching-action-bar`, `queue.music.enabled`) still apply first:
-a player's setting can only turn off what the server has on. Settings are bits of `dc_players.settings`
-(`profile/Setting`); bits from 10 on store "changed from the default", so new settings need no database migration.
+Server switches in config.yml (`animations.*`, `queue.searching-action-bar`, `queue.music.enabled`,
+`matchmaking.country.enabled`) still apply first: a player's setting can only turn off what the server has on.
+Settings are bits of `dc_players.settings` (`profile/Setting`); bits from 10 on store "changed from the default", so
+new settings need no database migration. Bits 25–30 are Prefer my country, Death messages, Menu sounds, Respawn
+animations, Round banners and Spectator alerts.
 
 ## Permissions
 
@@ -268,8 +276,11 @@ to false when they still have the old defaults (false / true); version 3 replace
 11-disc list when it is still the old 21-disc default (a list you edited is kept; delete the key to get the new
 default); version 4 turns `animations.countdown-pop`, `fight-sweep` and `match-point` off, so the classic start
 countdown is back (they were on by default, so a server that turned them on on purpose gets them switched off too: set
-them back to true after updating to keep the animated countdown). A file with a YAML error is never rewritten: the
-plugin runs on the bundled defaults for it and logs the error until you fix it. Main settings:
+them back to true after updating to keep the animated countdown); version 5 moves `rating.default` 1000 → 750 and
+`rating.floor` 100 → 50; version 6 adds the float, orbit and swoop animations to the old default
+`animations.respawn-styles`; version 7 raises `matchmaking.ping.penalty-per-ms` 0.5 → 0.75 (a closer ping counts a bit
+more). Each of these only replaces a value that still is the old default. A file with a YAML error is never
+rewritten: the plugin runs on the bundled defaults for it and logs the error until you fix it. Main settings:
 
 **config.yml**
 
@@ -278,13 +289,13 @@ plugin runs on the bundled defaults for it and logs the error until you fix it. 
 | `database` | `type: sqlite\|mysql`, connection and pool size |
 | `hub` | world, fixed `time`, `lock-weather`, `void-y`, `show-players`, `allow-flight` (everyone flies in the hub, default on) |
 | `queue` | `allow-multiple` (several kit queues at once, default on), ranked on/off, `unranked` (off: no unranked queue; `/duel` is unaffected), "searching" action bar, `music` (`enabled`, `volume`, `tracks`: `"<sound id> <seconds> [speed]"` music discs played to a player while searching; players can turn it off in their settings; `stop-client-music` stops the game's own background music every 10 s, players with Music Frequency "Constant" still hear short snippets of it) |
-| `matchmaking` | `interval-ticks`, rating window (`initial`, `growth-per-second`, `max`), region and ping penalties, `max-ranked-rematches-per-day`, `log-pairings` |
+| `matchmaking` | `interval-ticks`, rating window (`initial`, `growth-per-second`, `max`), the latency preferences, `max-ranked-rematches-per-day`, `log-pairings`. Among the opponents whose rating fits, the one with the lowest rating gap + penalties is picked; the penalties (rating points) only choose between opponents, never refuse a match, and fade to zero after `relax-after-seconds` (30): `region.cross-region-penalty` (250), `country.cross-country-penalty` (60; only when both players have a country and *Prefer my country* on; `country.enabled`), `ping.penalty-per-ms` (0.75 per ms of ping difference), `ping.over-max-ping-penalty` (300, an opponent above a player's max ping) |
 | `match` | countdowns, `round-end-delay-ticks`, `return-delay-seconds`, `timeout-decision: health\|draw`, `max-rounds`, `allowed-commands`, `totem-pop`, `void-depth` |
 | `animations` | see *Animations* below |
 | `rating` | `system: elo\|glicko2`, `default` (750), `floor` (50), `gain-multiplier` and `bonus-per-match` (each ranked change is multiplier × the system's change + bonus, 3 and 3 by default), Elo K-factors (normal and provisional), Glicko-2 tau/RD/volatility |
 | `season` | first season name |
 | `arena` | `world`, `persistent-world`, `pregenerate-slots`, `slot-spacing`, `base-y`, `max-instances`, `keep-idle-per-template`, `prewarm`, `block-budget-ms`, `reset-between-rounds`, `view-distance` |
-| `leaderboard` | `refresh-seconds`, `size`, `regions` |
+| `leaderboard` | `refresh-seconds`, `size`, `regions` (country names come from `countries.yml`) |
 | `dialogs` | `refresh.enabled`, `refresh.interval-ticks` (20): open menus whose content changes are rebuilt this often and sent again only when something visible changed (see *Menus* below) |
 | `display` | tier tags in chat, tab and above heads |
 | `party` | `max-size` (20), `invite-seconds` (invites and party challenges, 60), `open-by-default` |
@@ -297,6 +308,15 @@ how many players are searching or playing it, and the player's tier and Elo in i
 placement matches aren't played yet. *Queue All* joins (or leaves) every kit of the tab; *Keep Queuing* puts the
 player back into the same queues after each match. The ✎ after a kit opens its kit editor (with `duelcore.kiteditor`), and the results
 screen after a match has an *Edit kit* button for the match's kit.
+
+**Leaderboards** (Leaderboards item, `/leaderboard`) list the top players (gui.yml `dialogs.leaderboard-lines`, 10)
+overall or in a kit, with a button per kit and one per filter: *All* (global), the configured regions and, for players
+who have a country set, *My country* (`⚑DE`, the name in its tooltip): the same board for their country only, titled
+with the country's name from `countries.yml` (`dialog.leaderboard.title-country`). Ranks count within the filter, so
+on a country board the "You · #rank" line under the top players is your rank in your country. Switching the kit keeps
+the filter. `/leaderboard <kit|overall> <code>` takes a region code or a two-letter country code (any country
+`countries.yml` lists, or your own); region codes win where they are also a country (NA, SA, AS, AF: those countries'
+boards are behind the *My country* button).
 
 **Menus** stay open while you click: a button that leads to another menu (a tab, a page, Back, a player in the
 friends list, …) swaps the menu in place instead of closing and re-opening the screen, and one that does something
@@ -344,7 +364,8 @@ the overall Elo: the average rating of every kit a player has finished placement
 - `menu-sounds`: every menu button, clickable chat button (duel / party requests, draw offers) and hub item plays a
   sound to the presser: `click`, `toggle-on` / `toggle-off`, `back` (also Close, Escape and declining), `confirm`,
   `deny` (refused or failed) and `page` (tabs, pages), one per press; `enabled: false` silences them all. Same format
-  as `kit-editor.sounds` ("" = none); players' own *Sounds* setting applies. Preview: `/animtest play menu-sounds`.
+  as `kit-editor.sounds` ("" = none); players' own *All sounds* and *Menu sounds* settings apply (to the kit editor's
+  sounds too). Preview: `/animtest play menu-sounds`.
 
 **chat-filter.yml**: blocks slurs and harassment, masks swearing, in chat and private messages (`/msg`, `/tell`,
 `/r`, `/me`, …). Terms are written plainly and also catch leetspeak (`n1gg3r`, `f@g`), look-alike letters from
@@ -364,7 +385,7 @@ setting. Texts are in `messages.yml` (`progress`, `animtest`), colours and the b
 
 | Key | What it does |
 | --- | --- |
-| `respawn-throw` (+ `respawn-styles`, `-height`, `-max-ping`) | From round 2 on, fighters are brought back to their spawn with a respawn animation picked at random from `respawn-styles` (`throw`: carried along an arc; `float`: up, across and gently down; `orbit`: a rising spiral round the arena centre, camera on it; `swoop`: up and back looking over the arena, then a dive onto the spawn; `look-down`: look down, teleport, look back up; `spin`: a 360° turn, teleported half way; `"<style> <weight>"` for weights). They can't move until they stand on the spawn. Players above `-max-ping` ms (350) are teleported instead. Preview: `/duelcore debug throw <player> [distance] [style]` |
+| `respawn-throw` (+ `respawn-styles`, `-height`, `-max-ping`) | From round 2 on, fighters are brought back to their spawn with a respawn animation picked at random from `respawn-styles` (`throw`: carried along an arc; `float`: up, across and gently down; `orbit`: a rising spiral round the arena centre, camera on it; `swoop`: up and back looking over the arena, then a dive onto the spawn; `look-down`: look down, teleport, look back up; `spin`: a 360° turn, teleported half way; `"<style> <weight>"` for weights). They can't move until they stand on the spawn. Players above `-max-ping` ms (350) are teleported instead, and so are players who turned *Respawn animations* off. Preview: `/duelcore debug throw <player> [distance] [style]` |
 | `spawn-rise` (+ `-depth`, `-ticks`) | Round 1: each fighter rises out of a hole at their spawn |
 | `death`, `round-win`, `match-win`, `fight-start` | Red burst on death, golden spiral for the round winner, fireworks for the match winner, white ring when a round starts |
 | `join-title` | Title on joining the hub |
@@ -389,7 +410,7 @@ setting. Texts are in `messages.yml` (`progress`, `animtest`), colours and the b
 | `queue-sounds` | The queue menu's ticks and flourish, the match found whoosh and chime |
 | `countdown-pop` | Off by default (the classic countdown: plain numbers, a click each second). On: the numbers pop in (white and bold, then green / yellow / red by seconds left) with a tick that rises each second |
 | `fight-sweep` | Off by default (the classic `Fight` title). On: `FIGHT!` with a gradient sweep across the letters and a punch sound |
-| `round-banner` | Round over, match goes on: `ROUND WON` / `ROUND LOST` types in, the score below pops (`2 — 1`); spectators see who took the round |
+| `round-banner` | Round over, match goes on: `ROUND WON` / `ROUND LOST` types in, the score below pops (`2 — 1`); spectators see who took the round. Players with *Round banners* off get the action bar line instead |
 | `match-point` | Off by default (the subtitle always reads `Round N · first to N`). On: the countdown subtitle says `Match point` (or `Final round`) when a side is one round from winning, pulsing with `countdown-pop` |
 | `combo-bar` | Attacker's action bar: the hit combo counter pops from 2 hits on; `+1 kill · 3 hit combo` when a kill doesn't end the round |
 | `heartbeat` (+ `-hearts`) | At or below 3 hearts: a quiet heartbeat and a red pulse of the health in the action bar, faster when lower |

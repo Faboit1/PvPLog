@@ -84,7 +84,7 @@ public final class ConfigManager {
     }
 
     /** The config-version this build writes; {@link #upgrade} brings older config.yml files up to it. */
-    static final int CONFIG_VERSION = 6;
+    static final int CONFIG_VERSION = 7;
 
     /** The {@code queue.music.tracks} default up to config-version 2 (replaced by version 3 when unchanged). */
     static final List<String> OLD_MUSIC_TRACKS = List.of(
@@ -99,14 +99,21 @@ public final class ConfigManager {
     static final List<String> CLASSIC_COUNTDOWN = List.of(
             "animations.countdown-pop", "animations.fight-sweep", "animations.match-point");
 
-    /** A number whose default changed: a file still holding {@code old} gets {@code now}. */
-    record NumberDefault(String key, double old, int now) {
+    /**
+     * A number whose default changed: a file still holding {@code old} gets {@code now}, written as it is (750 stays a
+     * whole number, 0.75 doesn't).
+     */
+    record NumberDefault(String key, double old, Number now) {
     }
 
     /** Rating defaults changed in config-version 5 (new players start at 750, nobody drops below 50). */
     static final List<NumberDefault> RATING_DEFAULTS = List.of(
             new NumberDefault("rating.default", 1000, 750),
             new NumberDefault("rating.floor", 100, 50));
+
+    /** Matchmaking defaults changed in config-version 7: a closer ping counts a bit more. */
+    static final List<NumberDefault> PING_DEFAULTS = List.of(
+            new NumberDefault("matchmaking.ping.penalty-per-ms", 0.5, 0.75));
 
     /** The {@code animations.respawn-styles} default up to config-version 5. */
     static final List<String> OLD_RESPAWN_STYLES = List.of("throw", "look-down", "spin");
@@ -127,7 +134,8 @@ public final class ConfigManager {
      * {@code animations.countdown-pop}, {@code fight-sweep} and {@code match-point} switches (true by default before)
      * are turned off. Version 5: {@code rating.default} 1000 → 750 and {@code rating.floor} 100 → 50 (existing player
      * ratings are not touched). Version 6: the old default {@code animations.respawn-styles} list gets the new
-     * float, orbit and swoop animations. Values changed by hand are left alone. Returns true when something changed.
+     * float, orbit and swoop animations. Version 7: {@code matchmaking.ping.penalty-per-ms} 0.5 → 0.75 (a closer ping
+     * counts a bit more). Values changed by hand are left alone. Returns true when something changed.
      */
     static boolean upgrade(YamlConfiguration yml, java.util.logging.Logger log) {
         if (!yml.contains("config-version", true)) return false; // empty or broken file: defaults are merged in
@@ -156,21 +164,25 @@ public final class ConfigManager {
                 }
             }
         }
-        if (version < 5) {
-            for (NumberDefault d : RATING_DEFAULTS) {
-                if ((yml.isInt(d.key()) || yml.isDouble(d.key())) && yml.getDouble(d.key()) == d.old()) {
-                    yml.set(d.key(), d.now());
-                    log.info("config.yml: " + d.key() + " is now " + d.now() + " (new default)");
-                }
-            }
-        }
+        if (version < 5) replaceNumbers(yml, RATING_DEFAULTS, log);
         if (version < 6 && yml.isList("animations.respawn-styles")
                 && normalized(yml.getStringList("animations.respawn-styles")).equals(OLD_RESPAWN_STYLES)) {
             yml.set("animations.respawn-styles", RESPAWN_STYLES);
             log.info("config.yml: animations.respawn-styles now also has the float, orbit and swoop animations");
         }
+        if (version < 7) replaceNumbers(yml, PING_DEFAULTS, log);
         yml.set("config-version", CONFIG_VERSION);
         return true;
+    }
+
+    /** Every number that still holds its old default gets the new one (missing keys are filled in by the merge). */
+    private static void replaceNumbers(YamlConfiguration yml, List<NumberDefault> defaults, java.util.logging.Logger log) {
+        for (NumberDefault d : defaults) {
+            if ((yml.isInt(d.key()) || yml.isDouble(d.key())) && yml.getDouble(d.key()) == d.old()) {
+                yml.set(d.key(), d.now());
+                log.info("config.yml: " + d.key() + " is now " + d.now() + " (new default)");
+            }
+        }
     }
 
     /**
@@ -178,7 +190,15 @@ public final class ConfigManager {
      * gets the new one; a text edited by hand is kept.
      */
     static final Map<String, String> RETIRED_MESSAGES = Map.of(
-            "kit-editor.picker.category", "<icon> <text><name></text>");
+            "kit-editor.picker.category", "<icon> <text><name></text>",
+            // settings texts rewritten for the newer rows (chat lines, menu sounds, the country board, Prefer my country)
+            "dialog.settings.section-hover.gameplay",
+            "<text>In your matches: spectators, the action bar and the results screen.</text>",
+            "dialog.settings.section-body.queue",
+            "<muted>Region and max ping help the matchmaker find opponents with a similar connection.</muted>",
+            "dialog.settings.items.sounds.hover",
+            "Every DuelCore sound effect, match sounds included. The music while searching has its own switch.",
+            "dialog.settings.items.country.hover", "Shown on your profile.");
 
     /** Replaces every value that still equals its retired default with the current default; true when any did. */
     static boolean retireDefaults(YamlConfiguration yml, YamlConfiguration defaults, Map<String, String> retired) {

@@ -33,21 +33,24 @@ public final class SettingsLayout {
 
     /** The menu's tabs, in order. */
     public enum Section {
-        /** In a match: who watches, what the action bar tells you, the results screen. */
-        GAMEPLAY(toggle(Setting.ALLOW_SPECTATORS), toggle(Setting.TAB_SPECTATORS), toggle(Setting.COMBO_BAR),
-            toggle(Setting.HEARTBEAT), toggle(Setting.RESULTS_SCREEN)),
+        /** In a match: who watches, what the chat and the action bar tell you, the results screen. */
+        GAMEPLAY(toggle(Setting.ALLOW_SPECTATORS), toggle(Setting.SPECTATOR_ALERTS), toggle(Setting.TAB_SPECTATORS),
+            toggle(Setting.COMBO_BAR), toggle(Setting.HEARTBEAT), toggle(Setting.DEATH_MESSAGES),
+            toggle(Setting.RESULTS_SCREEN)),
         /** What you see: sidebar, tags, the hub, particles and animations. */
         VISUALS(toggle(Setting.SIDEBAR), toggle(Setting.CHAT_TAGS), toggle(Setting.HIDE_HUB_PLAYERS),
-            toggle(Setting.HOTBAR_HINTS), toggle(Setting.MATCH_PARTICLES), toggle(Setting.PROGRESS_REVEAL),
-            toggle(Setting.MATCH_FOUND_POP)),
+            toggle(Setting.HOTBAR_HINTS), toggle(Setting.MATCH_PARTICLES), toggle(Setting.ROUND_BANNERS),
+            toggle(Setting.RESPAWN_ANIMATIONS), toggle(Setting.PROGRESS_REVEAL), toggle(Setting.MATCH_FOUND_POP)),
         /** What you hear. */
-        SOUNDS(toggle(Setting.SOUNDS), toggle(Setting.MATCH_SOUNDS), toggle(Setting.QUEUE_MUSIC)),
+        SOUNDS(toggle(Setting.SOUNDS), toggle(Setting.MATCH_SOUNDS), toggle(Setting.MENU_SOUNDS),
+            toggle(Setting.QUEUE_MUSIC)),
         /** Other players: challenges, invites, alerts, GG. */
         SOCIAL(new Entry("duel-requests", Kind.DUEL_REQUESTS, null), toggle(Setting.PARTY_INVITES),
             toggle(Setting.FRIEND_ALERTS), toggle(Setting.AUTO_GG)),
         /** Searching and matchmaking. */
         QUEUE(toggle(Setting.KEEP_QUEUING), toggle(Setting.SEARCHING_BAR), new Entry("region", Kind.REGION, null),
-            new Entry("max-ping", Kind.MAX_PING, null), new Entry("country", Kind.COUNTRY, null));
+            new Entry("max-ping", Kind.MAX_PING, null), new Entry("country", Kind.COUNTRY, null),
+            toggle(Setting.PREFER_COUNTRY));
 
         private final List<Entry> entries;
 

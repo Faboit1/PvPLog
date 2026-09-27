@@ -59,8 +59,8 @@ public final class DuelCoreApi {
     }
 
     /**
-     * Replaces the matchmaking latency policy (region/ping preferences). Pass null to restore the configured
-     * default. Anti-boosting stays active either way.
+     * Replaces the matchmaking latency policy (region, country and ping preferences). Pass null to restore the
+     * configured default. Anti-boosting stays active either way.
      */
     public void setMatchPolicy(@Nullable MatchPolicy policy) {
         plugin.queue().policy(policy);

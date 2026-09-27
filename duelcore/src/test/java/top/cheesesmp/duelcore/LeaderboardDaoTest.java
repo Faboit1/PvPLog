@@ -17,7 +17,10 @@ import top.cheesesmp.duelcore.db.dao.RatingDao;
 import top.cheesesmp.duelcore.profile.KitStats;
 import top.cheesesmp.duelcore.rating.Tier;
 
-/** Test bots (names starting with dcbot, any case) never show on a board and are not counted in ranks. */
+/**
+ * Test bots (names starting with dcbot, any case) never show on a board and are not counted in ranks; a country
+ * board ranks its own players.
+ */
 class LeaderboardDaoTest {
 
     @TempDir
@@ -50,6 +53,42 @@ class LeaderboardDaoTest {
 
             assertEquals(1, (int) db.submit(c -> LeaderboardDao.kitRank(c, 1, 1, 5, 900)).join());
             assertEquals(2, (int) db.submit(c -> LeaderboardDao.overallRank(c, 1, 800)).join());
+            assertEquals(0, db.failures());
+        } finally {
+            db.close();
+        }
+    }
+
+    /** A country board lists that country's players only and ranks them among themselves (the "You · #2" line). */
+    @Test
+    void countryBoardsRankWithinTheCountry() throws Exception {
+        Database db = Database.sqlite(new File(dir.toFile(), "c.db"), Logger.getLogger("test"), () -> false);
+        try {
+            db.submit(c -> Migrations.migrate(c, db.dialect())).join();
+            String[] names = {"Anna", "Bert", "Carl", "Dora"};
+            String[] countries = {"DE", "FR", "DE", null};
+            double[] ratings = {900, 1200, 700, 1500};
+            db.submit(c -> {
+                for (int i = 0; i < names.length; i++) {
+                    int id = PlayerDao.loadOrCreate(c, UUID.randomUUID(), names[i], 1L, 0).id();
+                    PlayerDao.saveSettings(c, id, 0, "EU", countries[i], 0);
+                    KitStats s = new KitStats(ratings[i], 350, 0.06);
+                    s.games = 10;
+                    RatingDao.upsert(c, db.dialect(), 1, id, 1, s);
+                    RatingDao.upsertStanding(c, db.dialect(), 1, id, (int) ratings[i], Tier.LT5);
+                }
+                return null;
+            }).join();
+
+            List<LeaderboardDao.Row> kit = db.submit(c -> LeaderboardDao.kit(c, 1, 1, 5, null, "DE", 10)).join();
+            assertEquals(List.of("Anna", "Carl"), kit.stream().map(LeaderboardDao.Row::name).toList());
+            assertEquals(List.of(1, 2), kit.stream().map(LeaderboardDao.Row::rank).toList());
+            List<LeaderboardDao.Row> overall = db.submit(c -> LeaderboardDao.overall(c, 1, null, "DE", 10)).join();
+            assertEquals(List.of("Anna", "Carl"), overall.stream().map(LeaderboardDao.Row::name).toList());
+            assertEquals(2, overall.get(1).rank());
+            assertEquals(List.of("Bert"), db.submit(c -> LeaderboardDao.kit(c, 1, 1, 5, null, "FR", 10)).join().stream()
+                .map(LeaderboardDao.Row::name).toList());
+            assertEquals(4, db.submit(c -> LeaderboardDao.kit(c, 1, 1, 5, null, null, 10)).join().size());
             assertEquals(0, db.failures());
         } finally {
             db.close();

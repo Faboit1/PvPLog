@@ -4,7 +4,7 @@
 #  kits in kits/*.yml and arenas in arenas/*.yml.
 #  Reload everything with /duelcore reload (running matches keep their kit).
 # ─────────────────────────────────────────────────────────────
-config-version: 6
+config-version: 7
 
 database:
   # sqlite (default, file in the plugin folder) or mysql (MySQL 8 / MariaDB 10.5+)
@@ -83,14 +83,21 @@ matchmaking:
     initial: 50
     growth-per-second: 10
     max: 500
-  # Latency preferences (see Settings → region / max ping). Penalties are in rating points and
-  # fade to zero after relax-after-seconds so nobody waits forever.
+  # Latency preferences (see Settings → region / country / max ping). Penalties are in rating points: among the
+  # opponents whose rating fits, the lowest rating gap + penalties wins. They only pick between opponents (a match is
+  # never refused over them) and fade to zero after relax-after-seconds so nobody waits forever.
   region:
     enabled: true
     cross-region-penalty: 250
+  # Two players from different countries (both have a country set and "Prefer my country" on in their settings): a
+  # small nudge towards opponents from the same country.
+  country:
+    enabled: true
+    cross-country-penalty: 60
   ping:
     enabled: true
-    penalty-per-ms: 0.5
+    # Per ms of ping difference between the two players (closer ping first).
+    penalty-per-ms: 0.75
     over-max-ping-penalty: 300
   relax-after-seconds: 30
   # Anti-boosting: at most this many ranked games between the same two players per 24 h (0 = off).

@@ -50,6 +50,9 @@ public final class MainConfig {
     public final double mmWindowMax;
     public final boolean mmRegionEnabled;
     public final double mmRegionPenalty;
+    /** A pair from two different countries costs this, when both have a country and Prefer my country on. */
+    public final boolean mmCountryEnabled;
+    public final double mmCountryPenalty;
     public final boolean mmPingEnabled;
     public final double mmPingPenaltyPerMs;
     public final double mmOverMaxPingPenalty;
@@ -244,8 +247,10 @@ public final class MainConfig {
         mmWindowMax = c.getDouble("matchmaking.window.max", 500);
         mmRegionEnabled = c.getBoolean("matchmaking.region.enabled", true);
         mmRegionPenalty = c.getDouble("matchmaking.region.cross-region-penalty", 250);
+        mmCountryEnabled = c.getBoolean("matchmaking.country.enabled", true);
+        mmCountryPenalty = c.getDouble("matchmaking.country.cross-country-penalty", 60);
         mmPingEnabled = c.getBoolean("matchmaking.ping.enabled", true);
-        mmPingPenaltyPerMs = c.getDouble("matchmaking.ping.penalty-per-ms", 0.5);
+        mmPingPenaltyPerMs = c.getDouble("matchmaking.ping.penalty-per-ms", 0.75);
         mmOverMaxPingPenalty = c.getDouble("matchmaking.ping.over-max-ping-penalty", 300);
         mmRelaxAfterSeconds = c.getDouble("matchmaking.relax-after-seconds", 30);
         mmMaxRankedRematchesPerDay = c.getInt("matchmaking.max-ranked-rematches-per-day", 10);

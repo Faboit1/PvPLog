@@ -275,7 +275,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         problems.addAll(kitEditor.reload()); // layouts made for a kit that changed are reset (players are told)
         problems.addAll(gui().menuSounds.problems());
         ratingSystem = buildRatingSystem();
-        leaderboards.clear();
+        leaderboards.reload(); // cached boards and the country names
         tags.refreshTeams();
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (matches.match(p.getUniqueId()) == null && spectate.spectating(p.getUniqueId()) == null) {

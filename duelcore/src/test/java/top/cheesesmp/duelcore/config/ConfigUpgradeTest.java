@@ -49,12 +49,13 @@ class ConfigUpgradeTest {
     @Test
     void emptyOrCurrentFilesAreLeftAlone() throws Exception {
         assertFalse(ConfigManager.upgrade(new YamlConfiguration(), LOG));
-        YamlConfiguration current = yml("config-version: 6\nqueue:\n  unranked: true\nanimations:\n  countdown-pop: true\n"
-            + "rating:\n  default: 1000\n");
+        YamlConfiguration current = yml("config-version: " + ConfigManager.CONFIG_VERSION + "\nqueue:\n  unranked: true\n"
+            + "animations:\n  countdown-pop: true\nrating:\n  default: 1000\nmatchmaking:\n  ping:\n    penalty-per-ms: 0.5\n");
         assertFalse(ConfigManager.upgrade(current, LOG));
         assertTrue(current.getBoolean("queue.unranked"));
         assertTrue(current.getBoolean("animations.countdown-pop"));
         assertEquals(1000, current.getInt("rating.default"));
+        assertEquals(0.5, current.getDouble("matchmaking.ping.penalty-per-ms"));
     }
 
     private static String tracks(List<String> list) {
@@ -157,6 +158,39 @@ class ConfigUpgradeTest {
     }
 
     @Test
+    void oldPingPenaltyDefaultIsRaisedOnce() throws Exception {
+        YamlConfiguration y = yml("config-version: 6\nmatchmaking:\n  region:\n    cross-region-penalty: 250\n"
+            + "  ping:\n    enabled: true\n    penalty-per-ms: 0.5\n    over-max-ping-penalty: 300\n");
+        assertTrue(ConfigManager.upgrade(y, LOG));
+        assertEquals(0.75, y.getDouble("matchmaking.ping.penalty-per-ms"));
+        assertEquals(300, y.getInt("matchmaking.ping.over-max-ping-penalty"));
+        assertEquals(250, y.getInt("matchmaking.region.cross-region-penalty"));
+        assertEquals(ConfigManager.CONFIG_VERSION, y.getInt("config-version"));
+        // set back by hand afterwards: stays
+        y.set("matchmaking.ping.penalty-per-ms", 0.5);
+        assertFalse(ConfigManager.upgrade(y, LOG));
+        assertEquals(0.5, y.getDouble("matchmaking.ping.penalty-per-ms"));
+    }
+
+    @Test
+    void customPingPenaltyIsKept() throws Exception {
+        for (String custom : List.of("0.8", "1", "0")) {
+            YamlConfiguration y = yml("config-version: 6\nmatchmaking:\n  ping:\n    penalty-per-ms: " + custom + "\n");
+            assertTrue(ConfigManager.upgrade(y, LOG));
+            assertEquals(Double.parseDouble(custom), y.getDouble("matchmaking.ping.penalty-per-ms"), custom);
+        }
+        YamlConfiguration missing = yml("config-version: 6\nmatchmaking:\n  interval-ticks: 20\n");
+        assertTrue(ConfigManager.upgrade(missing, LOG));
+        assertFalse(missing.contains("matchmaking.ping.penalty-per-ms")); // defaults fill it in
+        // an old file (version 4) gets every step, this one included
+        YamlConfiguration old = yml("config-version: 4\nrating:\n  default: 1000\nmatchmaking:\n  ping:\n    penalty-per-ms: 0.5\n");
+        assertTrue(ConfigManager.upgrade(old, LOG));
+        assertEquals(750, old.getInt("rating.default"));
+        assertTrue(old.isInt("rating.default"), "whole numbers stay whole");
+        assertEquals(0.75, old.getDouble("matchmaking.ping.penalty-per-ms"));
+    }
+
+    @Test
     void bundledConfigMatchesTheUpgrade() throws Exception {
         try (var in = ConfigUpgradeTest.class.getResourceAsStream("/config.yml")) {
             YamlConfiguration bundled = YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
@@ -167,7 +201,10 @@ class ConfigUpgradeTest {
                 assertFalse(bundled.getBoolean(key), key);
             }
             for (ConfigManager.NumberDefault d : ConfigManager.RATING_DEFAULTS) {
-                assertEquals(d.now(), bundled.getDouble(d.key()), 0, d.key());
+                assertEquals(d.now().doubleValue(), bundled.getDouble(d.key()), 0, d.key());
+            }
+            for (ConfigManager.NumberDefault d : ConfigManager.PING_DEFAULTS) {
+                assertEquals(d.now().doubleValue(), bundled.getDouble(d.key()), 0, d.key());
             }
             assertEquals(ConfigManager.RESPAWN_STYLES, bundled.getStringList("animations.respawn-styles"));
         }
