@@ -26,7 +26,9 @@ public final class AntiSpamListener implements Listener {
     public static final String NOTIFY = "duelcore.antispam.notify";
 
     /** Private messages whose first argument is the recipient. */
-    private static final Set<String> TO_PLAYER = Set.of("msg", "tell", "w", "whisper", "m", "pm", "dm", "message");
+    private static final Set<String> TO_PLAYER = Set.of("msg", "tell", "w", "whisper", "m", "pm", "dm", "message", "t",
+        "emsg", "etell", "ew", "ewhisper", "epm");
+    private static final Set<String> REPLY = Set.of("r", "reply", "er", "ereply");
     private static final Set<String> PARTY = Set.of("pc", "teammsg", "tm");
 
     private final DuelCorePlugin plugin;
@@ -86,11 +88,11 @@ public final class AntiSpamListener implements Listener {
             channel = "pm:" + line.substring(start, end).toLowerCase(Locale.ROOT);
             start = end + 1;
             while (start < line.length() && line.charAt(start) == ' ') start++;
-        } else if (label.equals("r") || label.equals("reply")) {
+        } else if (REPLY.contains(label)) {
             channel = "reply";
         } else if (PARTY.contains(label)) {
             channel = "party";
-        } else if (label.equals("mail")) {
+        } else if (label.equals("mail") || label.equals("email")) {
             channel = "mail";
         } else {
             channel = "chat"; // /me, /say: seen by everyone like chat
