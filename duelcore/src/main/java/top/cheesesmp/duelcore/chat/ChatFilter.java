@@ -41,7 +41,7 @@ public final class ChatFilter {
         Map.entry('u', "uv"), Map.entry('v', "vu"), Map.entry('x', "x"));
 
     /** Look-alikes NFKD doesn't fold (Cyrillic, Greek, IPA). */
-    private static final Map<Character, Character> HOMOGLYPHS = Map.ofEntries(
+    static final Map<Character, Character> HOMOGLYPHS = Map.ofEntries(
         Map.entry('а', 'a'), Map.entry('в', 'b'), Map.entry('е', 'e'), Map.entry('ё', 'e'), Map.entry('к', 'k'),
         Map.entry('м', 'm'), Map.entry('н', 'h'), Map.entry('о', 'o'), Map.entry('р', 'p'), Map.entry('с', 'c'),
         Map.entry('т', 't'), Map.entry('у', 'y'), Map.entry('х', 'x'), Map.entry('і', 'i'), Map.entry('ї', 'i'),
