@@ -195,4 +195,39 @@ class ConfigUpgradeTest {
             assertFalse(e.getValue().equals(bundled.getString(e.getKey())), e.getKey());
         }
     }
+
+    @Test
+    void retiredListDefaultsAreReplacedButEditsKept() throws Exception {
+        java.util.Map<String, Object> retired = java.util.Map.of("a.lines", List.of("one", "two"), "a.text", "old");
+        YamlConfiguration defaults = yml("a:\n  lines:\n    - one\n    - \"<flag>two\"\n  text: \"new\"\n");
+        YamlConfiguration y = yml("a:\n  lines:\n    - one\n    - two\n  text: \"old\"\n");
+        assertTrue(ConfigManager.retireDefaults(y, defaults, retired));
+        assertEquals(List.of("one", "<flag>two"), y.getStringList("a.lines"));
+        assertEquals("new", y.getString("a.text"));
+        YamlConfiguration edited = yml("a:\n  lines:\n    - one\n    - two\n    - mine\n  text: \"mine\"\n");
+        assertFalse(ConfigManager.retireDefaults(edited, defaults, retired));
+        assertEquals(List.of("one", "two", "mine"), edited.getStringList("a.lines"));
+    }
+
+    @Test
+    void bundledGuiDoesNotHoldRetiredDefaults() throws Exception {
+        YamlConfiguration bundled = new YamlConfiguration();
+        try (var in = new InputStreamReader(ConfigUpgradeTest.class.getResourceAsStream("/gui.yml"), StandardCharsets.UTF_8)) {
+            bundled.load(in);
+        }
+        for (var e : ConfigManager.RETIRED_GUI.entrySet()) {
+            String now;
+            if (e.getValue() instanceof List<?> old) {
+                assertTrue(bundled.isList(e.getKey()), e.getKey());
+                assertFalse(old.equals(bundled.getStringList(e.getKey())), e.getKey());
+                assertEquals(old.size(), bundled.getStringList(e.getKey()).size(), e.getKey() + ": only a flag was added");
+                now = String.join("\n", bundled.getStringList(e.getKey()));
+            } else {
+                assertTrue(bundled.isString(e.getKey()), e.getKey());
+                assertFalse(e.getValue().equals(bundled.getString(e.getKey())), e.getKey());
+                now = bundled.getString(e.getKey());
+            }
+            assertTrue(now.contains("flag>"), e.getKey() + " shows a flag");
+        }
+    }
 }

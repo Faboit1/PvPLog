@@ -159,6 +159,7 @@ settings-menu:
     # Visuals
     sidebar: "items:item/paper"
     chat-tags: "items:item/name_tag"
+    show-flags: "items:item/globe_banner_pattern"
     hide-hub-players: "items:item/phantom_membrane"
     hotbar-hints: "items:item/oak_sign"
     match-particles: "items:item/firework_rocket"
@@ -173,11 +174,13 @@ settings-menu:
     party-invites: "items:item/cake"
     friend-alerts: "items:item/emerald"
     auto-gg: "items:item/feather"
+    show-my-flag: "items:item/painting"
     # Queue
     keep-queuing: "items:item/repeater"
     searching-bar: "items:item/compass_00"
     region: "items:item/filled_map"
     max-ping: "items:item/redstone"
+    auto-country: "items:item/map"
     country: "items:item/book"
 
 # The kit editor (Kit Editor hotbar item, /kit edit [kit], /kiteditor [kit]). A 6-row chest laid out like the
@@ -306,13 +309,14 @@ sidebar:
     - "<muted>Range</muted>  <text>±<range></text>"
     - ""
     - "<muted>pvp.cheesesmp.top</muted>"
-  # Extra: <kit> <kit_icon> <mode> <opponent> <you_score> <opp_score> <round> <first_to> <time> <ping> <opp_ping>
+  # Extra: <kit> <kit_icon> <mode> <opponent> <opp_flag> (the opponent's flag, see flags below) <you_score>
+  # <opp_score> <round> <first_to> <time> <ping> <opp_ping>
   match:
     - ""
     - "<kit_icon> <text><kit></text> <muted><mode></muted>"
     - ""
     - "<text>You</text>  <accent><you_score></accent>"
-    - "<text><opponent></text>  <accent><opp_score></accent>"
+    - "<opp_flag><text><opponent></text>  <accent><opp_score></accent>"
     - "<muted>First to <first_to> · round <round></muted>"
     - ""
     - "<muted>Time</muted>  <text><time></text>"
@@ -320,13 +324,13 @@ sidebar:
     - "<muted><opponent></muted>  <text><opp_ping>ms</text>"
     - ""
     - "<muted>pvp.cheesesmp.top</muted>"
-  # Extra: <kit> <kit_icon> <red_name> <blue_name> <red_score> <blue_score> <round> <time>
+  # Extra: <kit> <kit_icon> <red_name> <blue_name> <red_flag> <blue_flag> <red_score> <blue_score> <round> <time>
   spectate:
     - ""
     - "<kit_icon> <text><kit></text> <muted>spectating</muted>"
     - ""
-    - "<text><red_name></text>  <accent><red_score></accent>"
-    - "<text><blue_name></text>  <accent><blue_score></accent>"
+    - "<red_flag><text><red_name></text>  <accent><red_score></accent>"
+    - "<blue_flag><text><blue_name></text>  <accent><blue_score></accent>"
     - "<muted>Round <round></muted>"
     - ""
     - "<muted>Time</muted>  <text><time></text>"
@@ -358,10 +362,11 @@ sidebar:
 # Tier tags: the icon of a kit followed by the tier in it. In the hub the player's best kit (best tier, then highest
 # rating), during a match the match's kit with the tier they had when it started. The tab list is sorted by tier.
 # <tier> in chat/tab/nametag-prefix = the whole tag; in icon-tier: <icon> = kit sprite, <tier> = tiers.yml format.
+# <flag> in chat/tab/nametag-prefix = the player's country flag (see flags below), empty when there is none.
 tags:
   icon-tier: "<icon><tier>"
-  chat: "<tier> <text><name></text><muted>:</muted> <message>"
-  tab: "<tier> <text><name></text>"
+  chat: "<tier> <flag><text><name></text><muted>:</muted> <message>"
+  tab: "<tier> <flag><text><name></text>"
   # Tab name of players spectating a match (like vanilla spectators: grey, italic, listed last). <tier> works too.
   tab-spectator: "<gray><i><name></i></gray>"
   # After a name in the tab list: an icon while in a match or queueing ("atlas:path[#rrggbb]" sprite; "" = none;
@@ -369,9 +374,35 @@ tags:
   tab-status-match: "items:item/iron_sword"
   tab-status-queue: "items:item/clock_00"
   tab-admin: " <#ffd24a>★</#ffd24a>"
-  nametag-prefix: "<tier> "
+  nametag-prefix: "<tier> <flag>"
   # Hide the tag for players who have no ranked kit yet (instead of showing "???").
   hide-unranked: false
+
+# Country flags next to names: the flag head of the player's country (countries.yml), before the name and after the
+# tier tag. Players set their country in Settings (or have it detected, config.yml geo) and choose whether they see
+# flags (Settings → Visuals → Flags) and whether theirs is shown (Settings → Social → Show my flag). Put <flag> right
+# before a name: tags above, the sidebar lines (<opp_flag>, <red_flag>, <blue_flag>) and messages.yml
+# (match.found-subtitle, results.subtitle, duel.received, duel.sent, dialog.profile.header); it is empty when there's
+# no flag to show.
+flags:
+  enabled: true
+  # What <flag> becomes: <flag> is the head (as big as a letter); the space keeps it apart from the name.
+  format: "<flag> "
+  # Draw the head's hat (outer) layer too. Keep it on: some flags have their details only there (Japan's red disc,
+  # Brazil's globe).
+  hat: true
+  # Where flags are shown. The tab list looks the same to everyone, so there a viewer's own Flags setting doesn't
+  # apply (a player's Show my flag does); nametags above heads and everything else follow both.
+  show:
+    tab: true
+    nametag: true
+    chat: true
+    profile: true
+    # The match found title, the match and spectator sidebars and the results title.
+    match: true
+    # Duel requests in chat.
+    duel: true
+    leaderboard: true
 
 # Tab list header and footer, refreshed every 2 s. Empty lists = none.
 # Placeholders: <online> <live> <fighting> <queued> <ping> <tps> <spectators> (spectating any match)

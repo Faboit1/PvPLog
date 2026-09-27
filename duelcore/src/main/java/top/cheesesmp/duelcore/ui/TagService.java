@@ -1,8 +1,10 @@
 package top.cheesesmp.duelcore.ui;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.text.Component;
@@ -22,6 +24,7 @@ import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.config.GuiConfig;
 import top.cheesesmp.duelcore.config.Messages;
+import top.cheesesmp.duelcore.geo.Flags;
 import top.cheesesmp.duelcore.kit.Kit;
 import top.cheesesmp.duelcore.match.Match;
 import top.cheesesmp.duelcore.match.Participant;
@@ -31,11 +34,17 @@ import top.cheesesmp.duelcore.profile.Setting;
 import top.cheesesmp.duelcore.rating.Tier;
 
 /**
- * Tier tags in chat, the tab list and above heads, plus the tab header and footer.
+ * Tier tags and country flags in chat, the tab list and above heads, plus the tab header and footer.
  *
  * <p>A tag is the icon of a kit followed by the player's tier in it: in the hub their best kit (best tier, then
  * highest rating), during a match the match's kit with the tier they had when it started. Nametags use one scoreboard
- * team per shown kit + tier; team names start with the tier's rank, so the tab list is sorted best tier first.
+ * team per shown kit + tier (+ flag); team names start with the tier's rank, so the tab list is sorted best tier first.
+ *
+ * <p>Flags ({@link Flags}, {@code <flag>} in the gui.yml formats) go between the tag and the name. The tab list name
+ * is the same for every viewer, so there only the player's own {@link Setting#SHOW_MY_FLAG} counts. Nametags come
+ * from each viewer's own scoreboard: a player showing a flag is in a team of their tier, kit and country, whose prefix
+ * has the flag on the boards of viewers with {@link Setting#SHOW_FLAGS} on and not on the others. Chat is rendered
+ * per viewer as well.
  *
  * <p>Spectators of a match look like vanilla spectator-mode entries: a grey italic name, sorted last (their team
  * name sorts after every tier team). Their chat tag stays their normal one.
@@ -48,21 +57,25 @@ public final class TagService implements Listener, Runnable {
     private static final String PREFIX = "dct_";
 
     /**
-     * What a player's tag shows: a kit (null = none ranked yet) and their tier in it (null = unranked); spectators
-     * of a match are listed apart.
+     * What a player's tag shows: a kit (null = none ranked yet), their tier in it (null = unranked) and the country
+     * whose flag goes before their name above heads (null = none); spectators of a match are listed apart.
      */
-    private record Shown(@Nullable Kit kit, @Nullable Tier tier, boolean spectator) {
+    private record Shown(@Nullable Kit kit, @Nullable Tier tier, boolean spectator, @Nullable String flag) {
 
         String team() {
             if (spectator) return PREFIX + "zz_spectators"; // after every "dct_NN" tier team
             int rank = tier != null ? tier.ordinal() : kit != null ? Tier.values().length : Tier.values().length + 1;
-            return PREFIX + String.format(Locale.ROOT, "%02d", rank) + (kit == null ? "" : "_" + kit.id());
+            // kit ids are [a-z0-9_], so ".<country>" can't clash with another kit's team
+            return PREFIX + String.format(Locale.ROOT, "%02d", rank) + (kit == null ? "" : "_" + kit.id())
+                + (flag == null ? "" : "." + flag.toLowerCase(Locale.ROOT));
         }
     }
 
     private final DuelCorePlugin plugin;
     /** Rendered tag per player; read by the async chat renderer. */
     private final Map<UUID, Component> tags = new ConcurrentHashMap<>();
+    /** The flag before a player's name in chat (formatted), for players who show one; read by the chat renderer. */
+    private final Map<UUID, Component> chatFlags = new ConcurrentHashMap<>();
     private final Map<UUID, Shown> shown = new ConcurrentHashMap<>();
     /** Where the tab logo's colour wave is (0..1). */
     private double logoPhase;
@@ -71,16 +84,19 @@ public final class TagService implements Listener, Runnable {
         this.plugin = plugin;
     }
 
-    /** The kit + tier a player's tag shows right now. */
+    /** The kit + tier (and nametag flag) a player's tag shows right now. */
     private Shown shownFor(Player player) {
+        PlayerProfile profile = plugin.profiles().get(player);
+        String flag = plugin.flags().shows(Flags.Place.NAMETAG) ? plugin.flags().visibleCountry(profile) : null;
+        if (!plugin.flags().hasFlag(flag)) flag = null;
         Match match = plugin.matches().match(player.getUniqueId());
         if (match != null && !match.isOver()) {
             Participant p = match.participant(player.getUniqueId());
-            return new Shown(match.kit(), p == null ? null : p.tierBefore(), false);
+            return new Shown(match.kit(), p == null ? null : p.tierBefore(), false, flag);
         }
         boolean spectator = plugin.spectate().spectating(player.getUniqueId()) != null;
-        PlayerProfile profile = plugin.profiles().get(player);
-        if (profile == null) return new Shown(null, null, spectator);
+        if (spectator) flag = null;
+        if (profile == null) return new Shown(null, null, spectator, null);
         Kit best = null;
         Tier bestTier = null;
         double bestRating = 0;
@@ -95,7 +111,7 @@ public final class TagService implements Listener, Runnable {
                 bestRating = e.getValue().rating;
             }
         }
-        return new Shown(best, bestTier, spectator);
+        return new Shown(best, bestTier, spectator, flag);
     }
 
     /** After the name in the tab list: the status icon (in a match / queueing, nothing in the lobby) and the admin star. */
@@ -122,17 +138,18 @@ public final class TagService implements Listener, Runnable {
             Messages.comp("icon", s.kit().sprite()), Messages.comp("tier", plugin.tiers().format(s.tier())));
     }
 
-    /** Creates the teams of everyone online on a (new) scoreboard. */
-    public void setupTeams(Scoreboard sb) {
+    /** Creates the teams of everyone online on {@code viewer}'s (new) scoreboard. */
+    public void setupTeams(Player viewer, Scoreboard sb) {
         for (Player p : Bukkit.getOnlinePlayers()) {
             Shown s = shown.get(p.getUniqueId());
             if (s == null) continue;
-            Team team = team(sb, s);
+            Team team = team(viewer.getUniqueId(), sb, s);
             if (team != null) team.addEntry(p.getName());
         }
     }
 
-    private @Nullable Team team(Scoreboard sb, Shown s) {
+    /** The team of {@code s} on the board of {@code viewer}, created with the prefix that viewer sees. */
+    private @Nullable Team team(UUID viewer, Scoreboard sb, Shown s) {
         String name = s.team();
         Team team = sb.getTeam(name);
         if (team == null) {
@@ -146,11 +163,28 @@ public final class TagService implements Listener, Runnable {
                 team.color(NamedTextColor.GRAY);
                 return team;
             }
-            Component tag = tagFor(s);
-            team.prefix(plugin.settings().nametagTag && !tag.equals(Component.empty())
-                ? plugin.messages().parse(plugin.gui().nametagPrefix, Messages.comp("tier", tag)) : Component.empty());
+            team.prefix(nametagPrefix(s, viewer));
         }
         return team;
+    }
+
+    /**
+     * What stands before a name above heads on {@code viewer}'s board: gui.yml {@code tags.nametag-prefix} with the
+     * tag ({@code display.nametag-tag}) and the flag when the viewer sees flags; empty when neither is shown.
+     */
+    private Component nametagPrefix(Shown s, UUID viewer) {
+        Component tag = plugin.settings().nametagTag ? tagFor(s) : Component.empty();
+        Component flag = s.flag() != null && Flags.wantsFlags(plugin.profiles().get(viewer))
+            ? plugin.flags().formatted(s.flag()) : Component.empty();
+        if (tag.equals(Component.empty()) && flag.equals(Component.empty())) return Component.empty();
+        String format = plugin.gui().nametagPrefix;
+        return plugin.messages().parse(tag.equals(Component.empty()) ? omit(format, "tier") : format,
+            Messages.comp("tier", tag), Messages.comp("flag", flag));
+    }
+
+    /** {@code format} without the tag {@code <name>} and the space after it (for a part that is empty). */
+    private static String omit(String format, String name) {
+        return format.replace("<" + name + "> ", "").replace("<" + name + ">", "");
     }
 
     /** Rebuilds every tag team after a reload (formats may have changed). */
@@ -162,19 +196,43 @@ public final class TagService implements Listener, Runnable {
         for (Player p : Bukkit.getOnlinePlayers()) update(p);
     }
 
-    /** Recomputes a player's tag everywhere (join, match start and end, tier change). */
+    /** Redraws the nametags on {@code viewer}'s own board after they switched {@link Setting#SHOW_FLAGS}. */
+    public void refreshFlags(Player viewer) {
+        Scoreboard sb = plugin.sidebar().boards().get(viewer.getUniqueId());
+        if (sb == null) return;
+        Set<String> done = new HashSet<>();
+        for (Shown s : shown.values()) {
+            if (s.flag() == null || !done.add(s.team())) continue;
+            Team team = sb.getTeam(s.team());
+            if (team != null) team.prefix(nametagPrefix(s, viewer.getUniqueId()));
+        }
+    }
+
+    /**
+     * Recomputes a player's tag and flag everywhere (join, match start and end, tier change, their country or
+     * {@link Setting#SHOW_MY_FLAG} changed).
+     */
     public void update(Player player) {
         Shown s = shownFor(player);
         Component tag = tagFor(s);
         tags.put(player.getUniqueId(), tag);
+        String country = plugin.flags().visibleCountry(plugin.profiles().get(player));
+        Component chatFlag = plugin.flags().shows(Flags.Place.CHAT) ? plugin.flags().formatted(country) : Component.empty();
+        if (chatFlag.equals(Component.empty())) chatFlags.remove(player.getUniqueId());
+        else chatFlags.put(player.getUniqueId(), chatFlag);
         Shown before = shown.put(player.getUniqueId(), s);
         Component suffix = suffix(player);
         boolean plain = suffix.equals(Component.empty());
+        // the tab list looks the same to everyone: only the player's own Show my flag applies
+        Component tabFlag = plugin.flags().shows(Flags.Place.TAB) ? plugin.flags().formatted(country) : Component.empty();
+        boolean tabTag = plugin.settings().tabTag && !tag.equals(Component.empty());
         if (s.spectator()) {
             player.playerListName(plugin.messages().parse(plugin.gui().tabSpectatorFormat, Messages.comp("tier", tag),
-                Messages.text("name", player.getName())).append(suffix));
-        } else if (plugin.settings().tabTag && !tag.equals(Component.empty())) {
-            player.playerListName(plugin.messages().parse(plugin.gui().tabFormat, Messages.comp("tier", tag),
+                Messages.comp("flag", Component.empty()), Messages.text("name", player.getName())).append(suffix));
+        } else if (tabTag || !tabFlag.equals(Component.empty())) {
+            String format = plugin.gui().tabFormat;
+            player.playerListName(plugin.messages().parse(tabTag ? format : omit(format, "tier"),
+                Messages.comp("tier", tabTag ? tag : Component.empty()), Messages.comp("flag", tabFlag),
                 Messages.text("name", player.getName())).append(suffix));
         } else if (!plain) {
             player.playerListName(Component.text(player.getName()).append(suffix));
@@ -183,14 +241,15 @@ public final class TagService implements Listener, Runnable {
         }
         plugin.sidebar().board(player);
         String name = player.getName();
-        for (Scoreboard sb : plugin.sidebar().boards().values()) {
+        for (Map.Entry<UUID, Scoreboard> board : plugin.sidebar().boards().entrySet()) {
+            Scoreboard sb = board.getValue();
             Team current = sb.getEntryTeam(name);
             if (current != null && current.getName().equals(s.team())) continue;
             if (current != null && current.getName().startsWith(PREFIX)) {
                 current.removeEntry(name);
                 if (current.getEntries().isEmpty()) current.unregister();
             }
-            Team team = team(sb, s);
+            Team team = team(board.getKey(), sb, s);
             if (team != null) team.addEntry(name);
         }
         if (before == null || before.spectator() != s.spectator()) header(player);
@@ -243,6 +302,7 @@ public final class TagService implements Listener, Runnable {
     public void onQuit(PlayerQuitEvent event) {
         String name = event.getPlayer().getName();
         tags.remove(event.getPlayer().getUniqueId());
+        chatFlags.remove(event.getPlayer().getUniqueId());
         shown.remove(event.getPlayer().getUniqueId());
         for (Scoreboard sb : plugin.sidebar().boards().values()) {
             Team team = sb.getEntryTeam(name);
@@ -253,22 +313,31 @@ public final class TagService implements Listener, Runnable {
         }
     }
 
+    /**
+     * Chat lines with the tag and the flag, rendered per viewer: their {@link Setting#CHAT_TAGS} and
+     * {@link Setting#SHOW_FLAGS} decide what they see (the console gets no flag, it can't draw heads). Without chat
+     * tags ({@code display.chat-tag}) and without a flag the line stays vanilla.
+     */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onChat(AsyncChatEvent event) {
-        if (!plugin.settings().chatTag) return;
-        Component tag = tags.getOrDefault(event.getPlayer().getUniqueId(), Component.empty());
+        Component tag = plugin.settings().chatTag ? tags.getOrDefault(event.getPlayer().getUniqueId(), Component.empty())
+            : Component.empty();
+        Component flag = chatFlags.getOrDefault(event.getPlayer().getUniqueId(), Component.empty());
+        if (!plugin.settings().chatTag && flag.equals(Component.empty())) return;
         String format = plugin.gui().chatFormat;
         Messages messages = plugin.messages();
         event.renderer((source, displayName, message, viewer) -> {
             boolean showTags = true;
+            boolean showFlags = false;
             if (viewer instanceof Player v) {
                 PlayerProfile vp = plugin.profiles().get(v.getUniqueId());
                 showTags = vp == null || vp.setting(Setting.CHAT_TAGS);
+                showFlags = Flags.wantsFlags(vp);
             }
             Component t = showTags ? tag : Component.empty();
-            String f = t.equals(Component.empty()) ? format.replace("<tier> ", "").replace("<tier>", "") : format;
-            return messages.parse(f, Messages.comp("tier", t), Messages.comp("name", displayName),
-                Messages.comp("message", message));
+            String f = t.equals(Component.empty()) ? omit(format, "tier") : format;
+            return messages.parse(f, Messages.comp("tier", t), Messages.comp("flag", showFlags ? flag : Component.empty()),
+                Messages.comp("name", displayName), Messages.comp("message", message));
         });
     }
 }

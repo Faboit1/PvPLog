@@ -26,6 +26,7 @@ import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.config.Messages;
 import top.cheesesmp.duelcore.db.dao.LeaderboardDao;
 import top.cheesesmp.duelcore.db.dao.MatchDao;
+import top.cheesesmp.duelcore.geo.Flags;
 import top.cheesesmp.duelcore.kit.Kit;
 import top.cheesesmp.duelcore.kit.editor.KitEditor;
 import top.cheesesmp.duelcore.leaderboard.LeaderboardService;
@@ -177,13 +178,18 @@ public final class DialogService {
         int wins = target.totalWins();
         int losses = target.totalLosses();
         int games = wins + losses;
+        PlayerProfile viewerProfile = plugin.profiles().get(viewer);
+        // a player who hides their flag hides their country from everyone else too
+        String country = viewer.getUniqueId().equals(target.uuid()) || target.setting(Setting.SHOW_MY_FLAG) ? target.country() : null;
         body.add(msg().get("dialog.profile.header",
             Messages.comp("head", Icons.head(target.uuid(), target.name())),
+            Messages.comp("flag", plugin.flags().flag(Flags.Place.PROFILE, viewerProfile, target)),
             Messages.text("player", target.name()),
             Messages.comp("tier", plugin.tiers().format(target.overall())),
             Messages.text("elo", TierService.eloText(target)),
             Messages.text("region", target.region() == null ? "—" : target.region()),
-            Messages.text("country", target.country() == null ? "—" : target.country())));
+            Messages.text("country", country == null ? "—" : country),
+            Messages.text("country_name", country == null ? "—" : plugin.flags().name(country))));
         body.add(msg().get("dialog.profile.record", Messages.num("wins", wins), Messages.num("losses", losses),
             Messages.text("winrate", games == 0 ? "0" : String.valueOf(Math.round(100.0 * wins / games)))));
         if (legacy) body.add(msg().get("dialog.profile.legacy"));

@@ -53,7 +53,16 @@ public enum Setting {
     /** The queue's "searching" action bar while in a queue. */
     SEARCHING_BAR(20, true),
     /** The totem-pop animation with the kit's icon when a match is found. */
-    MATCH_FOUND_POP(21, true);
+    MATCH_FOUND_POP(21, true),
+    /**
+     * The country is detected from the player's IP address when they join ({@code geo/GeoIpService}). Picking a
+     * country by hand turns it off.
+     */
+    AUTO_COUNTRY(22, true),
+    /** This player sees country flags next to names (chat, nametags, menus; the tab list is the same for everyone). */
+    SHOW_FLAGS(23, true),
+    /** This player's own flag is shown next to their name, and their country on their profile (off: to nobody). */
+    SHOW_MY_FLAG(24, true);
 
     /** The first bit that is stored relative to the default. */
     public static final int RELATIVE_FROM = 10;

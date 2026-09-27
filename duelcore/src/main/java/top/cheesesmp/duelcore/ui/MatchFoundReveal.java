@@ -24,7 +24,8 @@ import top.cheesesmp.duelcore.ui.anim.TextFx;
 /**
  * The animated "match found" title ({@code animations.match-found-reveal}): "MATCH FOUND" (messages.yml
  * {@code match.found-reveal}) brightens out of the dark while a light band sweeps over it, then the subtitle (the
- * opponent with their tier, the kit and the mode: {@code match.found-subtitle}) is typed out. A whoosh plays at the
+ * opponent with their flag and tier, the kit and the mode: {@code match.found-subtitle}) is typed out (the flag
+ * appears as one letter would). A whoosh plays at the
  * start and a chime once the name is there ({@code animations.queue-sounds}, the player's sound and match sound
  * settings). The totem pop and the {@code match-found-sounds} pool are played by MatchService as before.
  *
@@ -106,6 +107,7 @@ public final class MatchFoundReveal {
         PlayerProfile profile = plugin.profiles().get(player);
         Component subtitle = plugin.messages().get("match.found-subtitle",
             Messages.text("opponent", player.getName()),
+            Messages.comp("flag", plugin.flags().flag(top.cheesesmp.duelcore.geo.Flags.Place.MATCH, profile, profile)),
             Messages.comp("tier", plugin.tiers().format(profile == null ? null
                 : plugin.tiers().kitTier(kit.id(), plugin.profiles().stats(profile, kit.id())))),
             Messages.comp("kit", kit.displayName()),

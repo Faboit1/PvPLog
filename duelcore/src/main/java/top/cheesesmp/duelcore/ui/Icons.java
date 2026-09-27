@@ -1,5 +1,7 @@
 package top.cheesesmp.duelcore.ui;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Locale;
 import java.util.UUID;
 import net.kyori.adventure.key.Key;
@@ -10,10 +12,11 @@ import net.kyori.adventure.text.format.ShadowColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.object.ObjectContents;
+import net.kyori.adventure.text.object.PlayerHeadObjectContents;
 
 /**
- * Inline atlas sprites (object components). Sprites are tinted by the text colour, so they are forced white and
- * without shadow to show the real texture. Atlases: {@code items} (item/…), {@code blocks} (block/…),
+ * Inline atlas sprites and heads (object components). Sprites are tinted by the text colour, so they are forced white
+ * and without shadow to show the real texture. Atlases: {@code items} (item/…), {@code blocks} (block/…),
  * {@code gui} (hud/…, icon/…, mob_effect/…).
  */
 public final class Icons {
@@ -83,6 +86,23 @@ public final class Icons {
         return Component.object()
             .contents(ObjectContents.playerHead(uuid))
             .fallback(Component.text(name))
+            .color(NamedTextColor.WHITE)
+            .shadowColor(ShadowColor.none())
+            .build();
+    }
+
+    /**
+     * A head wearing the skin {@code texture} (a textures.minecraft.net texture id, e.g. a solid colour or a
+     * country's flag), white and without shadow, with its hat layer when {@code hat}; {@code fallback} where heads
+     * can't be shown, and instead of anything that isn't a texture id.
+     */
+    public static Component textureHead(String texture, Component fallback, boolean hat) {
+        if (!texture.matches("[0-9a-f]{16,80}")) return fallback;
+        String json = "{\"textures\":{\"SKIN\":{\"url\":\"http://textures.minecraft.net/texture/" + texture + "\"}}}";
+        String value = Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
+        return Component.object()
+            .contents(ObjectContents.playerHead().profileProperty(PlayerHeadObjectContents.property("textures", value)).hat(hat).build())
+            .fallback(fallback)
             .color(NamedTextColor.WHITE)
             .shadowColor(ShadowColor.none())
             .build();

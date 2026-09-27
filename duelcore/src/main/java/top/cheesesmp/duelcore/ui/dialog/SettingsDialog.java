@@ -23,6 +23,7 @@ import org.bukkit.entity.Player;
 import org.jspecify.annotations.Nullable;
 import top.cheesesmp.duelcore.DuelCorePlugin;
 import top.cheesesmp.duelcore.config.Messages;
+import top.cheesesmp.duelcore.geo.GeoIpService;
 import top.cheesesmp.duelcore.profile.DuelRequests;
 import top.cheesesmp.duelcore.profile.PlayerProfile;
 import top.cheesesmp.duelcore.profile.Setting;
@@ -37,8 +38,10 @@ import top.cheesesmp.duelcore.ui.dialog.SettingsLayout.Section;
  * {@code settings-menu.icons}), name and state, the description in its hover. Clicking a row changes it at once
  * (saved, and whatever it controls refreshed) and shows the menu again with the new state: it stays on screen
  * meanwhile (after-action NONE), like switching tabs. The duel request row cycles Everyone / Friends only / Nobody,
- * the region row lists the regions as choices, max ping has − and + steps, and the country opens a small dialog
- * with a text box (Save or Back return to the Queue tab). Every click is a text click event
+ * the region row lists the regions as choices, max ping has − and + steps, and the country row (flag, name and
+ * "(auto)" while detected) opens a small dialog with a text box for a code or a name: Save checks it against
+ * countries.yml and turns {@link Setting#AUTO_COUNTRY} off, Auto-detect turns it back on and looks the country up at
+ * once, and they and Back return to the Queue tab. Every click is a text click event
  * {@code duelcore:settings/<action>} (routed here through the "settings" prefix of {@link ClickRouter}); payloads
  * are re-validated. While open, the menu is refreshed by {@link OpenDialogs} (e.g. Keep Queuing changed in the queue
  * menu). Texts: messages.yml {@code dialog.settings}.
@@ -123,14 +126,23 @@ public final class SettingsDialog {
             }
             case REGION -> line(e, regionChoices(profile, section), msg().get("dialog.settings.click-choice"));
             case MAX_PING -> line(e, pingControl(profile.maxPing(), section), msg().get("dialog.settings.click-steps"));
-            case COUNTRY -> line(e, msg().get(profile.country() == null ? "dialog.settings.country-none" : "dialog.settings.country-value",
-                    Messages.text("country", profile.country() == null ? "" : profile.country()))
-                    .append(Component.space())
-                    .append(msg().get("dialog.settings.country-change")
-                        .hoverEvent(HoverEvent.showText(msg().get("dialog.settings.country-change-hover")))
-                        .clickEvent(action("country"))),
-                msg().get("dialog.settings.click-country"));
+            case COUNTRY -> line(e, countryState(profile), msg().get("dialog.settings.click-country"));
         };
+    }
+
+    /** The country with its flag and name, "(auto)" while it is detected, and the Change button. */
+    private Component countryState(PlayerProfile profile) {
+        String cc = profile.country();
+        Component value = cc == null ? msg().get("dialog.settings.country-none")
+            : msg().get("dialog.settings.country-value", Messages.comp("flag", plugin.flags().formatted(cc)),
+                Messages.text("name", plugin.flags().name(cc)), Messages.text("country", cc));
+        if (profile.setting(Setting.AUTO_COUNTRY) && plugin.settings().geoEnabled) {
+            value = value.append(msg().get("dialog.settings.country-auto"));
+        }
+        return value.append(Component.space())
+            .append(msg().get("dialog.settings.country-change")
+                .hoverEvent(HoverEvent.showText(msg().get("dialog.settings.country-change-hover")))
+                .clickEvent(action("country")));
     }
 
     /** "icon Name  state" with the description (and what a click does) in the hover. */
@@ -186,15 +198,45 @@ public final class SettingsDialog {
 
     // ------------------------------------------------------------------ country
 
-    private void country(Player player, PlayerProfile profile) {
-        ActionButton save = plugin.dialogs().button(msg().get("dialog.settings.country-save"), null, 150, "settings/country-save", Map.of());
+    /** Longest text the country box takes (the longest country name is 38 characters). */
+    private static final int COUNTRY_INPUT = 48;
+
+    /**
+     * The country dialog: a text box for a code or a name, Save, Auto-detect (when the server has it on) and Back.
+     * {@code rejected}: what the player typed last time when it was no country, shown back with a hint.
+     */
+    private void country(Player player, PlayerProfile profile, @Nullable String rejected) {
+        List<ActionButton> buttons = new ArrayList<>();
+        buttons.add(plugin.dialogs().button(msg().get("dialog.settings.country-save"), null, 150, "settings/country-save", Map.of()));
+        if (plugin.settings().geoEnabled) {
+            buttons.add(plugin.dialogs().button(msg().get("dialog.settings.country-auto-button"),
+                msg().get("dialog.settings.country-auto-tooltip"), 150, "settings/country-auto", Map.of()));
+        }
         ActionButton back = plugin.dialogs().button(msg().get("dialog.settings.back"), null, 150, "settings/back", Map.of());
-        Dialog d = DialogService.dialog(msg().get("dialog.settings.country-title"),
-            List.of(plugin.dialogs().text(msg().get("dialog.settings.country-body"))),
+        List<DialogBody> body = new ArrayList<>();
+        body.add(plugin.dialogs().text(msg().get("dialog.settings.country-body")));
+        if (rejected != null) body.add(plugin.dialogs().text(msg().get("dialog.settings.country-unknown", Messages.text("input", rejected))));
+        String initial = rejected != null ? rejected : profile.country() == null ? "" : plugin.flags().name(profile.country());
+        Dialog d = DialogService.dialog(msg().get("dialog.settings.country-title"), body,
             List.of(DialogInput.text("country", msg().get("dialog.settings.country-label")).width(200)
-                .initial(profile.country() == null ? "" : profile.country()).maxLength(2).build()),
-            DialogType.confirmation(save, back));
+                .initial(clip(initial, COUNTRY_INPUT)).maxLength(COUNTRY_INPUT).build()),
+            DialogType.multiAction(buttons).columns(buttons.size()).exitAction(back).build());
         plugin.openDialogs().show(player, OpenDialogs.Kind.SETTINGS, d);
+    }
+
+    private static String clip(String s, int max) {
+        return s.length() > max ? s.substring(0, max) : s;
+    }
+
+    /** Tells the player why auto-detect found no country right now (nothing when it did). */
+    private void tellDetected(Player player, GeoIpService.Result result) {
+        switch (result) {
+            case NOT_READY -> msg().send(player, "dialog.settings.detect-waiting");
+            case UNKNOWN -> msg().send(player, "dialog.settings.detect-unknown");
+            case DISABLED -> msg().send(player, "dialog.settings.detect-disabled");
+            case CHANGED, SAME -> {
+            }
+        }
     }
 
     // ------------------------------------------------------------------ clicks
@@ -211,7 +253,12 @@ public final class SettingsDialog {
                 if (e == null || e.kind() != SettingsLayout.Kind.TOGGLE || e.setting() == null) return;
                 boolean on = !profile.setting(e.setting());
                 profile.setting(e.setting(), on);
+                // auto-detect switched on looks the country up right away (saved together with the setting)
+                GeoIpService.Result detected = e.setting() == Setting.AUTO_COUNTRY && on ? plugin.geo().apply(player, profile) : null;
                 changed(player, profile, on);
+                if (e.setting() == Setting.SHOW_FLAGS) plugin.tags().refreshFlags(player);
+                if (e.setting() == Setting.SHOW_MY_FLAG || detected == GeoIpService.Result.CHANGED) plugin.tags().update(player);
+                if (detected != null) tellDetected(player, detected);
                 open(player, section);
             }
             case "settings/duel" -> {
@@ -231,14 +278,33 @@ public final class SettingsDialog {
                 changed(player, profile, dir > 0);
                 open(player, section);
             }
-            case "settings/country" -> country(player, profile);
+            case "settings/country" -> country(player, profile, null);
             case "settings/country-save" -> {
                 String raw = view == null ? null : view.getText("country");
                 if (raw != null) {
-                    String cc = raw.trim().toUpperCase(Locale.ROOT);
-                    profile.country(cc.matches("[A-Z]{2}") ? cc : null);
+                    String typed = raw.strip();
+                    String cc = typed.isEmpty() ? null : plugin.flags().find(typed);
+                    if (!typed.isEmpty() && cc == null) {
+                        plugin.menuSounds().play(player, MenuSound.DENY);
+                        country(player, profile, clip(typed, COUNTRY_INPUT));
+                        return;
+                    }
+                    // picked by hand (or none): auto-detect stays off until switched on again
+                    profile.country(cc);
+                    profile.setting(Setting.AUTO_COUNTRY, false);
+                    String region = plugin.flags().region(cc);
+                    if (profile.region() == null && region != null && plugin.settings().regions.contains(region)) profile.region(region);
                     changed(player, profile, true);
+                    plugin.tags().update(player);
                 }
+                open(player, Section.QUEUE);
+            }
+            case "settings/country-auto" -> {
+                profile.setting(Setting.AUTO_COUNTRY, true);
+                GeoIpService.Result detected = plugin.geo().apply(player, profile);
+                changed(player, profile, true);
+                if (detected == GeoIpService.Result.CHANGED) plugin.tags().update(player);
+                tellDetected(player, detected);
                 open(player, Section.QUEUE);
             }
             case "settings/back" -> open(player, Section.QUEUE);

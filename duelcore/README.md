@@ -25,6 +25,9 @@ Optional:
 - **MySQL**: set `database.type: mysql` and fill in `database.mysql` in `config.yml`, then restart.
 - **Regions**: players pick EU/NA/… in Settings. The matchmaker prefers same-region opponents
   (`matchmaking.region`, `leaderboard.regions`).
+- **Countries and flags**: a player's country is detected from their IP address when they join (or picked in
+  Settings) and its flag is shown next to their name (see *Country flags*). The IP database downloads itself
+  (`geo` in config.yml); behind Velocity use modern forwarding so the server sees players' real addresses.
 - **PlaceholderAPI**: placeholders register automatically when PAPI is installed (see below).
 
 ### Arenas
@@ -192,10 +195,10 @@ Staff:
 | `/duelcore arena …` | `duelcore.admin.arena` | See *Arenas* |
 | `/duelcore kit list\|give <id>\|save <id>` | `duelcore.admin.kit` | Kits |
 | `/duelcore season info\|reset <name> confirm\|recalc` | `duelcore.admin.season` | New season: ratings reset, the old season stays viewable as "legacy". `recalc` rebuilds the overall tiers after changing tiers.yml |
-| `/duelcore player <name> setrating <kit> <r>\|setgames <kit> <n>\|setregion <r>\|setcountry <cc>` | `duelcore.admin.rating` | Edit a player |
+| `/duelcore player <name> setrating <kit> <r>\|setgames <kit> <n>\|setregion <r>\|setcountry <cc\|auto\|none>` | `duelcore.admin.rating` | Edit a player. `setcountry` takes a countries.yml code (turns the player's auto-detect off), `auto` (detect it again) or `none` |
 | `/duelcore forceend <player>` | `duelcore.admin.match` | End a match without rating changes |
 | `/animtest [on\|off\|play <preview>]` | `duelcore.animtest` | Animation test mode (see *Animations*): preview animations on yourself, simulated progress after unranked matches |
-| `/duelcore debug [gc\|trace\|matches\|player <name>]` | `duelcore.admin.debug` | Health numbers (instances, chunks, entities, tasks, caches, heap, DB threads), live matches, one player's client version, brand, ping and state |
+| `/duelcore debug [gc\|trace\|matches\|player <name>]` | `duelcore.admin.debug` | Health numbers (instances, chunks, entities, tasks, caches, heap, DB threads, the GeoIP database), live matches, one player's client version, brand, ping and state |
 
 `/duelcore` has the alias `/dc`.
 
@@ -219,6 +222,7 @@ the menu stays open and shows the new state (switching tabs works the same way).
 | | Results screen | on | The results dialog back in the hub after a match (off: only the title and chat summary) |
 | Visuals | Sidebar | on | The scoreboard |
 | | Tier tags in chat | on | Tiers next to names in chat |
+| | Flags | on | Country flags next to other players' names: chat, above heads, menus, titles, the match sidebar (not the tab list, which looks the same to everyone) |
 | | Hide hub players | off | Other players are invisible to you in the hub |
 | | Hotbar hints | on | The action bar hint of the held hub item |
 | | Match particles | on | Fight-start rings, round spirals, death bursts, fireworks and confetti of matches you're in or watch |
@@ -231,13 +235,53 @@ the menu stays open and shows the new state (switching tabs works the same way).
 | | Party invites from anyone | on | Off: only friends can invite you |
 | | Friend alerts | on | Friend online / new follower chat lines |
 | | Auto GG | off | Says "gg" (`match.auto-gg`) to your match's fighters and spectators a second after it ends |
+| | Show my flag | on | Your flag next to your name and your country on your profile; off: hidden from everyone else, the tab list included |
 | Queue | Keep queuing | off | Search again in the same kits after a match (also in the queue menu) |
 | | Searching bar | on | The queue's "searching" action bar (`queue.searching-action-bar`) |
-| | Region, Max opponent ping, Country | — | Region choices, ping in steps (50–500 ms or any), and a two-letter country set in a small dialog |
+| | Region, Max opponent ping | — | Region choices, and ping in steps (50–500 ms or any) |
+| | Auto-detect country | on | Your country (and your region, while you have none) is found from your IP address when you join (`geo` in config.yml). Picking a country turns it off; switching it on looks the country up at once |
+| | Country | — | Its flag, name and "(auto)" while detected. *Change* opens a small dialog: a two-letter code or the country's name (checked against countries.yml; "UK", "USA", "Turkey" work too), *Save* (auto-detect off), *Auto-detect*, or empty for none |
 
 Server switches in config.yml (`animations.*`, `queue.searching-action-bar`, `queue.music.enabled`) still apply first:
 a player's setting can only turn off what the server has on. Settings are bits of `dc_players.settings`
 (`profile/Setting`); bits from 10 on store "changed from the default", so new settings need no database migration.
+Players who had typed a country before auto-detection existed keep it: their auto-detect starts off (done once, on
+the first start of this version).
+
+## Country flags
+
+A player's country is shown as its flag, a small player head with the flag (the textures in countries.yml, like the
+queue menu's progress bar), right before their name and after their tier tag:
+
+| Where | Whose settings count |
+| --- | --- |
+| Tab list | The player's *Show my flag* only: a tab list name is the same for every viewer |
+| Nametags above heads | Both: every player has their own scoreboard, so the flag is in the nametag prefix only on the boards of viewers with *Flags* on (players with a flag are in a nametag team per tier, kit and country, so within one tier and kit the tab list groups them by country) |
+| Chat | Both (rendered per viewer; the console gets no flag) |
+| Profile, match found title, results title ("vs"), match and spectator sidebars, duel requests | Both |
+
+*Show my flag* off also hides the player's country on their profile from everyone else. Where flags go is set in
+gui.yml (`flags`) and by `<flag>` in the formats (`tags.chat`, `tags.tab`, `tags.nametag-prefix`, sidebar
+`<opp_flag>`, `<red_flag>`, `<blue_flag>`) and messages (`match.found-subtitle`, `results.subtitle`, `duel.received`,
+`duel.sent`, `dialog.profile.header`); unchanged old defaults of these are updated on start, edited ones are kept.
+
+**Detection.** With *Auto-detect country* on, the address a player joins from is looked up in memory when they join
+(behind Velocity with modern forwarding that's the player's own address) and their country is set when it changed;
+private and unknown addresses change nothing. Addresses are never stored or logged (`debug.verbose` logs the
+country found). The database is the free [DB-IP](https://db-ip.com) "IP to Country Lite" (see *Credits*), kept in
+`plugins/DuelCore/geoip/`: loaded in the background when it is younger than `geo.max-age-days`, otherwise this
+month's copy (last month's while it isn't out yet) is downloaded first; a failed download keeps the old file.
+Players who join before it has loaded are looked up as soon as it has.
+
+**countries.yml** (written to the plugin folder on the first start): per ISO code the name, the region (used as the
+player's region while they have none) and the flag head's texture id. Edit or add entries; countries missing from
+your file come from the bundled one, `flag: ""` removes a flag, and a file with a YAML error is left alone while the
+bundled list is used. Keys are quoted because YAML reads a bare `NO` as false (the plugin reads it as Norway anyway).
+
+For code: `plugin.flags()` has `flag(String country)` (the head, or empty), `formatted(country)` (with
+`flags.format`), `flag(Flags.Place, viewer, subject)` / `flag(Place, viewer, country, subjectSettingsBits)` (all
+switches and both players' settings applied; use the second for rows without a loaded profile), `name`, `region`,
+`isKnown` and `find` (a code or a typed name).
 
 ## Permissions
 
@@ -285,6 +329,7 @@ plugin runs on the bundled defaults for it and logs the error until you fix it. 
 | `season` | first season name |
 | `arena` | `world`, `persistent-world`, `pregenerate-slots`, `slot-spacing`, `base-y`, `max-instances`, `keep-idle-per-template`, `prewarm`, `block-budget-ms`, `reset-between-rounds`, `view-distance` |
 | `leaderboard` | `refresh-seconds`, `size`, `regions` |
+| `geo` | `enabled` (players' countries from their IP address), `database-url` (the monthly DB-IP file, `{year}` `{month}`), `max-age-days` (35: older files are downloaded again; checked on start, reload and twice a day). See *Country flags* |
 | `dialogs` | `refresh.enabled`, `refresh.interval-ticks` (20): open menus whose content changes are rebuilt this often and sent again only when something visible changed (see *Menus* below) |
 | `display` | tier tags in chat, tab and above heads |
 | `party` | `max-size` (20), `invite-seconds` (invites and party challenges, 60), `open-by-default` |
@@ -332,8 +377,11 @@ the overall Elo: the average rating of every kit a player has finished placement
 - Sidebar lines for hub, queue, match and spectate.
 - Tier tags (`tags`): the icon of a kit followed by the tier in it (`icon-tier: "<icon><tier>"`). In the hub a
   player shows their best kit (best tier, then highest rating), during a match the match's kit with the tier they had
-  when it started. Chat, tab and nametag formats. The tab list is sorted by tier, best first. Players spectating a
-  match show like vanilla spectators (`tab-spectator`: grey, italic, listed last).
+  when it started. Chat, tab and nametag formats (`<flag>` = the country flag). The tab list is sorted by tier, best
+  first. Players spectating a match show like vanilla spectators (`tab-spectator`: grey, italic, listed last).
+- Country flags (`flags`): `enabled`, `format` (what `<flag>` becomes, `"<flag> "`: the head and a space), `hat`
+  (the head's outer layer) and `show.<place>` for `tab`, `nametag`, `chat`, `profile`, `match`, `duel`,
+  `leaderboard`. See *Country flags*.
 - Tab header and footer (`tab`): online/live/queued counts, ping, TPS and spectators (`<spectators>` in total,
   `<watching>` for the player's own match in `footer-match`, the footer used during a match or while spectating).
   Existing servers keep their old `footer`; add the `<spectators>` line from the bundled gui.yml to show it in the hub.
@@ -356,6 +404,8 @@ still see the original of a *masked* message (blocked messages never reach anyon
 
 **messages.yml**: every player-facing text. The theme tags `<accent> <text> <muted> <good> <bad>` are defined at the
 top, so recolouring means editing five lines.
+
+**countries.yml**: the name, region and flag head of every country (see *Country flags*).
 
 ## Animations
 
@@ -546,6 +596,13 @@ Never install the test kit on a production server.
   Velocity plan).
 - **Not built yet**: party (2v2) queue, tournaments and the read-only web API. Their permissions and config
   sections exist but do nothing in this build.
+
+## Credits
+
+- IP Geolocation by DB-IP: the country of an IP address comes from the free "IP to Country Lite" database of
+  [db-ip.com](https://db-ip.com), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). It is
+  downloaded at runtime, not bundled.
+- The flag heads in countries.yml are the national flag heads of [minecraft-heads.com](https://minecraft-heads.com).
 
 ## What to build next
 

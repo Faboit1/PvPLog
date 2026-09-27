@@ -70,7 +70,9 @@ queue:
 
 match:
   found-title: "<accent>Match found</accent>"
-  found-subtitle: "<kit_icon> <text><opponent></text> <muted>· <tier> · <mode></muted>"
+  # <flag> (here and in other messages) is the country flag of the player named after it (gui.yml flags), empty when
+  # there's none to show.
+  found-subtitle: "<kit_icon> <flag><text><opponent></text> <muted>· <tier> · <mode></muted>"
   # Animated "match found" (config.yml animations.match-found-reveal): this sweeps in with a shimmer in its first
   # colour, then found-subtitle is typed out.
   found-reveal: "<accent>MATCH FOUND</accent>"
@@ -156,7 +158,8 @@ results:
   word-victory: "<good>Victory</good>"
   word-defeat: "<bad>Defeat</bad>"
   word-draw: "<muted>Draw</muted>"
-  subtitle: "<text><you>–<opp></text> <muted>vs <opponent></muted>"
+  # subtitle, chat and score also know <flag>, the opponent's flag.
+  subtitle: "<text><you>–<opp></text> <muted>vs <flag><opponent></muted>"
   chat: "<kit_icon> <outcome> <text><you_score>–<opp_score></text> <muted>vs <opponent></muted>"
   chat-rating: "<muted>Rating <text><after></text> (<delta>) · <tier></muted>"
   header: "<kit_icon> <text><kit></text> <muted>· <mode></muted>"
@@ -178,10 +181,11 @@ results:
   nobody: "nobody"
 
 duel:
-  received: "<kit_icon> <text><player></text> <muted>challenged you to</muted> <text><kit></text>  <accept> <deny>"
+  # <flag> = the challenger's flag (received), the challenged player's (sent).
+  received: "<kit_icon> <flag><text><player></text> <muted>challenged you to</muted> <text><kit></text>  <accept> <deny>"
   accept-button: "<good>Accept</good>"
   deny-button: "<muted>Decline</muted>"
-  sent: "<muted>Challenge sent to <text><player></text> · <kit_icon> <kit>. It expires in 60s.</muted>"
+  sent: "<muted>Challenge sent to <flag><text><player></text> · <kit_icon> <kit>. It expires in 60s.</muted>"
   denied: "<muted><text><player></text> declined your challenge.</muted>"
   expired: "<muted>Your challenge expired.</muted>"
   result:
@@ -561,6 +565,9 @@ admin:
   games-set: "<muted>Set <text><player></text>'s games to <text><games></text>.</muted>"
   region-set: "<muted><text><player></text> region: <text><region></text></muted>"
   country-set: "<muted><text><player></text> country: <text><country></text></muted>"
+  # /duelcore player <name> setcountry auto
+  country-auto: "<muted><text><player></text>'s country is detected from their connection again.</muted>"
+  country-unknown: "<bad>There's no country <text><country></text> in countries.yml. Use its two letters, <text>auto</text> or <text>none</text>.</bad>"
 
 arena:
   editor-world: "<muted>Editor world. Build freely, then /duelcore arena create <name>.</muted>"
@@ -728,7 +735,9 @@ dialog:
     item-lore: "<muted><queued> searching · <playing> playing</muted>"
   profile:
     title: "<player>"
-    header: "<head> <text><player></text>  <tier> <muted>· <elo> Elo · <region> <country></muted>"
+    # <flag> <country_name> ("Germany") <country> ("DE"); the country is "—" when not set, or hidden by the player
+    # (Show my flag off) from everyone else.
+    header: "<head> <flag><text><player></text>  <tier> <muted>· <elo> Elo · <region> · <country_name></muted>"
     record: "<muted><text><wins></text> wins · <text><losses></text> losses · <text><winrate>%</text></muted>"
     legacy: "<muted>Legacy season</muted>"
     kit-line: "<kit_icon> <text><kit></text>  <tier> <muted>· <rating> · <wins>W <losses>L · best streak <best_streak></muted>"
@@ -810,14 +819,25 @@ dialog:
     ping-down-hover: "<muted>Stricter: <value></muted>"
     ping-up-hover: "<muted>Looser: <value></muted>"
     country-none: "<muted>Not set</muted>"
-    country-value: "<text><country></text>"
+    # <flag> <name> (the country's name in countries.yml) <country> (its two letters)
+    country-value: "<flag><text><name></text>"
+    # After the country while Auto-detect country is on.
+    country-auto: " <muted>(auto)</muted>"
     country-change: "<accent>[Change]</accent>"
-    country-change-hover: "<muted>Type your country's two letters</muted>"
+    country-change-hover: "<muted>Pick your country, or have it detected</muted>"
     # The country dialog (Change)
     country-title: "Country"
-    country-body: "<muted>Two letters (DE, US, …), shown on your profile. Leave it empty to remove it.</muted>"
-    country-label: "Country (2 letters)"
+    country-body: "<muted>Your country's two letters (DE, US, …) or its name. Its flag is shown next to your name and it's on your profile. Saving turns auto-detect off; <text>Auto-detect</text> finds it from your connection again. Leave it empty to show none.</muted>"
+    # In the dialog after something that isn't a country. <input>
+    country-unknown: "<bad>There's no country <text><input></text>. Use its two letters (DE, US, …) or its English name.</bad>"
+    country-label: "Country (code or name)"
     country-save: "<good>Save</good>"
+    country-auto-button: "<accent>Auto-detect</accent>"
+    country-auto-tooltip: "<muted>Find your country from your connection every time you join</muted>"
+    # Auto-detect (the dialog's button or the switch) couldn't find a country right now.
+    detect-waiting: "<muted>Your country is looked up in a moment (the country database is still loading).</muted>"
+    detect-unknown: "<muted>Your country couldn't be found from your connection. Pick it with <text>Change</text>.</muted>"
+    detect-disabled: "<muted>Auto-detect is turned off on this server. Pick your country with <text>Change</text>.</muted>"
     back: "<muted>Back</muted>"
     # Each row: its name and the description in its hover. The ids are those of gui.yml settings-menu.icons.
     items:
@@ -844,6 +864,9 @@ dialog:
       chat-tags:
         name: "Tier tags in chat"
         hover: "Players' tiers next to their names in chat."
+      show-flags:
+        name: "Flags"
+        hover: "Country flags next to players' names: in chat, above heads, in menus and titles. The tab list looks the same to everyone, so it keeps its flags."
       hide-hub-players:
         name: "Hide hub players"
         hover: "Other players are invisible to you in the hub, friends and party included."
@@ -882,6 +905,9 @@ dialog:
       auto-gg:
         name: "Auto GG"
         hover: "Says \"gg\" to your opponents and spectators when a match of yours ends."
+      show-my-flag:
+        name: "Show my flag"
+        hover: "Your country's flag next to your name, and your country on your profile. Off: hidden from everyone else, the tab list included."
       # Queue
       keep-queuing:
         name: "Keep queuing"
@@ -895,9 +921,12 @@ dialog:
       max-ping:
         name: "Max opponent ping"
         hover: "The matchmaker prefers opponents below this ping (Any: no preference)."
+      auto-country:
+        name: "Auto-detect country"
+        hover: "Your country is found from your connection whenever you join (nobody sees your IP address). Picking one with Change turns this off."
       country:
         name: "Country"
-        hover: "Shown on your profile."
+        hover: "Its flag is shown next to your name, and it's on your profile. Found from your connection while Auto-detect country is on."
   spectate:
     title: "Live <muted>· <live></muted>"
     body: "<muted>Pick a match to watch. You stay in your queue. Showing <shown> of <live>.</muted>"

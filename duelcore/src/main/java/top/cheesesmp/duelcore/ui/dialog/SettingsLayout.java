@@ -23,7 +23,7 @@ public final class SettingsLayout {
         REGION,
         /** Max opponent ping, with − and + steps ({@link #PING_STEPS}). */
         MAX_PING,
-        /** The two-letter country, changed in a small dialog with a text box. */
+        /** The country with its flag (and "(auto)" while detected), changed in a small dialog with a text box. */
         COUNTRY
     }
 
@@ -36,18 +36,18 @@ public final class SettingsLayout {
         /** In a match: who watches, what the action bar tells you, the results screen. */
         GAMEPLAY(toggle(Setting.ALLOW_SPECTATORS), toggle(Setting.TAB_SPECTATORS), toggle(Setting.COMBO_BAR),
             toggle(Setting.HEARTBEAT), toggle(Setting.RESULTS_SCREEN)),
-        /** What you see: sidebar, tags, the hub, particles and animations. */
-        VISUALS(toggle(Setting.SIDEBAR), toggle(Setting.CHAT_TAGS), toggle(Setting.HIDE_HUB_PLAYERS),
-            toggle(Setting.HOTBAR_HINTS), toggle(Setting.MATCH_PARTICLES), toggle(Setting.PROGRESS_REVEAL),
-            toggle(Setting.MATCH_FOUND_POP)),
+        /** What you see: sidebar, tags, flags, the hub, particles and animations. */
+        VISUALS(toggle(Setting.SIDEBAR), toggle(Setting.CHAT_TAGS), toggle(Setting.SHOW_FLAGS),
+            toggle(Setting.HIDE_HUB_PLAYERS), toggle(Setting.HOTBAR_HINTS), toggle(Setting.MATCH_PARTICLES),
+            toggle(Setting.PROGRESS_REVEAL), toggle(Setting.MATCH_FOUND_POP)),
         /** What you hear. */
         SOUNDS(toggle(Setting.SOUNDS), toggle(Setting.MATCH_SOUNDS), toggle(Setting.QUEUE_MUSIC)),
-        /** Other players: challenges, invites, alerts, GG. */
+        /** Other players: challenges, invites, alerts, GG, your flag. */
         SOCIAL(new Entry("duel-requests", Kind.DUEL_REQUESTS, null), toggle(Setting.PARTY_INVITES),
-            toggle(Setting.FRIEND_ALERTS), toggle(Setting.AUTO_GG)),
-        /** Searching and matchmaking. */
+            toggle(Setting.FRIEND_ALERTS), toggle(Setting.AUTO_GG), toggle(Setting.SHOW_MY_FLAG)),
+        /** Searching and matchmaking, and where you play from. */
         QUEUE(toggle(Setting.KEEP_QUEUING), toggle(Setting.SEARCHING_BAR), new Entry("region", Kind.REGION, null),
-            new Entry("max-ping", Kind.MAX_PING, null), new Entry("country", Kind.COUNTRY, null));
+            new Entry("max-ping", Kind.MAX_PING, null), toggle(Setting.AUTO_COUNTRY), new Entry("country", Kind.COUNTRY, null));
 
         private final List<Entry> entries;
 

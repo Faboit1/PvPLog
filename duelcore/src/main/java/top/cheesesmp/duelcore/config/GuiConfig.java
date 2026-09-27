@@ -102,6 +102,8 @@ public final class GuiConfig {
     public final top.cheesesmp.duelcore.kit.editor.KitEditorStyle kitEditor;
     /** The sounds of menu presses: dialog and chat buttons, hub items (menu-sounds). */
     public final top.cheesesmp.duelcore.ui.MenuSoundStyle menuSounds;
+    /** Country flags next to names: on/off, where, and how {@code <flag>} looks (flags). */
+    public final top.cheesesmp.duelcore.geo.FlagStyle flags;
 
     public GuiConfig(YamlConfiguration y) {
         ConfigurationSection hb = y.getConfigurationSection("hotbar");
@@ -194,6 +196,7 @@ public final class GuiConfig {
         matchFx = top.cheesesmp.duelcore.ui.MatchFxStyle.parse(y);
         kitEditor = top.cheesesmp.duelcore.kit.editor.KitEditorStyle.parse(y);
         menuSounds = top.cheesesmp.duelcore.ui.MenuSoundStyle.parse(y);
+        flags = top.cheesesmp.duelcore.geo.FlagStyle.parse(y);
     }
 
     public @Nullable HotbarItem item(String key) {

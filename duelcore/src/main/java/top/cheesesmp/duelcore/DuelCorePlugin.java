@@ -83,6 +83,8 @@ public final class DuelCorePlugin extends JavaPlugin {
     private top.cheesesmp.duelcore.ui.AlertPop alerts;
     private top.cheesesmp.duelcore.kit.editor.KitEditor kitEditor;
     private top.cheesesmp.duelcore.ui.MenuSounds menuSounds;
+    private top.cheesesmp.duelcore.geo.Flags flags;
+    private top.cheesesmp.duelcore.geo.GeoIpService geo;
     private boolean papiHooked;
 
     @Override
@@ -92,6 +94,7 @@ public final class DuelCorePlugin extends JavaPlugin {
         new File(getDataFolder(), "schematics").mkdirs();
         config = new ConfigManager(this);
         config.load();
+        flags = new top.cheesesmp.duelcore.geo.Flags(this, config::countries);
         for (String problem : settings().soundProblems) getLogger().warning("config.yml " + problem);
         kits = new KitManager(this);
         kits.load();
@@ -176,6 +179,9 @@ public final class DuelCorePlugin extends JavaPlugin {
         pm.registerEvents(hubProgress, this);
         friends = new top.cheesesmp.duelcore.friends.FriendService(this);
         friends.enable();
+        geo = new top.cheesesmp.duelcore.geo.GeoIpService(this);
+        pm.registerEvents(geo, this);
+        geo.enable(); // loads (or downloads) the IP → country database in the background
 
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> commands.register(event.registrar()));
 
@@ -248,6 +254,7 @@ public final class DuelCorePlugin extends JavaPlugin {
             getLogger().log(Level.WARNING, "Resetting hub flight failed", t);
         }
         if (parties != null) parties.disable();
+        if (geo != null) geo.disable();
         if (papiHooked) {
             try {
                 top.cheesesmp.duelcore.hook.PapiHook.unregister();
@@ -276,7 +283,8 @@ public final class DuelCorePlugin extends JavaPlugin {
         problems.addAll(gui().menuSounds.problems());
         ratingSystem = buildRatingSystem();
         leaderboards.clear();
-        tags.refreshTeams();
+        geo.reload(); // geo.enabled may have changed, or the database file may be due
+        tags.refreshTeams(); // (countries.yml and the flag formats may have changed too)
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (matches.match(p.getUniqueId()) == null && spectate.spectating(p.getUniqueId()) == null) {
                 hub.giveItems(p);
@@ -489,5 +497,18 @@ public final class DuelCorePlugin extends JavaPlugin {
     /** Persistent parties: /party, party chat, party matches. */
     public top.cheesesmp.duelcore.party.PartyService parties() {
         return parties;
+    }
+
+    /**
+     * Country flags next to names ({@code flag(...)}, respecting gui.yml and the players' flag settings) and the
+     * names and regions of countries.yml ({@code name}, {@code region}, {@code isKnown}, {@code find}).
+     */
+    public top.cheesesmp.duelcore.geo.Flags flags() {
+        return flags;
+    }
+
+    /** Countries from IP addresses: the db-ip.com database and the lookup on join. */
+    public top.cheesesmp.duelcore.geo.GeoIpService geo() {
+        return geo;
     }
 }

@@ -60,7 +60,7 @@ public final class ResultsService implements org.bukkit.event.Listener {
                     Messages.num("kills", p.kills()))
                 : plugin.messages().get("results.subtitle",
                     Messages.num("you", m.score(p.team())), Messages.num("opp", m.score(1 - p.team())),
-                    Messages.text("opponent", m.teamName(1 - p.team())));
+                    Messages.text("opponent", m.teamName(1 - p.team())), Messages.comp("flag", opponentFlag(m, p)));
             player.showTitle(Title.title(title, subtitle,
                 Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(2200), Duration.ofMillis(400))));
             List<Component> lines = lines(m, p);
@@ -110,7 +110,7 @@ public final class ResultsService implements org.bukkit.event.Listener {
             Messages.comp("kit", m.kit().displayName()),
             Messages.text("mode", plugin.messages().raw("mode." + (m.ranked() ? "ranked" : "unranked")))));
         lines.add(plugin.messages().get("results.score", Messages.text("you", self.name()),
-            Messages.text("opponent", m.teamName(1 - self.team())),
+            Messages.text("opponent", m.teamName(1 - self.team())), Messages.comp("flag", opponentFlag(m, self)),
             Messages.num("you_score", m.score(self.team())), Messages.num("opp_score", m.score(1 - self.team()))));
         if (m.endReason() == Match.EndReason.FORFEIT_QUIT || m.endReason() == Match.EndReason.FORFEIT_COMMAND) {
             lines.add(plugin.messages().get("results.forfeit"));
@@ -157,6 +157,14 @@ public final class ResultsService implements org.bukkit.event.Listener {
         return lines;
     }
 
+    /** The flag of a lone opponent as {@code self} sees it (see geo/Flags); empty against a team or when not shown. */
+    private Component opponentFlag(Match m, Participant self) {
+        List<Participant> opponents = m.team(1 - self.team());
+        if (opponents.size() != 1) return Component.empty();
+        return plugin.flags().flag(top.cheesesmp.duelcore.geo.Flags.Place.MATCH, plugin.profiles().get(self.uuid()),
+            plugin.profiles().get(opponents.getFirst().uuid()));
+    }
+
     private String winnerName(Match m) {
         return m.winnerTeam() < 0 ? plugin.messages().raw("results.nobody") : m.teamName(m.winnerTeam());
     }
@@ -173,7 +181,7 @@ public final class ResultsService implements org.bukkit.event.Listener {
             Messages.comp("outcome", plugin.messages().get("results.word-" + (m.winnerTeam() < 0 ? "draw"
                 : m.winnerTeam() == self.team() ? "victory" : "defeat"))),
             Messages.num("you_score", m.score(self.team())), Messages.num("opp_score", m.score(1 - self.team())),
-            Messages.text("opponent", m.teamName(1 - self.team()))));
+            Messages.text("opponent", m.teamName(1 - self.team())), Messages.comp("flag", opponentFlag(m, self))));
         if (m.ranked() && !Double.isNaN(self.ratingAfter())) {
             int delta = (int) Math.round(self.ratingDelta());
             out.add(plugin.messages().get("results.chat-rating", Messages.num("after", (int) Math.round(self.ratingAfter())),
