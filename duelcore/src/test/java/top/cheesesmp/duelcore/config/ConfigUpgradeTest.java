@@ -264,7 +264,8 @@ class ConfigUpgradeTest {
                 assertFalse(e.getValue().equals(bundled.getString(e.getKey())), e.getKey());
                 now = bundled.getString(e.getKey());
             }
-            assertTrue(now.contains("flag>"), e.getKey() + " shows a flag");
+            if (e.getKey().startsWith("match-health.")) assertTrue(now.contains("<heart>"), e.getKey() + " shows the heart sprite");
+            else assertTrue(now.contains("flag>"), e.getKey() + " shows a flag");
         }
     }
 }

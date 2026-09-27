@@ -254,9 +254,12 @@ public final class ConfigManager {
 
     /**
      * gui.yml values whose bundled default changed, as key → old default (a text or a list of lines), handled like
-     * {@link #RETIRED_MESSAGES}: the name formats and the match / spectate sidebars got {@code <flag>}.
+     * {@link #RETIRED_MESSAGES}: the name formats and the match / spectate sidebars got {@code <flag>}, the match
+     * health line the HUD's heart sprites.
      */
     static final Map<String, Object> RETIRED_GUI = Map.of(
+            "match-health.format", "<#ff5555>❤</#ff5555> <hp_color><hearts></hp_color><absorption>",
+            "match-health.absorption", " <#ffcc33>+<hearts></#ffcc33>",
             "tags.chat", "<tier> <text><name></text><muted>:</muted> <message>",
             "tags.tab", "<tier> <text><name></text>",
             "tags.nametag-prefix", "<tier> ",
