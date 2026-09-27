@@ -90,26 +90,23 @@ hotbar:
 # Server list entry. Placeholders: <online> <max> <live> (matches) <fighting> <queued> <kits>
 motd:
   enabled: true
-  # Center each line in the server list (by character widths of the default font).
+  # Center each line in the server list (by the pixel widths of the default font, bold included).
   center: true
   # Placeholders: <online> <max> <live> <fighting> <queued> <kits> and <tagline> (one of the taglines below, picked at
   # random on every server-list refresh).
   lines:
-    - "<b><gradient:#ffe45c:#ffab2e>CHEESE</gradient><#ff4545>PVP</#ff4545></b> <#6b7078>|</#6b7078> <#d8dbe0>discord.cheesesmp.top</#d8dbe0>"
+    - "<b><#ffaa00>CHEESE PVP</#ffaa00></b> <#aaaaaa>|</#aaaaaa> <white>discord.gg/cheesesmp</white>"
     - "<tagline>"
   taglines:
-    - "<#ffd84d>Ranked has been released to everyone!</#ffd84d>"
-    - "<#ffd84d>Climb the tiers from LT5 to HT1 in <kits> kits!</#ffd84d>"
-    - "<#ffd84d>New: Party FFA, /draw and new respawn animations!</#ffd84d>"
-    - "<#ffd84d><live> live matches · <queued> in queue · join now!</#ffd84d>"
+    - "<#ffff55>Ranked has been released to everyone!</#ffff55>"
   # Replaces the player list shown when hovering the player count. Empty list = the normal player list.
   hover:
-    - "<b><gradient:#ffe45c:#ffab2e>CHEESE</gradient><#ff4545>PVP</#ff4545></b>"
-    - "<#8b9099>Fighting</#8b9099> <#d8dbe0><fighting></#d8dbe0>"
-    - "<#8b9099>In queue</#8b9099> <#d8dbe0><queued></#d8dbe0>"
-    - "<#8b9099>Live matches</#8b9099> <#d8dbe0><live></#d8dbe0>"
+    - "<b><#ffaa00>CHEESE PVP</#ffaa00></b>"
+    - "<#aaaaaa>Fighting</#aaaaaa> <white><fighting></white>"
+    - "<#aaaaaa>In queue</#aaaaaa> <white><queued></white>"
+    - "<#aaaaaa>Live matches</#aaaaaa> <white><live></white>"
     - ""
-    - "<#ffd84d>discord.cheesesmp.top</#ffd84d>"
+    - "<#ffff55>discord.gg/cheesesmp</#ffff55>"
 
 # The queue menu (Play item, /queue). Texts are in messages.yml (dialog.queue).
 queue-menu:

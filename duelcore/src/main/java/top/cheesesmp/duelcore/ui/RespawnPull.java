@@ -390,17 +390,19 @@ public final class RespawnPull implements Listener {
                 }
                 if (k < ticks) {
                     double[] at = path[k];
-                    moveSeat(t, start.clone().add(at[0], at[1], at[2]));
                     if (facing != null) {
-                        view = turn(player, view, facing[k]);
+                        view = facing[k];
                     } else if (k >= turnFrom) {
                         if (k == turnFrom) { // from wherever they are looking now
                             turnStart = new float[] {player.getLocation().getYaw(), player.getLocation().getPitch()};
-                            view = turnStart;
                         }
-                        view = turn(player, view, RespawnMotion.landTurn(turnStart[0], turnStart[1], target.getYaw(),
-                            target.getPitch(), k + 1 - turnFrom, ticks - turnFrom));
+                        view = RespawnMotion.landTurn(turnStart[0], turnStart[1], target.getYaw(),
+                            target.getPitch(), k + 1 - turnFrom, ticks - turnFrom);
+                    } else {
+                        // free look: the seat carries the view they have (the rotation goes out with every move)
+                        view = new float[] {player.getLocation().getYaw(), player.getLocation().getPitch()};
                     }
+                    moveSeat(t, start.clone().add(at[0], at[1], at[2]), view);
                     player.setFallDistance(0);
                     if (k % 2 == 0) trail(t, player.getLocation().add(0, 0.2, 0), particle);
                     k++;
@@ -540,8 +542,9 @@ public final class RespawnPull implements Listener {
      */
     private boolean seat(Pull t, Location feet, int glide) {
         Location at = feet.clone().add(0, RIDE_OFFSET, 0);
-        at.setYaw(0);
-        at.setPitch(0);
+        // the seat's rotation is the rider's: Paper teleports passengers along with the seat, rotation included
+        at.setYaw(t.player.getLocation().getYaw());
+        at.setPitch(t.player.getLocation().getPitch());
         ItemDisplay seat = at.getWorld().spawn(at, ItemDisplay.class, d -> {
             d.setPersistent(false);
             d.addScoreboardTag(SpawnRise.KEEP_TAG);
@@ -569,13 +572,18 @@ public final class RespawnPull implements Listener {
         return seat != null && seat.isValid() && t.player.getVehicle() == seat;
     }
 
-    /** Moves the seat (and the player on it) so the player's feet are at {@code feet}. */
-    private static void moveSeat(Pull t, Location feet) {
+    /**
+     * Moves the seat (and the player on it) so the player's feet are at {@code feet}, looking {@code view} (yaw,
+     * pitch). Paper teleports the passengers along with the seat and gives them its rotation (an absolute rotation
+     * every tick), so the seat carries the view the animation wants: a fixed yaw here turned everyone to face one
+     * way for the whole flight, backwards for one of the two spawns.
+     */
+    private static void moveSeat(Pull t, Location feet, float[] view) {
         ItemDisplay seat = t.seat;
         if (seat == null) return;
         Location at = feet.clone().add(0, RIDE_OFFSET, 0);
-        at.setYaw(0);
-        at.setPitch(0);
+        at.setYaw(view[0]);
+        at.setPitch(view[1]);
         t.movingSeat = true;
         try {
             seat.teleport(at); // riders come along (Paper 26.2 always carries passengers)

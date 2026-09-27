@@ -7,7 +7,6 @@ import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -63,10 +62,22 @@ public final class MotdService implements Listener {
     }
 
     private static Component center(Component line) {
-        String plain = PlainTextComponentSerializer.plainText().serialize(line);
-        int width = width(plain);
+        int width = width(line, false);
         int pad = Math.max(0, (AREA - width) / 2 / 4); // a space is 4 px
         return pad == 0 ? line : Component.text(" ".repeat(pad)).append(line);
+    }
+
+    /** Pixel width of a component in the default font: bold glyphs are 1 px wider (their style is inherited). */
+    static int width(Component c, boolean parentBold) {
+        net.kyori.adventure.text.format.TextDecoration.State state = c.decoration(net.kyori.adventure.text.format.TextDecoration.BOLD);
+        boolean bold = state == net.kyori.adventure.text.format.TextDecoration.State.TRUE
+            || (state == net.kyori.adventure.text.format.TextDecoration.State.NOT_SET && parentBold);
+        int w = 0;
+        if (c instanceof net.kyori.adventure.text.TextComponent text) {
+            w += width(text.content()) + (bold ? text.content().codePointCount(0, text.content().length()) : 0);
+        }
+        for (Component child : c.children()) w += width(child, bold);
+        return w;
     }
 
     /** Approximate pixel width in the default font (glyph + 1 px spacing, no bold). */
