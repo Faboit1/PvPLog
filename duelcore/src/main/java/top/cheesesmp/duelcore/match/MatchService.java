@@ -1100,7 +1100,7 @@ public final class MatchService implements Runnable {
                 plugin.tiers().placementMatches(), p.tierBefore(), p.tierAfter, false));
             plugin.tiers().refresh(profile);
             writes.add(new ProfileService.RatingWrite(profile.id(), m.kit().id(), stats.snapshot(), profile.elo(),
-                profile.overall()));
+                profile.points(), profile.overall()));
             profile.recent(null);
         }
     }

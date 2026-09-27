@@ -24,10 +24,11 @@ hub:
   join-title: "<#f2c14e>Cheese</#f2c14e> <#f7e3a1>PvP</#f7e3a1>"
   join-subtitle: "<muted>Ranked duels</muted>"
   # The typed welcome title instead (config.yml animations.join-welcome). <player>; in welcome-subtitle also <tier>
-  # (icon + tier of the best kit), <overall> (overall tier) and <elo> (overall Elo).
+  # (icon + tier of the best kit), <overall> (overall tier), <points> (overall points: the Elo of every placed kit
+  # added up) and <elo> (overall Elo: their average).
   welcome-back-title: "<text>Welcome back,</text> <accent><player></accent>"
   welcome-first-title: "<text>Welcome to</text> <#f2c14e>Cheese</#f2c14e> <#f7e3a1>PvP</#f7e3a1>"
-  welcome-subtitle: "<tier> <muted>· <elo> Elo</muted>"
+  welcome-subtitle: "<tier> <muted>· <points> pts</muted>"
   # First join, or nothing ranked yet.
   welcome-subtitle-unranked: "<muted>Right-click</muted> <text>Play</text> <muted>to find a match</muted>"
   # Short action bar pops next to the friend and party chat alerts (config.yml animations.alert-pops). "" = none.
@@ -598,7 +599,7 @@ tier:
   unknown: "<bad>Unknown tier. Use HT1, MT1, LT1 … LT5."
   set: "<muted>Pinned <text><player></text> to <tier> in <kit>.</muted>"
   cleared: "<muted>Cleared the tier pin of <text><player></text> in <kit>.</muted>"
-  info-header: "<text><player></text> <muted>· <tier> · <elo> Elo</muted>"
+  info-header: "<text><player></text> <muted>· <tier> · <points> pts · <elo> Elo avg</muted>"
   info-line: "<muted>  <kit>: <tier> · <rating> · <games> games <override></muted>"
 
 season:
@@ -795,8 +796,9 @@ dialog:
   profile:
     title: "<player>"
     # <flag> <country_name> ("Germany") <country> ("DE"); the country is "—" when not set, or hidden by the player
-    # (Show my flag off) from everyone else.
-    header: "<head> <flag><text><player></text>  <tier> <muted>· <elo> Elo · <region> · <country_name></muted>"
+    # (Show my flag off) from everyone else. <points> = overall points (the Elo of every placed kit added up; the
+    # overall board ranks by them), <elo> = overall Elo (their average, which sets the overall tier).
+    header: "<head> <flag><text><player></text>  <tier> <muted>· <points> pts · <region> · <country_name></muted>"
     record: "<muted><text><wins></text> wins · <text><losses></text> losses · <text><winrate>%</text></muted>"
     legacy: "<muted>Legacy season</muted>"
     kit-line: "<kit_icon> <text><kit></text>  <tier> <muted>· <rating> · <wins>W <losses>L · best streak <best_streak></muted>"
@@ -814,9 +816,11 @@ dialog:
     global: "global"
     overall: "Overall"
     empty: "<muted>Nobody is ranked here yet.</muted>"
-    # <flag>: the player's flag and a space (gui.yml flags; nothing when hidden or unknown)
-    line-overall: "<muted><rank>.</muted> <head> <flag><text><player></text>  <tier> <muted>· <elo> Elo · <wins>W</muted>"
+    # <flag>: the player's flag and a space (gui.yml flags; nothing when hidden or unknown). The overall board ranks
+    # by overall points (<points>, also <value>): the Elo of every kit with finished placement added up.
+    line-overall: "<muted><rank>.</muted> <head> <flag><text><player></text>  <tier> <muted>· <points> pts · <wins>W</muted>"
     line-kit: "<muted><rank>.</muted> <head> <flag><text><player></text>  <tier> <muted>· <value> · <wins>W <losses>L</muted>"
+    # <value>: points on the overall board, Elo on a kit board
     you: "<muted>You · #<rank> · <value></muted>"
     overall-button: "<sprite:items:item/nether_star>"
     overall-button-selected: "<accent>•</accent><sprite:items:item/nether_star>"

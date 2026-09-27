@@ -187,6 +187,7 @@ public final class DialogService {
             Messages.text("player", target.name()),
             Messages.comp("tier", plugin.tiers().format(target.overall())),
             Messages.text("elo", TierService.eloText(target)),
+            Messages.text("points", TierService.pointsText(target)),
             Messages.text("region", target.region() == null ? "—" : target.region()),
             Messages.text("country", country == null ? "—" : country),
             Messages.text("country_name", country == null ? "—" : plugin.flags().name(country))));
@@ -294,6 +295,7 @@ public final class DialogService {
                 Messages.comp("tier", plugin.tiers().format(tier)),
                 Messages.num("value", (int) Math.round(r.value())),
                 Messages.num("elo", (int) Math.round(r.value())),
+                Messages.num("points", (int) Math.round(r.value())),
                 Messages.num("wins", r.wins()), Messages.num("losses", r.losses()),
                 Messages.text("region", r.region() == null ? "" : r.region())));
         }
@@ -302,7 +304,8 @@ public final class DialogService {
                 body.add(Component.empty());
                 body.add(msg().get("dialog.leaderboard.you", Messages.num("rank", r.rank()),
                     Messages.num("value", (int) Math.round(r.value())),
-                    Messages.num("elo", (int) Math.round(r.value()))));
+                    Messages.num("elo", (int) Math.round(r.value())),
+                    Messages.num("points", (int) Math.round(r.value()))));
             }
         }
         List<ActionButton> buttons = new ArrayList<>();

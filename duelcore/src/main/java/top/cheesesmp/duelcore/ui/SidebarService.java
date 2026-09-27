@@ -179,6 +179,7 @@ public final class SidebarService implements Listener, Runnable {
         tags.add(Messages.text("player", player.getName()));
         tags.add(Messages.comp("tier", plugin.tiers().format(profile == null ? null : profile.overall())));
         tags.add(Messages.text("elo", top.cheesesmp.duelcore.rating.TierService.eloText(profile)));
+        tags.add(Messages.text("points", top.cheesesmp.duelcore.rating.TierService.pointsText(profile)));
         tags.add(Messages.num("queued", plugin.queue().totalQueued()));
         tags.add(Messages.num("live", plugin.matches().count()));
         tags.add(Messages.num("online", Bukkit.getOnlinePlayers().size()));

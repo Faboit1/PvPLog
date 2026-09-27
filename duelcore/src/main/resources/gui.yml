@@ -295,11 +295,12 @@ sidebar:
     width: 1.6
     sweep-ticks: 32
     pause-ticks: 160
-  # Placeholders: <player> <tier> <elo> (overall Elo) <queued> <live> <online> <region> <ping>
+  # Placeholders: <player> <tier> <points> (overall points: the placed kits' Elo added up) <elo> (overall Elo, their
+  # average) <queued> <live> <online> <region> <ping>
   hub:
     - ""
     - "<text><player></text>"
-    - "<tier> <muted>· <elo> Elo</muted>"
+    - "<tier> <muted>· <points> pts</muted>"
     - ""
     - "<muted>Queued</muted>  <text><queued></text>"
     - "<muted>Live</muted>  <text><live></text>"
@@ -309,7 +310,7 @@ sidebar:
   queue:
     - ""
     - "<text><player></text>"
-    - "<tier> <muted>· <elo> Elo</muted>"
+    - "<tier> <muted>· <points> pts</muted>"
     - ""
     - "<kit_icon> <text><kit></text> <muted><mode></muted>"
     - "<muted>Searching</muted>  <text><wait></text>"

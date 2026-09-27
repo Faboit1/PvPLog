@@ -16,7 +16,8 @@ public final class LeaderboardDao {
 
     /**
      * One leaderboard line. For kit boards {@code value} is the rating and {@code tier} the pinned tier (if any);
-     * for the overall board {@code value} is the overall Elo and {@code tier} the overall tier. Test bots
+     * for the overall board {@code value} is the overall points (sum of the placed kits' Elo) and {@code tier}
+     * the overall tier (from the average Elo). Test bots
      * ({@link #BOT_PREFIX}) are never listed, so ranks count real players only.
      */
     public record Row(int rank, UUID uuid, String name, double value, @Nullable Tier tier, int wins, int losses,
@@ -66,7 +67,7 @@ public final class LeaderboardDao {
     public static List<Row> overall(Connection c, int seasonId, @Nullable String region, @Nullable String country, int limit)
         throws SQLException {
         StringBuilder sql = new StringBuilder(
-            "SELECT p.uuid, p.name, s.elo, s.overall_tier, "
+            "SELECT p.uuid, p.name, s.points, s.overall_tier, "
                 + "(SELECT COALESCE(SUM(r.wins), 0) FROM dc_ratings r WHERE r.season_id = s.season_id AND r.player_id = s.player_id), "
                 + "(SELECT COALESCE(SUM(r.losses), 0) FROM dc_ratings r WHERE r.season_id = s.season_id AND r.player_id = s.player_id), "
                 + "p.region, p.country, p.settings "
@@ -74,7 +75,7 @@ public final class LeaderboardDao {
                 + "WHERE s.season_id = ? AND s.overall_tier IS NOT NULL AND " + NOT_BOT);
         if (region != null) sql.append(" AND p.region = ?");
         if (country != null) sql.append(" AND p.country = ? AND ").append(SHOWS_COUNTRY);
-        sql.append(" ORDER BY s.elo DESC, p.name ASC LIMIT ?");
+        sql.append(" ORDER BY s.points DESC, s.elo DESC, p.name ASC LIMIT ?");
         try (PreparedStatement ps = c.prepareStatement(sql.toString())) {
             int i = 1;
             ps.setInt(i++, seasonId);
@@ -102,13 +103,13 @@ public final class LeaderboardDao {
         }
     }
 
-    /** 1-based rank of an overall Elo on the overall board (ties share the better rank; test bots are not counted). */
-    public static int overallRank(Connection c, int seasonId, int elo) throws SQLException {
+    /** 1-based rank of overall points on the overall board (ties share the better rank; test bots are not counted). */
+    public static int overallRank(Connection c, int seasonId, int points) throws SQLException {
         try (PreparedStatement ps = c.prepareStatement(
             "SELECT COUNT(*) FROM dc_standings s JOIN dc_players p ON p.id = s.player_id "
-                + "WHERE s.season_id = ? AND s.elo > ? AND s.overall_tier IS NOT NULL AND " + NOT_BOT)) {
+                + "WHERE s.season_id = ? AND s.points > ? AND s.overall_tier IS NOT NULL AND " + NOT_BOT)) {
             ps.setInt(1, seasonId);
-            ps.setInt(2, elo);
+            ps.setInt(2, points);
             try (ResultSet rs = ps.executeQuery()) {
                 rs.next();
                 return rs.getInt(1) + 1;
