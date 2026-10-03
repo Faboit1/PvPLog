@@ -21,6 +21,7 @@ public final class PvPLogPlugin extends JavaPlugin {
         CombatCommand command = new CombatCommand(this);
         register("combat", command);
         register("pvplog", command);
+        register("showcombatbar", command);
 
         getLogger().info("PvPLog enabled - combat duration " + settings.combatDurationMillis() / 1000 + "s"
                 + (isFolia() ? " (Folia mode)" : ""));

@@ -19,7 +19,6 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.AreaEffectCloudApplyEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityToggleGlideEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.PotionSplashEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
@@ -242,15 +241,6 @@ public final class CombatListener implements Listener {
     private static String stripNamespace(String label) {
         int colon = label.indexOf(':');
         return colon >= 0 ? label.substring(colon + 1) : label;
-    }
-
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-    public void onGlide(EntityToggleGlideEvent event) {
-        if (!event.isGliding() || !settings().disableElytra()) return;
-        if (event.getEntity() instanceof Player player && combat().isTagged(player)) {
-            event.setCancelled(true);
-            CombatManager.send(player, settings().message("elytra-blocked"));
-        }
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)

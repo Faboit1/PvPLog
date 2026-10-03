@@ -42,8 +42,6 @@ on-death:
   untag-killer: false
 
 restrictions:
-  # Block elytra gliding while in combat (also stops current glide on tag).
-  disable-elytra: true
   # Disable /fly style flight while in combat (creative/spectator are not affected).
   disable-flight: true
   # Ender pearl cooldown in ticks while in combat (20 ticks = 1 second). -1 = vanilla.
@@ -94,10 +92,9 @@ commands:
     - suicide
 
 display:
+  # The combat countdown in the action bar (messages.action-bar). Players can hide it for themselves with
+  # /showcombatbar false.
   action-bar: true
-  boss-bar: true
-  boss-bar-color: RED        # PINK, BLUE, RED, GREEN, YELLOW, PURPLE, WHITE
-  boss-bar-overlay: PROGRESS # PROGRESS, NOTCHED_6, NOTCHED_10, NOTCHED_12, NOTCHED_20
   sounds:
     tagged: "entity.experience_orb.pickup"   # empty string to disable
     untagged: "block.note_block.pling"
@@ -106,10 +103,8 @@ messages:
   prefix: "<dark_gray>[<red><bold>COMBAT</bold></red>]</dark_gray> "
   tagged: "<red>You are now in combat! <gray>Do not log out or you will die."
   untagged: "<green>You are no longer in combat. You may log out safely."
-  action-bar: "<red><bold>COMBAT</bold></red> <dark_gray>»</dark_gray> <white>{time}s</white> <dark_gray>|</dark_gray> <gray>Do not log out!"
-  boss-bar: "<red><bold>IN COMBAT</bold></red> <gray>- <white>{time}s</white>"
+  action-bar: "<white>Combat: <blue>{time}s"
   command-blocked: "<red>You cannot use <white>/{command}</white> while in combat!"
-  elytra-blocked: "<red>You cannot use an elytra while in combat!"
   flight-blocked: "<red>You cannot fly while in combat!"
   teleport-blocked: "<red>You cannot teleport while in combat!"
   combat-logged-broadcast: "<red><bold>{player}</bold></red> <gray>logged out during combat and was killed."
@@ -122,4 +117,7 @@ messages:
   reloaded: "<green>Configuration reloaded."
   player-not-found: "<red>Player not found."
   no-permission: "<red>You don't have permission to do that."
-  usage: "<red>Usage: /pvplog <reload|tag|untag|status> [player]"
+  usage: "<red>Usage: /pvplog <reload|tag|untag|status|friendcheck> [player] [player]"
+  combat-bar-shown: "<green>The combat bar is now shown."
+  combat-bar-hidden: "<gray>The combat bar is now hidden. <white>/showcombatbar true</white> shows it again."
+  combat-bar-usage: "<red>Usage: /showcombatbar <true|false>"

@@ -12,11 +12,15 @@ commands:
     description: Shows your combat tag status.
     aliases: [ct, combattime]
     permission: pvplog.use
+  showcombatbar:
+    description: Shows or hides your combat countdown in the action bar.
+    usage: /<command> [true|false]
+    permission: pvplog.use
   pvplog:
     description: PvPLog admin command.
     aliases: [combattag]
     permission: pvplog.admin
-    usage: /<command> <reload|tag|untag|status> [player]
+    usage: /<command> <reload|tag|untag|status|friendcheck> [player] [player]
 
 permissions:
   pvplog.use:
