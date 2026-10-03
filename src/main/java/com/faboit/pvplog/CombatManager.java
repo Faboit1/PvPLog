@@ -1,11 +1,12 @@
 package com.faboit.pvplog;
 
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
-import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.Map;
 import java.util.UUID;
@@ -26,20 +27,38 @@ public final class CombatManager {
     private static final class Tag {
         volatile long expiresAt;
         volatile UUID lastAttacker;
-        BossBar bossBar;          // only touched on the owning player's thread
         ScheduledTask task;
     }
 
+    /** Set on players who turned the combat bar off (/showcombatbar false); absent = shown. */
+    private final NamespacedKey hideBarKey;
+
     CombatManager(PvPLogPlugin plugin) {
         this.plugin = plugin;
+        this.hideBarKey = new NamespacedKey(plugin, "hide_combat_bar");
+    }
+
+    /** Whether this player sees the combat bar (action bar countdown). Call on the player's thread. */
+    public boolean showsBar(Player player) {
+        return !player.getPersistentDataContainer().has(hideBarKey, PersistentDataType.BYTE);
+    }
+
+    /** Show or hide the combat bar for this player (stored on the player, survives restarts). */
+    public void showBar(Player player, boolean show) {
+        if (show) {
+            player.getPersistentDataContainer().remove(hideBarKey);
+        } else {
+            player.getPersistentDataContainer().set(hideBarKey, PersistentDataType.BYTE, (byte) 1);
+            if (isTagged(player)) player.sendActionBar(Component.empty());
+        }
+        Tag tag = tags.get(player.getUniqueId());
+        if (show && tag != null) updateDisplay(player, tag);
     }
 
     void shutdown() {
         for (Map.Entry<UUID, Tag> entry : tags.entrySet()) {
             Tag tag = entry.getValue();
             if (tag.task != null) tag.task.cancel();
-            Player player = Bukkit.getPlayer(entry.getKey());
-            if (player != null && tag.bossBar != null) player.hideBossBar(tag.bossBar);
         }
         tags.clear();
     }
@@ -131,9 +150,6 @@ public final class CombatManager {
 
     private void applyRestrictions(Player player) {
         Settings settings = plugin.settings();
-        if (settings.disableElytra() && player.isGliding()) {
-            player.setGliding(false);
-        }
         GameMode mode = player.getGameMode();
         if (settings.disableFlight() && mode != GameMode.CREATIVE && mode != GameMode.SPECTATOR
                 && (player.isFlying() || player.getAllowFlight())) {
@@ -166,36 +182,13 @@ public final class CombatManager {
 
     private void updateDisplay(Player player, Tag tag) {
         Settings settings = plugin.settings();
+        if (!settings.actionBar() || !showsBar(player)) return;
         long remaining = Math.max(0, tag.expiresAt - System.currentTimeMillis());
-        String time = seconds(remaining);
-
-        if (settings.actionBar()) {
-            player.sendActionBar(settings.raw("action-bar", "time", time));
-        }
-        if (settings.bossBar()) {
-            float progress = Math.min(1f, Math.max(0f, (float) remaining / settings.combatDurationMillis()));
-            Component name = settings.raw("boss-bar", "time", time);
-            if (tag.bossBar == null) {
-                tag.bossBar = BossBar.bossBar(name, progress, settings.bossBarColor(), settings.bossBarOverlay());
-                player.showBossBar(tag.bossBar);
-            } else {
-                tag.bossBar.name(name);
-                tag.bossBar.progress(progress);
-                tag.bossBar.color(settings.bossBarColor());
-                tag.bossBar.overlay(settings.bossBarOverlay());
-            }
-        } else if (tag.bossBar != null) {
-            player.hideBossBar(tag.bossBar);
-            tag.bossBar = null;
-        }
+        player.sendActionBar(settings.raw("action-bar", "time", seconds(remaining)));
     }
 
     private void hideDisplay(Player player, Tag tag) {
-        if (tag.bossBar != null) {
-            player.hideBossBar(tag.bossBar);
-            tag.bossBar = null;
-        }
-        if (plugin.settings().actionBar()) {
+        if (plugin.settings().actionBar() && showsBar(player)) {
             player.sendActionBar(Component.empty());
         }
     }

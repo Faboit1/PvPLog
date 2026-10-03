@@ -12,7 +12,7 @@ import java.util.Locale;
 
 public final class CombatCommand implements TabExecutor {
 
-    private static final List<String> SUBCOMMANDS = List.of("reload", "tag", "untag", "status");
+    private static final List<String> SUBCOMMANDS = List.of("reload", "tag", "untag", "status", "friendcheck");
 
     private final PvPLogPlugin plugin;
 
@@ -24,6 +24,27 @@ public final class CombatCommand implements TabExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         Settings s = plugin.settings();
         CombatManager combat = plugin.combatManager();
+
+        if (command.getName().equalsIgnoreCase("showcombatbar")) {
+            if (!(sender instanceof Player player)) {
+                sender.sendMessage("Only players can use this.");
+                return true;
+            }
+            boolean show;
+            if (args.length == 0) {
+                show = !combat.showsBar(player); // no argument: toggle
+            } else if (args[0].equalsIgnoreCase("true") || args[0].equalsIgnoreCase("on")) {
+                show = true;
+            } else if (args[0].equalsIgnoreCase("false") || args[0].equalsIgnoreCase("off")) {
+                show = false;
+            } else {
+                send(sender, s.message("combat-bar-usage"));
+                return true;
+            }
+            combat.showBar(player, show);
+            send(sender, s.message(show ? "combat-bar-shown" : "combat-bar-hidden"));
+            return true;
+        }
 
         if (command.getName().equalsIgnoreCase("combat")) {
             if (!(sender instanceof Player player)) {
@@ -51,6 +72,19 @@ public final class CombatCommand implements TabExecutor {
         }
         if (!SUBCOMMANDS.contains(sub)) {
             send(sender, s.message("usage"));
+            return true;
+        }
+        if (sub.equals("friendcheck")) {
+            // What PvPLog sees for two players: whether FriendSystem is hooked and whether it calls them friends.
+            Player a = args.length >= 2 ? Bukkit.getPlayerExact(args[1]) : null;
+            Player b = args.length >= 3 ? Bukkit.getPlayerExact(args[2]) : null;
+            if (a == null || b == null) {
+                sender.sendMessage("Usage: /pvplog friendcheck <player> <player> (both online)");
+                return true;
+            }
+            FriendHook hook = plugin.friendHook();
+            sender.sendMessage("FriendSystem hooked: " + hook.isAvailable() + " | never-tag-friends: " + s.ignoreFriends()
+                    + " | " + a.getName() + " & " + b.getName() + " friends: " + hook.areFriends(a, b));
             return true;
         }
 
@@ -95,15 +129,19 @@ public final class CombatCommand implements TabExecutor {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (command.getName().equalsIgnoreCase("showcombatbar")) {
+            return args.length == 1 ? List.of("true", "false") : List.of();
+        }
         if (command.getName().equalsIgnoreCase("combat")) return List.of();
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
             for (String sub : SUBCOMMANDS) {
                 if (sub.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(sub);
             }
-        } else if (args.length == 2 && !args[0].equalsIgnoreCase("reload")) {
+        } else if ((args.length == 2 && !args[0].equalsIgnoreCase("reload"))
+                || (args.length == 3 && args[0].equalsIgnoreCase("friendcheck"))) {
             for (Player p : Bukkit.getOnlinePlayers()) {
-                if (p.getName().toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT))) out.add(p.getName());
+                if (p.getName().toLowerCase(Locale.ROOT).startsWith(args[args.length - 1].toLowerCase(Locale.ROOT))) out.add(p.getName());
             }
         }
         return out;

@@ -1,6 +1,5 @@
 package com.faboit.pvplog;
 
-import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
@@ -33,16 +32,14 @@ public final class Settings {
     private final boolean untagKillerOnKill;
     private final boolean ignoreFriends, preventFriendDamage;
 
-    private final boolean disableElytra, disableFlight;
+    private final boolean disableFlight;
     private final int enderPearlCooldown, windChargeCooldown;
     private final Set<PlayerTeleportEvent.TeleportCause> blockedTeleportCauses;
 
     private final boolean whitelistMode;
     private final Set<String> commandList;
 
-    private final boolean actionBar, bossBar;
-    private final BossBar.Color bossBarColor;
-    private final BossBar.Overlay bossBarOverlay;
+    private final boolean actionBar;
     private final Sound taggedSound, untaggedSound;
 
     private final String prefix;
@@ -70,7 +67,6 @@ public final class Settings {
         ignoreFriends = config.getBoolean("friends.never-tag-friends", true);
         preventFriendDamage = config.getBoolean("friends.prevent-damage", false);
 
-        disableElytra = config.getBoolean("restrictions.disable-elytra", true);
         disableFlight = config.getBoolean("restrictions.disable-flight", true);
         enderPearlCooldown = config.getInt("restrictions.ender-pearl-cooldown", -1);
         windChargeCooldown = config.getInt("restrictions.wind-charge-cooldown", -1);
@@ -87,9 +83,6 @@ public final class Settings {
         commandList = lower(config.getStringList("commands.list"));
 
         actionBar = config.getBoolean("display.action-bar", true);
-        bossBar = config.getBoolean("display.boss-bar", true);
-        bossBarColor = parseEnum(BossBar.Color.class, config.getString("display.boss-bar-color"), BossBar.Color.RED);
-        bossBarOverlay = parseEnum(BossBar.Overlay.class, config.getString("display.boss-bar-overlay"), BossBar.Overlay.PROGRESS);
         taggedSound = sound(config.getString("display.sounds.tagged", ""));
         untaggedSound = sound(config.getString("display.sounds.untagged", ""));
 
@@ -160,15 +153,11 @@ public final class Settings {
     public boolean untagKillerOnKill() { return untagKillerOnKill; }
     public boolean ignoreFriends() { return ignoreFriends; }
     public boolean preventFriendDamage() { return preventFriendDamage; }
-    public boolean disableElytra() { return disableElytra; }
     public boolean disableFlight() { return disableFlight; }
     public int enderPearlCooldown() { return enderPearlCooldown; }
     public int windChargeCooldown() { return windChargeCooldown; }
     public boolean isTeleportBlocked(PlayerTeleportEvent.TeleportCause cause) { return blockedTeleportCauses.contains(cause); }
     public boolean actionBar() { return actionBar; }
-    public boolean bossBar() { return bossBar; }
-    public BossBar.Color bossBarColor() { return bossBarColor; }
-    public BossBar.Overlay bossBarOverlay() { return bossBarOverlay; }
     public Sound taggedSound() { return taggedSound; }
     public Sound untaggedSound() { return untaggedSound; }
 
