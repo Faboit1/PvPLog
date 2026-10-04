@@ -29,8 +29,16 @@ friends:
 combat-log:
   # Kill players who disconnect while in combat.
   kill-on-logout: true
-  # Also punish players who got kicked (e.g. by an anti-cheat / timeout).
-  punish-on-kick: false
+  # Also punish players who got kicked. On by default: players can get themselves kicked on purpose (packet spam,
+  # tripping the anti-cheat, rejecting the resource pack) to escape a fight.
+  punish-on-kick: true
+  # Kicks that never count as combat logging (PlayerKickEvent causes): staff /kick, restarts, whitelist and bans.
+  exempt-kick-causes:
+    - KICK_COMMAND
+    - RESTART_COMMAND
+    - WHITELIST
+    - BANNED
+    - IP_BANNED
   # Give the kill to the last player who hit them.
   credit-last-attacker: true
   # Commands run from console when someone combat logs. {player} = logger, {killer} = last attacker (or "none").
@@ -48,6 +56,13 @@ restrictions:
   ender-pearl-cooldown: -1
   # Wind charge cooldown in ticks while in combat. -1 = vanilla.
   wind-charge-cooldown: -1
+  # Block plugin teleports the player picked from a menu, dialog button (e.g. SettingsPlus) or NPC while in combat
+  # (homes/warps menus, RTP buttons): those run commands without the command check below seeing them. Only
+  # teleports within menu-teleport-window-seconds of such a click and at least menu-teleport-min-distance blocks
+  # away (or to another world) count, so anti-cheat setbacks and plugin teleports nobody clicked for still work.
+  block-menu-teleports: true
+  menu-teleport-min-distance: 16
+  menu-teleport-window-seconds: 6
   # Block teleports with these causes while in combat (ender pearls / chorus fruit are always allowed).
   blocked-teleport-causes:
     - COMMAND

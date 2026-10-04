@@ -38,6 +38,46 @@ public final class CombatManager {
         this.hideBarKey = new NamespacedKey(plugin, "hide_combat_bar");
     }
 
+    /**
+     * Plugin disable: remembers each online tagged player's tag end (and last attacker) on the player, so a reload
+     * (PlugMan) puts them straight back in combat. Main/owning thread is not required for PDC writes at disable.
+     */
+    void saveTags() {
+        NamespacedKey until = new NamespacedKey(plugin, "tagged_until");
+        NamespacedKey by = new NamespacedKey(plugin, "tagged_by");
+        for (Map.Entry<UUID, Tag> e : tags.entrySet()) {
+            Player player = Bukkit.getPlayer(e.getKey());
+            if (player == null || e.getValue().expiresAt <= System.currentTimeMillis()) continue;
+            player.getPersistentDataContainer().set(until, PersistentDataType.LONG, e.getValue().expiresAt);
+            UUID attacker = e.getValue().lastAttacker;
+            if (attacker != null) player.getPersistentDataContainer().set(by, PersistentDataType.STRING, attacker.toString());
+        }
+    }
+
+    /** Plugin enable: re-tags online players whose saved tag hasn't run out (see {@link #saveTags}). */
+    void restoreTags() {
+        NamespacedKey until = new NamespacedKey(plugin, "tagged_until");
+        NamespacedKey by = new NamespacedKey(plugin, "tagged_by");
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            runFor(player, () -> {
+                Long end = player.getPersistentDataContainer().get(until, PersistentDataType.LONG);
+                String attacker = player.getPersistentDataContainer().get(by, PersistentDataType.STRING);
+                player.getPersistentDataContainer().remove(until);
+                player.getPersistentDataContainer().remove(by);
+                if (end == null || end <= System.currentTimeMillis() || !player.isOnline()) return;
+                UUID attackerId = null;
+                try {
+                    if (attacker != null) attackerId = UUID.fromString(attacker);
+                } catch (IllegalArgumentException ignored) {
+                    // corrupt value: no attacker credit
+                }
+                tagNow(player, attackerId);
+                Tag tag = tags.get(player.getUniqueId());
+                if (tag != null) tag.expiresAt = end;
+            });
+        }
+    }
+
     /** Whether this player sees the combat bar (action bar countdown). Call on the player's thread. */
     public boolean showsBar(Player player) {
         return !player.getPersistentDataContainer().has(hideBarKey, PersistentDataType.BYTE);
