@@ -28,6 +28,10 @@ public final class Settings {
     private final boolean tagMelee, tagProjectiles, tagPotions, tagExplosions, tagPets, tagFishingRod, tagAttacker;
 
     private final boolean killOnLogout, punishOnKick, creditLastAttacker;
+    private final Set<String> exemptKickCauses;
+    private final boolean blockMenuTeleports;
+    private final double menuTeleportMinDistanceSq;
+    private final long menuTeleportWindowMillis;
     private final java.util.List<String> combatLogCommands;
     private final boolean untagKillerOnKill;
     private final boolean ignoreFriends, preventFriendDamage;
@@ -60,7 +64,13 @@ public final class Settings {
         tagAttacker = config.getBoolean("tagging.tag-attacker", true);
 
         killOnLogout = config.getBoolean("combat-log.kill-on-logout", true);
-        punishOnKick = config.getBoolean("combat-log.punish-on-kick", false);
+        punishOnKick = config.getBoolean("combat-log.punish-on-kick", true);
+        exemptKickCauses = new HashSet<>();
+        for (String c : config.getStringList("combat-log.exempt-kick-causes")) exemptKickCauses.add(c.toUpperCase(Locale.ROOT));
+        blockMenuTeleports = config.getBoolean("restrictions.block-menu-teleports", true);
+        double minDistance = Math.max(0, config.getDouble("restrictions.menu-teleport-min-distance", 16));
+        menuTeleportMinDistanceSq = minDistance * minDistance;
+        menuTeleportWindowMillis = Math.max(0, config.getLong("restrictions.menu-teleport-window-seconds", 6)) * 1000L;
         creditLastAttacker = config.getBoolean("combat-log.credit-last-attacker", true);
         combatLogCommands = config.getStringList("combat-log.console-commands");
         untagKillerOnKill = config.getBoolean("on-death.untag-killer", false);
@@ -148,6 +158,11 @@ public final class Settings {
     public boolean tagAttacker() { return tagAttacker; }
     public boolean killOnLogout() { return killOnLogout; }
     public boolean punishOnKick() { return punishOnKick; }
+    /** Kick causes (PlayerKickEvent.Cause names) that never count as combat logging, e.g. staff /kick or a restart. */
+    public boolean isKickExempt(String cause) { return cause != null && exemptKickCauses.contains(cause); }
+    public boolean blockMenuTeleports() { return blockMenuTeleports; }
+    public double menuTeleportMinDistanceSq() { return menuTeleportMinDistanceSq; }
+    public long menuTeleportWindowMillis() { return menuTeleportWindowMillis; }
     public boolean creditLastAttacker() { return creditLastAttacker; }
     public java.util.List<String> combatLogCommands() { return combatLogCommands; }
     public boolean untagKillerOnKill() { return untagKillerOnKill; }

@@ -16,7 +16,10 @@ public final class PvPLogPlugin extends JavaPlugin {
         combatManager = new CombatManager(this);
         friendHook = new FriendHook(this);
 
-        getServer().getPluginManager().registerEvents(new CombatListener(this), this);
+        CombatListener listener = new CombatListener(this);
+        getServer().getPluginManager().registerEvents(listener, this);
+        hookDialogClicks(listener);
+        combatManager.restoreTags(); // tags of players still online after a plugin reload
 
         CombatCommand command = new CombatCommand(this);
         register("combat", command);
@@ -34,7 +37,35 @@ public final class PvPLogPlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         if (combatManager != null) {
+            combatManager.saveTags(); // so a /plugman reload doesn't clear everyone's tag
             combatManager.shutdown();
+        }
+    }
+
+    /**
+     * Dialog button presses (Paper 1.21.6+ PlayerCustomClickEvent) count as menu actions for the combat teleport
+     * check. Hooked by reflection so the plugin still loads on servers without dialogs.
+     */
+    @SuppressWarnings("unchecked")
+    private void hookDialogClicks(CombatListener listener) {
+        Class<? extends org.bukkit.event.Event> type;
+        try {
+            type = (Class<? extends org.bukkit.event.Event>) Class.forName("io.papermc.paper.event.player.PlayerCustomClickEvent");
+        } catch (ClassNotFoundException | ClassCastException e) {
+            return;
+        }
+        getServer().getPluginManager().registerEvent(type, new org.bukkit.event.Listener() { }, org.bukkit.event.EventPriority.MONITOR,
+                (l, event) -> listener.menuAction(clicker(event)), this, false);
+    }
+
+    /** The player behind a custom click event (its connection's player), or null. */
+    private static org.bukkit.entity.Player clicker(Object event) {
+        try {
+            Object connection = event.getClass().getMethod("getCommonConnection").invoke(event);
+            Object player = connection.getClass().getMethod("getPlayer").invoke(connection);
+            return player instanceof org.bukkit.entity.Player p ? p : null;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return null; // a configuration-phase connection has no player
         }
     }
 

@@ -5,9 +5,9 @@ A lightweight combat tag plugin for Paper, Folia and Canvas (1.21 and newer, inc
 ## Features
 - **Combat tag** on melee, projectiles, harmful splash and lingering potions, explosions (TNT, end crystals), tamed pets and, if enabled, fishing rods. The timer resets on every hit.
 - **Countdown** in the action bar (`Combat: 12s`). Each player can hide it with `/showcombatbar false`; the choice is stored on the player.
-- **Combat logging**: players who disconnect while tagged are killed, their items drop, and the last attacker gets the kill. The server broadcasts it and can run console commands you configure. Server shutdowns and (optionally) kicks are not punished.
+- **Combat logging**: players who disconnect while tagged are killed, their items drop, and the last attacker gets the kill. The server broadcasts it and can run console commands you configure. Kicks count too (players could get themselves kicked to escape), except staff `/kick`, restarts, whitelist and bans (`combat-log.exempt-kick-causes`); server shutdowns are never punished. Open menus are closed before the kill, and tags survive a PlugMan reload.
 - **Command blocking**: blacklist or whitelist mode. Namespaced commands (`/essentials:spawn`) and aliases are also caught.
-- **Restrictions while in combat**: no `/fly`, blocked teleport causes, and optional ender pearl and wind charge cooldowns. Elytras stay usable.
+- **Restrictions while in combat**: no `/fly`, blocked teleport causes, no teleports picked from menus, dialog buttons or NPCs (homes/warps menus, RTP buttons; short anti-cheat setbacks still pass), and optional ender pearl and wind charge cooldowns. Elytras stay usable.
 - **FriendSystem support**: if [FriendSystem](https://github.com/Faboit1/FriendSystem) is installed, friends hitting each other never get combat tagged. You can also turn on `friends.prevent-damage` to stop friendly fire completely. No extra setup needed, and PvPLog runs fine without it.
 - **Folia / Canvas support**: every tagged player's timer runs on their own region thread, and nothing uses the old Bukkit scheduler.
 - **Disabled worlds**, a bypass permission, and all messages in MiniMessage format.

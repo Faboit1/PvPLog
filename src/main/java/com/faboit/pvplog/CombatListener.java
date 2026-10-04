@@ -23,7 +23,11 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.PotionSplashEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerFishEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
@@ -33,11 +37,17 @@ import org.bukkit.projectiles.ProjectileSource;
 
 import java.util.Collection;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class CombatListener implements Listener {
 
     private final PvPLogPlugin plugin;
+    /** Why a player is being kicked (PlayerKickEvent.Cause name), read by the quit handler that follows. */
+    private final Map<UUID, String> kickCauses = new ConcurrentHashMap<>();
+    /** When a player last clicked a menu, a dialog button or an NPC (a teleport right after is player-chosen). */
+    private final Map<UUID, Long> lastMenuAction = new ConcurrentHashMap<>();
 
     CombatListener(PvPLogPlugin plugin) {
         this.plugin = plugin;
@@ -146,16 +156,25 @@ public final class CombatListener implements Listener {
 
     // ------------------------------------------------------------------ combat log
 
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onKick(PlayerKickEvent event) {
+        kickCauses.put(event.getPlayer().getUniqueId(), event.getCause().name());
+    }
+
     @EventHandler(priority = EventPriority.LOWEST)
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
+        String kickCause = kickCauses.remove(player.getUniqueId());
+        lastMenuAction.remove(player.getUniqueId());
         if (!combat().isTagged(player)) {
             combat().untag(player, false);
             return;
         }
         Settings s = settings();
+        // Any kick counts unless staff or the server did it on purpose: players can get themselves kicked (packet
+        // spam, an anti-cheat flag, a rejected resource pack) to escape a fight.
         boolean kicked = event.getReason() == PlayerQuitEvent.QuitReason.KICKED;
-        boolean punish = s.killOnLogout() && !Bukkit.isStopping() && (!kicked || s.punishOnKick())
+        boolean punish = s.killOnLogout() && !Bukkit.isStopping() && (!kicked || (s.punishOnKick() && !s.isKickExempt(kickCause)))
                 && !player.hasPermission("pvplog.bypass") && !player.isDead();
 
         UUID lastAttacker = combat().lastAttacker(player);
@@ -167,6 +186,9 @@ public final class CombatListener implements Listener {
         if (s.creditLastAttacker() && killer != null && !killer.equals(player)) {
             player.setKiller(killer);
         }
+        // Close any open menu first so the cursor item and crafting grid go back into the inventory that drops
+        // (and storage plugins see the close and save) instead of being returned after death.
+        player.closeInventory();
         player.setHealth(0.0);
 
         var broadcast = s.message("combat-logged-broadcast", "player", player.getName());
@@ -257,9 +279,51 @@ public final class CombatListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onTeleport(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
-        if (!settings().isTeleportBlocked(event.getCause()) || !combat().isTagged(player)) return;
+        if (!combat().isTagged(player)) return;
+        if (!settings().isTeleportBlocked(event.getCause()) && !isMenuTeleport(event)) return;
         event.setCancelled(true);
         CombatManager.send(player, settings().message("teleport-blocked"));
+    }
+
+    /**
+     * A plugin teleport the player picked from a menu, dialog button or NPC (homes and warps menus, RTP buttons,
+     * settings buttons) shortly before: those run commands without the command check seeing them. Short hops
+     * (anti-cheat setbacks) and plugin teleports nobody clicked for (a duel sending its winner home) still pass.
+     */
+    private boolean isMenuTeleport(PlayerTeleportEvent event) {
+        Settings s = settings();
+        if (!s.blockMenuTeleports()) return false;
+        PlayerTeleportEvent.TeleportCause cause = event.getCause();
+        if (cause != PlayerTeleportEvent.TeleportCause.PLUGIN && cause != PlayerTeleportEvent.TeleportCause.UNKNOWN
+                && cause != PlayerTeleportEvent.TeleportCause.COMMAND) return false;
+        Long last = lastMenuAction.get(event.getPlayer().getUniqueId());
+        if (last == null || System.currentTimeMillis() - last > s.menuTeleportWindowMillis()) return false;
+        var from = event.getFrom();
+        var to = event.getTo();
+        return to.getWorld() != from.getWorld() || to.distanceSquared(from) >= s.menuTeleportMinDistanceSq();
+    }
+
+    /** Remember a click in a plugin menu (not the player's own inventory) while tagged. */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onMenuClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player) || !combat().isTagged(player)) return;
+        InventoryType top = event.getView().getTopInventory().getType();
+        if (top == InventoryType.CRAFTING || top == InventoryType.CREATIVE) return;
+        lastMenuAction.put(player.getUniqueId(), System.currentTimeMillis());
+    }
+
+    /** Remember right-clicking an NPC (Citizens and similar mark theirs with "NPC" metadata) while tagged. */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onNpcClick(PlayerInteractEntityEvent event) {
+        Player player = event.getPlayer();
+        if (event.getRightClicked().hasMetadata("NPC") && combat().isTagged(player)) {
+            lastMenuAction.put(player.getUniqueId(), System.currentTimeMillis());
+        }
+    }
+
+    /** Dialog button presses (SettingsPlus and other dialog menus); hooked by reflection on servers that have them. */
+    void menuAction(Player player) {
+        if (player != null && combat().isTagged(player)) lastMenuAction.put(player.getUniqueId(), System.currentTimeMillis());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
